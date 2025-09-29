@@ -1,7 +1,8 @@
 package com.llmctl.mapper;
 
 import com.llmctl.entity.GlobalConfig;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -21,15 +22,6 @@ public interface GlobalConfigMapper {
      * @param id 配置ID
      * @return GlobalConfig对象，如果不存在则返回null
      */
-    @Select("SELECT * FROM global_config WHERE id = #{id}")
-    @Results({
-        @Result(property = "id", column = "id"),
-        @Result(property = "configKey", column = "config_key"),
-        @Result(property = "configValue", column = "config_value"),
-        @Result(property = "description", column = "description"),
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
     GlobalConfig findById(@Param("id") Integer id);
 
     /**
@@ -38,15 +30,6 @@ public interface GlobalConfigMapper {
      * @param configKey 配置键
      * @return GlobalConfig对象，如果不存在则返回null
      */
-    @Select("SELECT * FROM global_config WHERE config_key = #{configKey}")
-    @Results({
-        @Result(property = "id", column = "id"),
-        @Result(property = "configKey", column = "config_key"),
-        @Result(property = "configValue", column = "config_value"),
-        @Result(property = "description", column = "description"),
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
     GlobalConfig findByConfigKey(@Param("configKey") String configKey);
 
     /**
@@ -54,15 +37,6 @@ public interface GlobalConfigMapper {
      *
      * @return GlobalConfig列表
      */
-    @Select("SELECT * FROM global_config ORDER BY config_key")
-    @Results({
-        @Result(property = "id", column = "id"),
-        @Result(property = "configKey", column = "config_key"),
-        @Result(property = "configValue", column = "config_value"),
-        @Result(property = "description", column = "description"),
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
     List<GlobalConfig> findAll();
 
     /**
@@ -71,15 +45,6 @@ public interface GlobalConfigMapper {
      * @param keyPattern 配置键模式（支持%通配符）
      * @return GlobalConfig列表
      */
-    @Select("SELECT * FROM global_config WHERE config_key LIKE #{keyPattern} ORDER BY config_key")
-    @Results({
-        @Result(property = "id", column = "id"),
-        @Result(property = "configKey", column = "config_key"),
-        @Result(property = "configValue", column = "config_value"),
-        @Result(property = "description", column = "description"),
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
     List<GlobalConfig> findByConfigKeyLike(@Param("keyPattern") String keyPattern);
 
     /**
@@ -88,9 +53,6 @@ public interface GlobalConfigMapper {
      * @param globalConfig GlobalConfig对象
      * @return 影响的行数
      */
-    @Insert("INSERT INTO global_config (config_key, config_value, description, created_at, updated_at) " +
-            "VALUES (#{configKey}, #{configValue}, #{description}, #{createdAt}, #{updatedAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(GlobalConfig globalConfig);
 
     /**
@@ -99,11 +61,6 @@ public interface GlobalConfigMapper {
      * @param globalConfig GlobalConfig对象
      * @return 影响的行数
      */
-    @Update("UPDATE global_config SET " +
-            "config_value = #{configValue}, " +
-            "description = #{description}, " +
-            "updated_at = #{updatedAt} " +
-            "WHERE id = #{id}")
     int update(GlobalConfig globalConfig);
 
     /**
@@ -113,8 +70,6 @@ public interface GlobalConfigMapper {
      * @param configValue 配置值
      * @return 影响的行数
      */
-    @Update("UPDATE global_config SET config_value = #{configValue}, updated_at = NOW() " +
-            "WHERE config_key = #{configKey}")
     int updateValueByKey(@Param("configKey") String configKey, @Param("configValue") String configValue);
 
     /**
@@ -125,12 +80,6 @@ public interface GlobalConfigMapper {
      * @param description 配置描述
      * @return 影响的行数
      */
-    @Insert("INSERT INTO global_config (config_key, config_value, description, created_at, updated_at) " +
-            "VALUES (#{configKey}, #{configValue}, #{description}, NOW(), NOW()) " +
-            "ON DUPLICATE KEY UPDATE " +
-            "config_value = VALUES(config_value), " +
-            "description = VALUES(description), " +
-            "updated_at = NOW()")
     int insertOrUpdate(@Param("configKey") String configKey,
                       @Param("configValue") String configValue,
                       @Param("description") String description);
@@ -141,7 +90,6 @@ public interface GlobalConfigMapper {
      * @param id 配置ID
      * @return 影响的行数
      */
-    @Delete("DELETE FROM global_config WHERE id = #{id}")
     int deleteById(@Param("id") Integer id);
 
     /**
@@ -150,7 +98,6 @@ public interface GlobalConfigMapper {
      * @param configKey 配置键
      * @return 影响的行数
      */
-    @Delete("DELETE FROM global_config WHERE config_key = #{configKey}")
     int deleteByConfigKey(@Param("configKey") String configKey);
 
     /**
@@ -159,7 +106,6 @@ public interface GlobalConfigMapper {
      * @param configKey 配置键
      * @return 如果存在返回true，否则返回false
      */
-    @Select("SELECT COUNT(*) > 0 FROM global_config WHERE config_key = #{configKey}")
     boolean existsByConfigKey(@Param("configKey") String configKey);
 
     /**
@@ -169,7 +115,6 @@ public interface GlobalConfigMapper {
      * @param excludeId 排除的配置ID
      * @return 如果存在返回true，否则返回false
      */
-    @Select("SELECT COUNT(*) > 0 FROM global_config WHERE config_key = #{configKey} AND id != #{excludeId}")
     boolean existsByConfigKeyAndIdNot(@Param("configKey") String configKey, @Param("excludeId") Integer excludeId);
 
     /**
@@ -177,7 +122,6 @@ public interface GlobalConfigMapper {
      *
      * @return 全局配置总数
      */
-    @Select("SELECT COUNT(*) FROM global_config")
     long count();
 
     /**
@@ -185,7 +129,6 @@ public interface GlobalConfigMapper {
      *
      * @return 活跃的Provider ID，如果未设置则返回null
      */
-    @Select("SELECT config_value FROM global_config WHERE config_key = 'active_provider_id'")
     String getActiveProviderId();
 
     /**
@@ -194,11 +137,6 @@ public interface GlobalConfigMapper {
      * @param providerId Provider ID
      * @return 影响的行数
      */
-    @Insert("INSERT INTO global_config (config_key, config_value, description, created_at, updated_at) " +
-            "VALUES ('active_provider_id', #{providerId}, '当前活跃的Provider ID', NOW(), NOW()) " +
-            "ON DUPLICATE KEY UPDATE " +
-            "config_value = VALUES(config_value), " +
-            "updated_at = NOW()")
     int setActiveProviderId(@Param("providerId") String providerId);
 
     /**
@@ -206,7 +144,6 @@ public interface GlobalConfigMapper {
      *
      * @return 应用版本号
      */
-    @Select("SELECT config_value FROM global_config WHERE config_key = 'app_version'")
     String getAppVersion();
 
     /**
@@ -215,11 +152,6 @@ public interface GlobalConfigMapper {
      * @param version 版本号
      * @return 影响的行数
      */
-    @Insert("INSERT INTO global_config (config_key, config_value, description, created_at, updated_at) " +
-            "VALUES ('app_version', #{version}, '应用版本号', NOW(), NOW()) " +
-            "ON DUPLICATE KEY UPDATE " +
-            "config_value = VALUES(config_value), " +
-            "updated_at = NOW()")
     int setAppVersion(@Param("version") String version);
 
     /**
@@ -227,7 +159,6 @@ public interface GlobalConfigMapper {
      *
      * @return Token错误阈值
      */
-    @Select("SELECT config_value FROM global_config WHERE config_key = 'token_error_threshold'")
     String getTokenErrorThreshold();
 
     /**
@@ -235,7 +166,6 @@ public interface GlobalConfigMapper {
      *
      * @return Token冷却时间
      */
-    @Select("SELECT config_value FROM global_config WHERE config_key = 'token_cooldown_period'")
     String getTokenCooldownPeriod();
 
     /**
@@ -243,6 +173,5 @@ public interface GlobalConfigMapper {
      *
      * @return 会话最大空闲时间
      */
-    @Select("SELECT config_value FROM global_config WHERE config_key = 'max_session_idle_time'")
     String getMaxSessionIdleTime();
 }

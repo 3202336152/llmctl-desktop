@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.GlobalConfigMapper">
+
+    <!-- GlobalConfig结果映射 -->
+    <resultMap id="GlobalConfigResultMap" type="com.llmctl.entity.GlobalConfig">
+        <id column="id" property="id"/>
+        <result column="config_key" property="configKey"/>
+        <result column="config_value" property="configValue"/>
+        <result column="description" property="description"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据ID查询全局配置 -->
+    <select id="findById" parameterType="int" resultMap="GlobalConfigResultMap">
+        SELECT * FROM global_config WHERE id = #{id}
+    </select>
+
+    <!-- 根据配置键查询全局配置 -->
+    <select id="findByConfigKey" parameterType="string" resultMap="GlobalConfigResultMap">
+        SELECT * FROM global_config WHERE config_key = #{configKey}
+    </select>
+
+    <!-- 查询所有全局配置 -->
+    <select id="findAll" resultMap="GlobalConfigResultMap">
+        SELECT * FROM global_config ORDER BY config_key
+    </select>
+
+    <!-- 根据配置键模糊查询全局配置 -->
+    <select id="findByConfigKeyLike" parameterType="string" resultMap="GlobalConfigResultMap">
+        SELECT * FROM global_config WHERE config_key LIKE #{keyPattern} ORDER BY config_key
+    </select>
+
+    <!-- 插入全局配置 -->
+    <insert id="insert" parameterType="com.llmctl.entity.GlobalConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO global_config (config_key, config_value, description, created_at, updated_at)
+        VALUES (#{configKey}, #{configValue}, #{description}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 更新全局配置 -->
+    <update id="update" parameterType="com.llmctl.entity.GlobalConfig">
+        UPDATE global_config SET
+            config_value = #{configValue},
+            description = #{description},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据配置键更新配置值 -->
+    <update id="updateValueByKey">
+        UPDATE global_config SET config_value = #{configValue}, updated_at = NOW()
+        WHERE config_key = #{configKey}
+    </update>
+
+    <!-- 插入或更新全局配置 -->
+    <insert id="insertOrUpdate">
+        INSERT INTO global_config (config_key, config_value, description, created_at, updated_at)
+        VALUES (#{configKey}, #{configValue}, #{description}, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            config_value = VALUES(config_value),
+            description = VALUES(description),
+            updated_at = NOW()
+    </insert>
+
+    <!-- 根据ID删除全局配置 -->
+    <delete id="deleteById" parameterType="int">
+        DELETE FROM global_config WHERE id = #{id}
+    </delete>
+
+    <!-- 根据配置键删除全局配置 -->
+    <delete id="deleteByConfigKey" parameterType="string">
+        DELETE FROM global_config WHERE config_key = #{configKey}
+    </delete>
+
+    <!-- 检查配置键是否已存在 -->
+    <select id="existsByConfigKey" parameterType="string" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM global_config WHERE config_key = #{configKey}
+    </select>
+
+    <!-- 检查配置键是否已存在（排除指定ID） -->
+    <select id="existsByConfigKeyAndIdNot" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM global_config WHERE config_key = #{configKey} AND id != #{excludeId}
+    </select>
+
+    <!-- 统计全局配置总数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM global_config
+    </select>
+
+    <!-- 获取当前活跃的Provider ID -->
+    <select id="getActiveProviderId" resultType="string">
+        SELECT config_value FROM global_config WHERE config_key = 'active_provider_id'
+    </select>
+
+    <!-- 设置当前活跃的Provider ID -->
+    <insert id="setActiveProviderId" parameterType="string">
+        INSERT INTO global_config (config_key, config_value, description, created_at, updated_at)
+        VALUES ('active_provider_id', #{providerId}, '当前活跃的Provider ID', NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            config_value = VALUES(config_value),
+            updated_at = NOW()
+    </insert>
+
+    <!-- 获取应用版本号 -->
+    <select id="getAppVersion" resultType="string">
+        SELECT config_value FROM global_config WHERE config_key = 'app_version'
+    </select>
+
+    <!-- 设置应用版本号 -->
+    <insert id="setAppVersion" parameterType="string">
+        INSERT INTO global_config (config_key, config_value, description, created_at, updated_at)
+        VALUES ('app_version', #{version}, '应用版本号', NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            config_value = VALUES(config_value),
+            updated_at = NOW()
+    </insert>
+
+    <!-- 获取Token错误阈值 -->
+    <select id="getTokenErrorThreshold" resultType="string">
+        SELECT config_value FROM global_config WHERE config_key = 'token_error_threshold'
+    </select>
+
+    <!-- 获取Token冷却时间（秒） -->
+    <select id="getTokenCooldownPeriod" resultType="string">
+        SELECT config_value FROM global_config WHERE config_key = 'token_cooldown_period'
+    </select>
+
+    <!-- 获取会话最大空闲时间（秒） -->
+    <select id="getMaxSessionIdleTime" resultType="string">
+        SELECT config_value FROM global_config WHERE config_key = 'max_session_idle_time'
+    </select>
+
+</mapper>

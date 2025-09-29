@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.ProviderTemplateMapper">
+
+    <!-- ProviderTemplate结果映射 -->
+    <resultMap id="ProviderTemplateResultMap" type="com.llmctl.entity.ProviderTemplate">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="type" property="type"/>
+        <result column="default_base_url" property="defaultBaseUrl"/>
+        <result column="default_model_name" property="defaultModelName"/>
+        <result column="env_vars_template" property="envVarsTemplate"/>
+        <result column="setup_prompts" property="setupPrompts"/>
+        <result column="is_active" property="isActive"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据ID查询Provider模板 -->
+    <select id="findById" parameterType="string" resultMap="ProviderTemplateResultMap">
+        SELECT * FROM provider_templates WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有模板 -->
+    <select id="findAll" resultMap="ProviderTemplateResultMap">
+        SELECT * FROM provider_templates ORDER BY type, name
+    </select>
+
+    <!-- 根据类型查询模板 -->
+    <select id="findByType" parameterType="string" resultMap="ProviderTemplateResultMap">
+        SELECT * FROM provider_templates WHERE type = #{type} AND is_active = 1 ORDER BY name
+    </select>
+
+    <!-- 查询活跃的模板 -->
+    <select id="findActive" resultMap="ProviderTemplateResultMap">
+        SELECT * FROM provider_templates WHERE is_active = 1 ORDER BY type, name
+    </select>
+
+    <!-- 插入模板 -->
+    <insert id="insert" parameterType="com.llmctl.entity.ProviderTemplate">
+        INSERT INTO provider_templates (id, name, description, type, default_base_url, default_model_name, env_vars_template, setup_prompts, is_active, created_at, updated_at)
+        VALUES (#{id}, #{name}, #{description}, #{type}, #{defaultBaseUrl}, #{defaultModelName}, #{envVarsTemplate}, #{setupPrompts}, #{isActive}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 更新模板 -->
+    <update id="update" parameterType="com.llmctl.entity.ProviderTemplate">
+        UPDATE provider_templates SET
+            name = #{name},
+            description = #{description},
+            default_base_url = #{defaultBaseUrl},
+            default_model_name = #{defaultModelName},
+            env_vars_template = #{envVarsTemplate},
+            setup_prompts = #{setupPrompts},
+            is_active = #{isActive},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除模板 -->
+    <delete id="deleteById" parameterType="string">
+        DELETE FROM provider_templates WHERE id = #{id}
+    </delete>
+
+</mapper>

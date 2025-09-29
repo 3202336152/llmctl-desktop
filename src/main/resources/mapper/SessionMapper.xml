@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.SessionMapper">
+
+    <!-- Session结果映射 -->
+    <resultMap id="SessionResultMap" type="com.llmctl.entity.Session">
+        <id column="id" property="id"/>
+        <result column="provider_id" property="providerId"/>
+        <result column="pid" property="pid"/>
+        <result column="working_directory" property="workingDirectory"/>
+        <result column="command" property="command"/>
+        <result column="status" property="status" typeHandler="com.llmctl.config.SessionStatusTypeHandler"/>
+        <result column="start_time" property="startTime"/>
+        <result column="last_activity" property="lastActivity"/>
+        <result column="end_time" property="endTime"/>
+    </resultMap>
+
+    <!-- 根据ID查询Session -->
+    <select id="findById" parameterType="string" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有Session -->
+    <select id="findAll" resultMap="SessionResultMap">
+        SELECT * FROM sessions ORDER BY start_time DESC
+    </select>
+
+    <!-- 根据状态查询Session列表 -->
+    <select id="findByStatus" parameterType="string" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE status = #{status} ORDER BY start_time DESC
+    </select>
+
+    <!-- 根据Provider ID查询Session列表 -->
+    <select id="findByProviderId" parameterType="string" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE provider_id = #{providerId} ORDER BY start_time DESC
+    </select>
+
+    <!-- 查询活跃的Session列表 -->
+    <select id="findActiveSessions" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE status = 'active' ORDER BY last_activity DESC
+    </select>
+
+    <!-- 根据进程ID查询Session -->
+    <select id="findByPid" parameterType="int" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE pid = #{pid}
+    </select>
+
+    <!-- 插入Session -->
+    <insert id="insert" parameterType="com.llmctl.entity.Session">
+        INSERT INTO sessions (id, provider_id, pid, working_directory, command, status, start_time, last_activity, end_time)
+        VALUES (#{id}, #{providerId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
+    </insert>
+
+    <!-- 更新Session -->
+    <update id="update" parameterType="com.llmctl.entity.Session">
+        UPDATE sessions SET
+            provider_id = #{providerId},
+            pid = #{pid},
+            working_directory = #{workingDirectory},
+            command = #{command},
+            status = #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler},
+            last_activity = #{lastActivity},
+            end_time = #{endTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新Session状态 -->
+    <update id="updateStatus">
+        UPDATE sessions SET status = #{status}, last_activity = NOW() WHERE id = #{id}
+    </update>
+
+    <!-- 更新Session最后活动时间 -->
+    <update id="updateLastActivity" parameterType="string">
+        UPDATE sessions SET last_activity = NOW() WHERE id = #{id}
+    </update>
+
+    <!-- 终止Session -->
+    <update id="terminate" parameterType="string">
+        UPDATE sessions SET status = 'terminated', end_time = NOW(), last_activity = NOW() WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除Session -->
+    <delete id="deleteById" parameterType="string">
+        DELETE FROM sessions WHERE id = #{id}
+    </delete>
+
+    <!-- 根据Provider ID删除所有Session -->
+    <delete id="deleteByProviderId" parameterType="string">
+        DELETE FROM sessions WHERE provider_id = #{providerId}
+    </delete>
+
+    <!-- 删除指定时间之前的已终止Session -->
+    <delete id="deleteTerminatedBefore" parameterType="java.time.LocalDateTime">
+        DELETE FROM sessions WHERE status = 'terminated' AND end_time &lt; #{beforeTime}
+    </delete>
+
+    <!-- 查询空闲超时的Session列表 -->
+    <select id="findIdleTimeoutSessions" parameterType="int" resultMap="SessionResultMap">
+        SELECT * FROM sessions WHERE status = 'active'
+        AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
+    </select>
+
+    <!-- 批量更新空闲超时Session的状态为inactive -->
+    <update id="markIdleSessionsAsInactive" parameterType="int">
+        UPDATE sessions SET status = 'inactive', last_activity = NOW()
+        WHERE status = 'active' AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
+    </update>
+
+    <!-- 统计Session总数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM sessions
+    </select>
+
+    <!-- 统计指定状态的Session数量 -->
+    <select id="countByStatus" parameterType="string" resultType="long">
+        SELECT COUNT(*) FROM sessions WHERE status = #{status}
+    </select>
+
+    <!-- 统计指定Provider的Session数量 -->
+    <select id="countByProviderId" parameterType="string" resultType="long">
+        SELECT COUNT(*) FROM sessions WHERE provider_id = #{providerId}
+    </select>
+
+</mapper>
