@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration scan="true" scanPeriod="15 seconds" debug="true">
-    <!-- 定义日志格式 -->
-    <property name="LOG_HOME" value="./logs"/>
-    <!-- 定义日志格式：时间|日志级别|跟踪ID|线程名称|类.方法|代码行号|消息 -->
+<configuration scan="true" scanPeriod="15 seconds">
+    <!-- 定义日志格式：时间|日志级别|线程名称|类名|消息 -->
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%-5level|%X{traceId}|%thread|%logger.%method|%line|%msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%-5level|%thread|%logger{36}|%msg%n"/>
 
     <!-- 控制台输出 -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!--此日志appender是为开发使用，只配置最底级别，控制台输出的日志级别是大于或等于此级别的日志信息 -->
+        <!-- 控制台输出的日志级别是大于或等于此级别的日志信息 -->
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>debug</level>
+            <level>INFO</level>
         </filter>
         <encoder>
             <charset>UTF-8</charset>
@@ -18,82 +16,9 @@
         </encoder>
     </appender>
 
-    <!-- 文件输出 -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_HOME}/app.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- 滚动后的日志文件命名格式 -->
-            <fileNamePattern>${LOG_HOME}/app-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <!-- 单个日志文件最大大小 -->
-            <maxFileSize>100MB</maxFileSize>
-            <!-- 日志保存天数 -->
-            <maxHistory>730</maxHistory>
-            <!-- 总日志大小上限 -->
-            <totalSizeCap>10GB</totalSizeCap>
-        </rollingPolicy>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-    </appender>
-
-    <!-- 监控模块日志 -->
-    <appender name="MONITOR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_HOME}/monitor.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- 滚动后的日志文件命名格式 -->
-            <fileNamePattern>${LOG_HOME}/monitor-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <!-- 单个日志文件最大大小 -->
-            <maxFileSize>10MB</maxFileSize>
-            <!-- 日志保存天数 -->
-            <maxHistory>30</maxHistory>
-            <!-- 总日志大小上限 -->
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-    </appender>
-
-    <!-- 监控模块日志独立输出 -->
-    <logger name="com.aspire.wabp.monitor" level="INFO" additivity="false">
-        <appender-ref ref="MONITOR"/>
-    </logger>
-
-    <appender name="allstepFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <!-- 正在记录的日志文件的路径及文件名 -->
-        <file>${LOG_HOME}/allstep_23.log</file>
-        <!--日志文件输出格式-->
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS}|%-5level|%X{traceId}:%msg%n</pattern>
-            <charset>UTF-8</charset>
-        </encoder>
-        <!-- 日志记录器的滚动策略，按小时滚动 -->
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- 按小时日志归档路径以及格式 -->
-            <fileNamePattern>${LOG_HOME}/%d{yyyy-MM,aux}/%d{yyyy-MM-dd,aux}/allstep_23_%d{yyyyMMddHH}_000001.log</fileNamePattern>
-            <!--日志文件保留时长：730小时-->
-            <maxHistory>730</maxHistory>
-        </rollingPolicy>
-        <!-- 此日志文件只记录info级别的 -->
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>info</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-
-    <!--配置记录器 -->
-    <logger name="com.aspire.wabp.main.service.impl.AllProcessLogServiceImpl"
-            level="info">
-        <appender-ref ref="allstepFile"/>
-    </logger>
-
-    <!-- 全局日志级别：DEBUG、INFO -->
+    <!-- 全局日志级别：只输出到控制台 -->
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
-        <appender-ref ref="FILE"/>
     </root>
 
 </configuration>
