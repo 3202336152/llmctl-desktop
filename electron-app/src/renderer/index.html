@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval';">
+    <title>LLMctl Desktop</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        #root {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        // Fix for global is not defined error
+        if (typeof global === 'undefined') {
+            window.global = globalThis;
+        }
+        // Fix for process is not defined error
+        if (typeof process === 'undefined') {
+            window.process = { env: { NODE_ENV: 'development' } };
+        }
+
+        // Simple EventEmitter polyfill
+        function SimpleEventEmitter() {
+            this.events = {};
+        }
+        SimpleEventEmitter.prototype.on = function(event, listener) {
+            if (!this.events[event]) {
+                this.events[event] = [];
+            }
+            this.events[event].push(listener);
+        };
+        SimpleEventEmitter.prototype.emit = function(event, ...args) {
+            if (this.events[event]) {
+                this.events[event].forEach(listener => listener.apply(this, args));
+            }
+        };
+        SimpleEventEmitter.prototype.removeListener = function(event, listener) {
+            if (this.events[event]) {
+                this.events[event] = this.events[event].filter(l => l !== listener);
+            }
+        };
+
+        // Fix for require is not defined error
+        if (typeof require === 'undefined') {
+            window.require = function(module) {
+                if (module === 'events') {
+                    // Return EventEmitter as both a constructor and the default export
+                    var eventsModule = SimpleEventEmitter;
+                    eventsModule.EventEmitter = SimpleEventEmitter;
+                    return eventsModule;
+                }
+                return {};
+            };
+        }
+        // Fix for module is not defined error
+        if (typeof module === 'undefined') {
+            window.module = { exports: {} };
+        }
+        // Fix for exports is not defined error
+        if (typeof exports === 'undefined') {
+            window.exports = {};
+        }
+    </script>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">正在加载应用...</div>
+    </div>
+</body>
+</html>

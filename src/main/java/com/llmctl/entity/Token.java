@@ -1,0 +1,118 @@
+package com.llmctl.entity;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
+
+/**
+ * Token管理实体类
+ *
+ * @author Liu Yifan
+ * @version 2.0.0
+ * @since 2025-09-28
+ */
+@Data
+@EqualsAndHashCode(callSuper = false)
+public class Token {
+
+    /**
+     * Token唯一标识
+     */
+    private String id;
+
+    /**
+     * 关联的Provider ID
+     */
+    private String providerId;
+
+    /**
+     * Token值 (加密存储)
+     */
+    private String value;
+
+    /**
+     * Token别名
+     */
+    private String alias;
+
+    /**
+     * 权重 (用于加权轮询)
+     */
+    private Integer weight;
+
+    /**
+     * 是否启用
+     */
+    private Boolean enabled;
+
+    /**
+     * 健康状态
+     */
+    private Boolean healthy;
+
+    /**
+     * 最后使用时间
+     */
+    private LocalDateTime lastUsed;
+
+    /**
+     * 错误次数
+     */
+    private Integer errorCount;
+
+    /**
+     * 最后错误时间
+     */
+    private LocalDateTime lastErrorTime;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updatedAt;
+
+    /**
+     * 关联的Provider对象 (多对一关系)
+     */
+    private Provider provider;
+
+    /**
+     * 检查Token是否可用
+     *
+     * @return true如果Token启用且健康
+     */
+    public boolean isAvailable() {
+        return Boolean.TRUE.equals(enabled) && Boolean.TRUE.equals(healthy);
+    }
+
+    /**
+     * 增加错误计数
+     */
+    public void incrementErrorCount() {
+        if (this.errorCount == null) {
+            this.errorCount = 0;
+        }
+        this.errorCount++;
+        this.lastErrorTime = LocalDateTime.now();
+    }
+
+    /**
+     * 重置错误计数
+     */
+    public void resetErrorCount() {
+        this.errorCount = 0;
+        this.lastErrorTime = null;
+    }
+
+    /**
+     * 更新最后使用时间
+     */
+    public void updateLastUsed() {
+        this.lastUsed = LocalDateTime.now();
+    }
+}

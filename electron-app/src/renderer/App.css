@@ -1,0 +1,141 @@
+/* App.css */
+.ant-layout {
+  height: 100vh;
+}
+
+.ant-layout-sider {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.ant-layout-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.ant-menu-item {
+  margin: 4px 0 !important;
+  border-radius: 6px !important;
+}
+
+.ant-menu-item-selected {
+  background-color: #e6f7ff !important;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 表格样式优化 */
+.ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: #f5f5f5;
+}
+
+/* 卡片样式优化 */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 按钮样式优化 */
+.ant-btn {
+  border-radius: 6px;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+/* 表单样式优化 */
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-input-number {
+  border-radius: 6px;
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.healthy {
+  background-color: #52c41a;
+}
+
+.status-dot.unhealthy {
+  background-color: #ff4d4f;
+}
+
+.status-dot.unknown {
+  background-color: #d9d9d9;
+}
+
+/* 统计卡片 */
+.stat-card {
+  text-align: center;
+  padding: 24px;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: bold;
+  color: #1890ff;
+  line-height: 1;
+}
+
+.stat-label {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 100;
+  }
+
+  .ant-layout-content {
+    margin-left: 200px;
+  }
+}

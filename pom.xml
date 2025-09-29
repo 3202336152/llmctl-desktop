@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.huanyu</groupId>
+    <groupId>com.llmctl</groupId>
     <artifactId>LLMctl</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>

@@ -1,0 +1,34 @@
+import httpClient from './httpClient';
+import {
+  ApiResponse,
+  Session,
+  StartSessionRequest,
+  UpdateSessionStatusRequest,
+} from '../types';
+
+export const sessionAPI = {
+  // 获取所有活跃会话
+  getAllSessions: (): Promise<ApiResponse<Session[]>> => {
+    return httpClient.get('/sessions').then(response => response.data);
+  },
+
+  // 根据ID获取会话信息
+  getSessionById: (sessionId: string): Promise<ApiResponse<Session>> => {
+    return httpClient.get(`/sessions/${sessionId}`).then(response => response.data);
+  },
+
+  // 启动CLI会话
+  startSession: (request: StartSessionRequest): Promise<ApiResponse<Session>> => {
+    return httpClient.post('/sessions', request).then(response => response.data);
+  },
+
+  // 更新会话状态
+  updateSessionStatus: (sessionId: string, request: UpdateSessionStatusRequest): Promise<ApiResponse<Session>> => {
+    return httpClient.put(`/sessions/${sessionId}/status`, request).then(response => response.data);
+  },
+
+  // 终止会话
+  terminateSession: (sessionId: string): Promise<ApiResponse<void>> => {
+    return httpClient.delete(`/sessions/${sessionId}`).then(response => response.data);
+  },
+};
