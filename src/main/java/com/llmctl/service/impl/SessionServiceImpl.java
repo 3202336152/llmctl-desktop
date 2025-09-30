@@ -5,33 +5,31 @@ import com.llmctl.dto.StartSessionRequest;
 import com.llmctl.entity.Provider;
 import com.llmctl.entity.Session;
 import com.llmctl.entity.Token;
+import com.llmctl.exception.BusinessException;
+import com.llmctl.exception.ResourceNotFoundException;
+import com.llmctl.exception.ServiceException;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.SessionMapper;
 import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.ISessionService;
 import com.llmctl.service.TokenService;
 import com.llmctl.utils.IdGenerator;
-import com.llmctl.exception.ResourceNotFoundException;
-import com.llmctl.exception.ServiceException;
-import com.llmctl.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
  * Session业务服务实现类
+ *
+ * 职责：管理会话元数据（记录、查询、更新）
+ * 注意：进程管理由Electron层负责，本服务不再处理进程启动、I/O等操作
  *
  * @author Liu Yifan
  * @version 2.0.0
@@ -46,11 +44,6 @@ public class SessionServiceImpl implements ISessionService {
     private final ProviderMapper providerMapper;
     private final TokenService tokenService;
     private final IGlobalConfigService globalConfigService;
-
-    /**
-     * 存储活跃进程的引用
-     */
-    private final Map<String, Process> activeProcesses = new ConcurrentHashMap<>();
 
     @Override
     public List<SessionDTO> getActiveSessions() {
@@ -85,9 +78,8 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     @Override
-    @Transactional
     public SessionDTO startSession(StartSessionRequest request) {
-        log.info("启动新的CLI会话: {} (Provider: {})", request.getCommand(), request.getProviderId());
+        log.info("创建新的会话记录: Provider: {}, WorkingDir: {}", request.getProviderId(), request.getWorkingDirectory());
 
         // 检查Provider是否存在
         Provider provider = providerMapper.findById(request.getProviderId());
@@ -101,16 +93,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new BusinessException("没有可用的Token: " + request.getProviderId());
         }
 
-        // 构建环境变量
-        Map<String, String> envVars = buildEnvironmentVariables(provider, selectedToken);
-
-        // 验证工作目录
-        File workingDir = new File(request.getWorkingDirectory());
-        if (!workingDir.exists() || !workingDir.isDirectory()) {
-            throw new BusinessException("工作目录不存在或不是有效目录: " + request.getWorkingDirectory());
-        }
-
-        // 创建Session实体
+        // 创建Session实体（仅记录元数据，进程由Electron管理）
         Session session = new Session();
         session.setId(IdGenerator.generateSessionId());
         session.setProviderId(request.getProviderId());
@@ -122,41 +105,17 @@ public class SessionServiceImpl implements ISessionService {
         session.setStartTime(now);
         session.setLastActivity(now);
 
-        try {
-            // 启动CLI进程
-            ProcessBuilder processBuilder = new ProcessBuilder(request.getCommand().split("\\s+"));
-            processBuilder.directory(workingDir);
-            processBuilder.environment().putAll(envVars);
-
-            Process process = processBuilder.start();
-            session.setPid((int) process.pid());
-
-            // 存储进程引用
-            activeProcesses.put(session.getId(), process);
-
-            // 保存Session到数据库
-            int result = sessionMapper.insert(session);
-            if (result <= 0) {
-                // 如果数据库操作失败，需要清理进程
-                process.destroyForcibly();
-                activeProcesses.remove(session.getId());
-                throw new ServiceException("创建会话", "数据库插入失败");
-            }
-
-            // 异步监控进程状态
-            monitorProcessAsync(session.getId());
-
-            log.info("成功启动CLI会话: {} (ID: {}, PID: {})", session.getCommand(), session.getId(), session.getPid());
-            return convertToDTO(session);
-
-        } catch (IOException e) {
-            log.error("启动CLI进程失败: ", e);
-            throw new ServiceException("启动CLI进程", e);
+        // 保存Session到数据库
+        int result = sessionMapper.insert(session);
+        if (result <= 0) {
+            throw new ServiceException("创建会话", "数据库插入失败");
         }
+
+        log.info("成功创建会话记录: {} (ID: {})", session.getCommand(), session.getId());
+        return convertToDTO(session);
     }
 
     @Override
-    @Transactional
     public SessionDTO updateSessionStatus(String sessionId, String status) {
         log.info("更新会话状态: {} -> {}", sessionId, status);
 
@@ -171,8 +130,6 @@ public class SessionServiceImpl implements ISessionService {
 
         if (newStatus == Session.SessionStatus.TERMINATED) {
             session.setEndTime(LocalDateTime.now());
-            // 终止关联的进程
-            terminateProcess(sessionId);
         }
 
         int result = sessionMapper.update(session);
@@ -185,7 +142,6 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     @Override
-    @Transactional
     public void terminateSession(String sessionId) {
         log.info("终止会话: {}", sessionId);
 
@@ -194,10 +150,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("会话", sessionId);
         }
 
-        // 终止进程
-        terminateProcess(sessionId);
-
-        // 更新数据库状态
+        // 更新数据库状态（进程由Electron管理和终止）
         int result = sessionMapper.terminate(sessionId);
         if (result <= 0) {
             throw new ServiceException("终止会话", "数据库更新失败");
@@ -221,6 +174,31 @@ public class SessionServiceImpl implements ISessionService {
         statistics.setTotalCount(sessionMapper.count());
 
         return statistics;
+    }
+
+    /**
+     * 获取会话对应的环境变量（供Electron前端使用）
+     *
+     * @param sessionId 会话ID
+     * @return 环境变量Map
+     */
+    public Map<String, String> getSessionEnvironmentVariables(String sessionId) {
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        Provider provider = providerMapper.findById(session.getProviderId());
+        if (provider == null) {
+            throw new ResourceNotFoundException("Provider", session.getProviderId());
+        }
+
+        Token selectedToken = tokenService.selectToken(session.getProviderId());
+        if (selectedToken == null) {
+            throw new BusinessException("没有可用的Token: " + session.getProviderId());
+        }
+
+        return buildEnvironmentVariables(provider, selectedToken);
     }
 
     /**
@@ -249,45 +227,17 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
-     * 异步监控进程状态
-     */
-    @Async
-    public void monitorProcessAsync(String sessionId) {
-        Process process = activeProcesses.get(sessionId);
-        if (process == null) {
-            return;
-        }
-
-        try {
-            // 等待进程结束
-            int exitCode = process.waitFor();
-            log.info("进程结束: {} (退出码: {})", sessionId, exitCode);
-
-            // 更新会话状态
-            updateSessionStatus(sessionId, "terminated");
-
-        } catch (InterruptedException e) {
-            log.warn("进程监控被中断: {}", sessionId);
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            log.error("进程监控异常: {}", sessionId, e);
-        } finally {
-            activeProcesses.remove(sessionId);
-        }
-    }
-
-    /**
-     * 构建环境变量
+     * 构建环境变量（用于启动进程）
      */
     private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken) {
         Map<String, String> envVars = new HashMap<>();
 
         // 根据Provider类型设置相应的环境变量
-        String tokenValue = selectedToken.getValue(); // 这里应该解密Token值
+        String tokenValue = selectedToken.getValue();
 
         switch (provider.getType().toLowerCase()) {
             case "anthropic":
-                envVars.put("ANTHROPIC_API_KEY", tokenValue);
+                envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
                 if (provider.getBaseUrl() != null) {
                     envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
                 }
@@ -331,18 +281,6 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         return envVars;
-    }
-
-    /**
-     * 终止进程
-     */
-    private void terminateProcess(String sessionId) {
-        Process process = activeProcesses.get(sessionId);
-        if (process != null && process.isAlive()) {
-            log.info("终止进程: {} (PID: {})", sessionId, process.pid());
-            process.destroyForcibly();
-            activeProcesses.remove(sessionId);
-        }
     }
 
     /**

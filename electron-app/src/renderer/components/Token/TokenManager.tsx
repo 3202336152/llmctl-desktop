@@ -53,6 +53,13 @@ const TokenManager: React.FC = () => {
     dispatch(fetchProviders());
   }, [dispatch]);
 
+  // 当 providers 加载完成后，自动选择第一个 Provider
+  useEffect(() => {
+    if (providers.length > 0 && !selectedProviderId) {
+      setSelectedProviderId(providers[0].id);
+    }
+  }, [providers, selectedProviderId]);
+
   useEffect(() => {
     if (selectedProviderId) {
       loadTokens();

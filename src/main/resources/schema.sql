@@ -25,10 +25,12 @@ CREATE TABLE `providers` (
     `extra_headers` JSON COMMENT '额外HTTP头',
     `token_strategy_type` ENUM('round-robin', 'weighted', 'random', 'least-used') DEFAULT 'round-robin' COMMENT 'Token轮询策略',
     `token_fallback_on_error` BOOLEAN DEFAULT TRUE COMMENT '错误时是否故障切换',
+    `is_active` BOOLEAN DEFAULT TRUE COMMENT '是否启用',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     INDEX `idx_type` (`type`),
+    INDEX `idx_is_active` (`is_active`),
     INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='LLM Provider配置表';
 
@@ -136,8 +138,8 @@ INSERT INTO `global_config` (`config_key`, `config_value`, `description`) VALUES
 
 -- 插入默认Provider模板
 INSERT INTO `provider_templates` (`id`, `name`, `description`, `type`, `default_base_url`, `default_model_name`, `env_vars_template`, `setup_prompts`) VALUES
-('anthropic', 'Claude (Anthropic)', 'Claude AI模型配置模板', 'anthropic', 'https://api.anthropic.com', 'claude-3-5-sonnet-20241022',
- JSON_OBJECT('ANTHROPIC_API_KEY', '{token}', 'ANTHROPIC_BASE_URL', '{baseUrl}', 'ANTHROPIC_MODEL', '{modelName}'),
+('anthropic', 'Claude (Anthropic)', 'Claude AI模型配置模板', 'anthropic', 'https://api.anthropic.com', 'claude-sonnet-4-5-20250929-20241022',
+ JSON_OBJECT('ANTHROPIC_AUTH_TOKEN', '{token}', 'ANTHROPIC_BASE_URL', '{baseUrl}', 'ANTHROPIC_MODEL', '{modelName}'),
  JSON_ARRAY(JSON_OBJECT('type', 'input', 'name', 'name', 'message', 'Provider名称', 'required', true), JSON_OBJECT('type', 'password', 'name', 'token', 'message', 'API Key', 'required', true))),
 
 ('openai', 'OpenAI GPT', 'OpenAI GPT模型配置模板', 'openai', 'https://api.openai.com', 'gpt-4',

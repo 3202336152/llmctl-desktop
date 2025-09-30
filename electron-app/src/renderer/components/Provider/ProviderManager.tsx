@@ -245,7 +245,7 @@ const ProviderManager: React.FC = () => {
           initialValues={{
             type: 'anthropic',
             baseUrl: 'https://api.anthropic.com',
-            modelName: 'claude-3-5-sonnet',
+            modelName: 'claude-sonnet-4-5-20250929',
             maxTokens: 4096,
             temperature: 0.7,
             isActive: true,

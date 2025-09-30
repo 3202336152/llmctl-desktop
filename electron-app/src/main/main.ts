@@ -1,10 +1,21 @@
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import * as path from 'path';
 import { createMenu } from './menu';
+import terminalManager from './services/terminalManager';
 
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// 捕获未处理的异常
+process.on('uncaughtException', (error) => {
+  console.error('未捕获的异常:', error);
+  // 不退出应用，只记录错误
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未处理的 Promise 拒绝:', reason);
+});
 
 function createMainWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
@@ -81,6 +92,62 @@ ipcMain.handle('maximize-window', () => {
 
 ipcMain.handle('close-window', () => {
   mainWindow?.close();
+});
+
+// ==================== 终端 IPC Handlers ====================
+
+ipcMain.handle('terminal-create', async (_event, options: {
+  sessionId: string;
+  command?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+}) => {
+  try {
+    if (!mainWindow) {
+      throw new Error('Main window not available');
+    }
+
+    terminalManager.createSession(options.sessionId, mainWindow, {
+      command: options.command,
+      cwd: options.cwd,
+      env: options.env,
+    });
+
+    return { success: true, sessionId: options.sessionId };
+  } catch (error) {
+    console.error('[IPC] terminal-create 失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('terminal-input', async (_event, data: { sessionId: string; input: string }) => {
+  try {
+    terminalManager.sendInput(data.sessionId, data.input);
+    return { success: true };
+  } catch (error) {
+    console.error('[IPC] terminal-input 失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('terminal-kill', (_event, sessionId: string) => {
+  terminalManager.killSession(sessionId);
+  return { success: true };
+});
+
+/**
+ * 调整终端大小
+ */
+ipcMain.handle('terminal-resize', (_event, data: { sessionId: string; cols: number; rows: number }) => {
+  console.log('[IPC] terminal-resize:', data);
+  terminalManager.resize(data.sessionId, data.cols, data.rows);
+  return { success: true };
+});
+
+// 清理所有会话
+app.on('before-quit', () => {
+  console.log('[App] 退出前清理终端会话');
+  terminalManager.cleanup();
 });
 
 export { mainWindow };

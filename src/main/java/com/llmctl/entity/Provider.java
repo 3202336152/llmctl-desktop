@@ -79,6 +79,11 @@ public class Provider {
     private Boolean tokenFallbackOnError;
 
     /**
+     * 是否启用
+     */
+    private Boolean isActive;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

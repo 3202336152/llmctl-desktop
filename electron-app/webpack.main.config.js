@@ -16,8 +16,15 @@ module.exports = {
         test: /\.ts$/,
         use: 'ts-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.node$/,
+        use: 'node-loader'
       }
     ]
+  },
+  externals: {
+    'node-pty': 'commonjs node-pty'
   },
   node: {
     __dirname: false,

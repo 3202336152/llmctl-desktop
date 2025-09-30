@@ -19,6 +19,7 @@
         <result column="token_strategy_type" property="tokenStrategyType"
                 typeHandler="com.llmctl.config.TokenStrategyTypeHandler"/>
         <result column="token_fallback_on_error" property="tokenFallbackOnError" jdbcType="BOOLEAN"/>
+        <result column="is_active" property="isActive" jdbcType="BOOLEAN"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -26,7 +27,7 @@
     <!-- 基础列 -->
     <sql id="Base_Column_List">
         id, name, description, type, base_url, model_name, max_tokens, max_output_tokens,
-        temperature, extra_headers, token_strategy_type, token_fallback_on_error,
+        temperature, extra_headers, token_strategy_type, token_fallback_on_error, is_active,
         created_at, updated_at
     </sql>
 
@@ -68,13 +69,13 @@
         INSERT INTO providers (
             id, name, description, type, base_url, model_name,
             max_tokens, max_output_tokens, temperature, extra_headers,
-            token_strategy_type, token_fallback_on_error, created_at, updated_at
+            token_strategy_type, token_fallback_on_error, is_active, created_at, updated_at
         )
         VALUES (
             #{id}, #{name}, #{description}, #{type}, #{baseUrl}, #{modelName},
             #{maxTokens}, #{maxOutputTokens}, #{temperature}, #{extraHeaders},
             #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
-            #{tokenFallbackOnError}, #{createdAt}, #{updatedAt}
+            #{tokenFallbackOnError}, #{isActive}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -92,6 +93,7 @@
             extra_headers = #{extraHeaders},
             token_strategy_type = #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
             token_fallback_on_error = #{tokenFallbackOnError},
+            is_active = #{isActive},
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>

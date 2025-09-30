@@ -101,6 +101,9 @@ public class ProviderServiceImpl implements ProviderService {
         }
         provider.setTokenFallbackOnError(request.getTokenFallbackOnError() != null ? request.getTokenFallbackOnError() : true);
 
+        // 设置启用状态，默认为true
+        provider.setIsActive(true);
+
         // 设置时间戳
         LocalDateTime now = LocalDateTime.now();
         provider.setCreatedAt(now);
@@ -175,6 +178,9 @@ public class ProviderServiceImpl implements ProviderService {
         }
         if (request.getTokenFallbackOnError() != null) {
             existingProvider.setTokenFallbackOnError(request.getTokenFallbackOnError());
+        }
+        if (request.getIsActive() != null) {
+            existingProvider.setIsActive(request.getIsActive());
         }
 
         existingProvider.setUpdatedAt(LocalDateTime.now());
@@ -251,6 +257,7 @@ public class ProviderServiceImpl implements ProviderService {
         dto.setMaxOutputTokens(provider.getMaxOutputTokens());
         dto.setTemperature(provider.getTemperature());
         dto.setExtraHeaders(provider.getExtraHeaders());
+        dto.setIsActive(provider.getIsActive());
         dto.setCreatedAt(provider.getCreatedAt());
         dto.setUpdatedAt(provider.getUpdatedAt());
 

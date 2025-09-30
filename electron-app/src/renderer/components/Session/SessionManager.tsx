@@ -21,6 +21,7 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   DesktopOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders } from '../../store/slices/providerSlice';
@@ -28,6 +29,7 @@ import { setSessions, addSession, updateSession, removeSession, setLoading, setE
 import { sessionAPI } from '../../services/api';
 import { Session, StartSessionRequest, UpdateSessionStatusRequest } from '../../types';
 import type { RootState } from '../../store';
+import TerminalComponent from '../Terminal/TerminalComponent';
 
 const { Option } = Select;
 
@@ -37,6 +39,7 @@ const SessionManager: React.FC = () => {
   const { sessions, loading } = useAppSelector((state: RootState) => state.session);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [openTerminalSessions, setOpenTerminalSessions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     dispatch(fetchProviders());
@@ -73,6 +76,8 @@ const SessionManager: React.FC = () => {
       const response = await sessionAPI.startSession(request);
       if (response.data) {
         dispatch(addSession(response.data));
+        // 自动打开终端
+        setOpenTerminalSessions(prev => new Set(prev).add(response.data!.id));
       }
       message.success('会话启动成功');
       setModalVisible(false);
@@ -104,10 +109,28 @@ const SessionManager: React.FC = () => {
     try {
       await sessionAPI.terminateSession(sessionId);
       dispatch(removeSession(sessionId));
+      // 如果关闭的是打开的终端，则关闭终端显示
+      setOpenTerminalSessions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionId);
+        return newSet;
+      });
       message.success('会话终止成功');
     } catch (error) {
       message.error(`终止会话失败: ${error}`);
     }
+  };
+
+  const handleOpenTerminal = (sessionId: string) => {
+    setOpenTerminalSessions(prev => new Set(prev).add(sessionId));
+  };
+
+  const handleCloseTerminal = (sessionId: string) => {
+    setOpenTerminalSessions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sessionId);
+      return newSet;
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -202,6 +225,16 @@ const SessionManager: React.FC = () => {
       key: 'action',
       render: (_: any, record: Session) => (
         <Space size="middle">
+          {(record.status === 'active' || record.status === 'inactive') && (
+            <Button
+              type="link"
+              icon={<CodeOutlined />}
+              onClick={() => handleOpenTerminal(record.id)}
+              disabled={openTerminalSessions.has(record.id)}
+            >
+              {openTerminalSessions.has(record.id) ? '已打开' : '打开终端'}
+            </Button>
+          )}
           {record.status === 'active' && (
             <Button
               type="link"
@@ -300,6 +333,7 @@ const SessionManager: React.FC = () => {
           layout="vertical"
           initialValues={{
             command: 'claude',
+            workingDirectory: 'D:\\code\\program\\LLMctl',
           }}
         >
           <Form.Item
@@ -326,11 +360,30 @@ const SessionManager: React.FC = () => {
             <Input placeholder="请输入工作目录路径" />
           </Form.Item>
 
-          <Form.Item label="命令" name="command">
-            <Input placeholder="请输入启动命令（默认: claude）" />
+          <Form.Item
+            label="命令"
+            name="command"
+            tooltip="命令将在内置终端中执行，环境变量和工作目录会自动配置"
+            extra="命令将在内置终端中运行，支持交互式输入和实时输出"
+          >
+            <Input placeholder="请输入启动命令" />
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 内置终端 - 支持多个终端 */}
+      {Array.from(openTerminalSessions).map(sessionId => {
+        const session = sessions.find(s => s.id === sessionId);
+        return session ? (
+          <TerminalComponent
+            key={sessionId}
+            sessionId={sessionId}
+            command={session.command}
+            cwd={session.workingDirectory}
+            onClose={() => handleCloseTerminal(sessionId)}
+          />
+        ) : null;
+      })}
     </div>
   );
 };

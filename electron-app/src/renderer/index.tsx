@@ -16,13 +16,11 @@ if (!container) {
 const root = createRoot(container);
 
 root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <ConfigProvider locale={zhCN}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ConfigProvider>
-    </Provider>
-  </React.StrictMode>
+  <Provider store={store}>
+    <ConfigProvider locale={zhCN}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ConfigProvider>
+  </Provider>
 );

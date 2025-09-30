@@ -324,7 +324,7 @@ public class SessionService {
 
         switch (provider.getType().toLowerCase()) {
             case "anthropic":
-                envVars.put("ANTHROPIC_API_KEY", tokenValue);
+                envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
                 if (provider.getBaseUrl() != null) {
                     envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
                 }

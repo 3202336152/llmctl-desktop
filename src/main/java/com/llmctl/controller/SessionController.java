@@ -11,9 +11,13 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Session管理REST控制器
+ *
+ * 职责：提供会话元数据管理的REST API
+ * 注意：终端I/O由Electron层直接处理，本控制器不再提供SSE和输入接口
  *
  * @author Liu Yifan
  * @version 2.0.0
@@ -76,7 +80,7 @@ public class SessionController {
     }
 
     /**
-     * 启动新的CLI会话
+     * 启动新的CLI会话（仅创建元数据记录）
      *
      * @param request 启动会话请求
      * @return 创建的会话
@@ -84,10 +88,10 @@ public class SessionController {
     @PostMapping
     public ResponseEntity<ApiResponse<SessionDTO>> startSession(
             @Valid @RequestBody StartSessionRequest request) {
-        log.info("启动新的CLI会话: {} (Provider: {})", request.getCommand(), request.getProviderId());
+        log.info("创建会话记录: {} (Provider: {})", request.getCommand(), request.getProviderId());
 
         SessionDTO session = sessionService.startSession(request);
-        ApiResponse<SessionDTO> response = ApiResponse.success(session, "会话启动成功");
+        ApiResponse<SessionDTO> response = ApiResponse.success(session, "会话记录创建成功");
 
         return ResponseEntity.ok(response);
     }
@@ -112,7 +116,7 @@ public class SessionController {
     }
 
     /**
-     * 终止会话
+     * 终止会话（仅更新元数据）
      *
      * @param sessionId 会话ID
      * @return 终止结果
@@ -156,6 +160,23 @@ public class SessionController {
 
         ISessionService.SessionStatistics statistics = sessionService.getSessionStatistics();
         ApiResponse<ISessionService.SessionStatistics> response = ApiResponse.success(statistics);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 获取会话环境变量（供Electron前端使用）
+     *
+     * @param sessionId 会话ID
+     * @return 环境变量Map
+     */
+    @GetMapping("/{sessionId}/environment")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getSessionEnvironment(
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
+        log.info("获取会话环境变量: {}", sessionId);
+
+        Map<String, String> envVars = sessionService.getSessionEnvironmentVariables(sessionId);
+        ApiResponse<Map<String, String>> response = ApiResponse.success(envVars);
 
         return ResponseEntity.ok(response);
     }

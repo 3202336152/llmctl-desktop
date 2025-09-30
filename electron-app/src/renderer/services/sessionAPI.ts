@@ -31,4 +31,9 @@ export const sessionAPI = {
   terminateSession: (sessionId: string): Promise<ApiResponse<void>> => {
     return httpClient.delete(`/sessions/${sessionId}`).then(response => response.data);
   },
+
+  // 获取会话环境变量
+  getSessionEnvironment: (sessionId: string): Promise<ApiResponse<Record<string, string>>> => {
+    return httpClient.get(`/sessions/${sessionId}/environment`).then(response => response.data);
+  },
 };

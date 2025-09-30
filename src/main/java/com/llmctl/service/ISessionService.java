@@ -4,9 +4,13 @@ import com.llmctl.dto.SessionDTO;
 import com.llmctl.dto.StartSessionRequest;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Session服务接口
+ *
+ * 职责：管理会话元数据（记录、查询、更新）
+ * 注意：进程管理由Electron层负责
  *
  * @author Liu Yifan
  * @version 2.0.0
@@ -38,7 +42,7 @@ public interface ISessionService {
     SessionDTO getSessionById(String sessionId);
 
     /**
-     * 启动新的CLI会话
+     * 启动新的CLI会话（仅创建元数据记录）
      *
      * @param request 启动会话请求
      * @return 创建的会话
@@ -57,7 +61,7 @@ public interface ISessionService {
     SessionDTO updateSessionStatus(String sessionId, String status);
 
     /**
-     * 终止会话
+     * 终止会话（仅更新元数据）
      *
      * @param sessionId 会话ID
      * @throws IllegalArgumentException 如果会话不存在
@@ -77,6 +81,15 @@ public interface ISessionService {
      * @return 会话统计信息
      */
     SessionStatistics getSessionStatistics();
+
+    /**
+     * 获取会话的环境变量（用于Electron终端）
+     *
+     * @param sessionId 会话ID
+     * @return 环境变量Map
+     * @throws IllegalArgumentException 如果会话不存在
+     */
+    Map<String, String> getSessionEnvironmentVariables(String sessionId);
 
     /**
      * 会话统计信息

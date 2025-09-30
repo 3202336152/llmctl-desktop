@@ -13,6 +13,7 @@ import com.llmctl.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -219,12 +220,27 @@ public class TokenServiceImpl implements TokenService {
         }
 
         if (selectedToken != null) {
-            // 更新最后使用时间
-            tokenMapper.updateLastUsed(selectedToken.getId());
+            // TODO: 异步更新最后使用时间（暂时禁用以避免事务锁冲突）
+            // 注意：由于自调用AOP不生效，且会导致数据库锁等待，暂时禁用此功能
+            // updateTokenLastUsedAsync(selectedToken.getId());
             log.debug("选择Token: {} (策略: {})", selectedToken.getAlias(), strategy);
         }
 
         return selectedToken;
+    }
+
+    /**
+     * 在新事务中异步更新Token最后使用时间
+     * 使用REQUIRES_NEW避免与外层事务冲突
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateTokenLastUsedAsync(String tokenId) {
+        try {
+            tokenMapper.updateLastUsed(tokenId);
+        } catch (Exception e) {
+            // 忽略更新失败，不影响主流程
+            log.warn("更新Token最后使用时间失败: {}", tokenId, e);
+        }
     }
 
     @Override

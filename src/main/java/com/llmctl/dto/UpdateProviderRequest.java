@@ -76,4 +76,9 @@ public class UpdateProviderRequest {
      * 错误时是否故障切换
      */
     private Boolean tokenFallbackOnError;
+
+    /**
+     * 是否启用
+     */
+    private Boolean isActive;
 }
