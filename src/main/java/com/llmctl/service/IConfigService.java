@@ -62,12 +62,14 @@ public interface IConfigService {
         private Integer importedCount;
         private Integer skippedCount;
         private java.util.List<String> errors;
+        private java.util.List<String> warnings;
 
         public ConfigImportResult() {
             this.success = true;
             this.importedCount = 0;
             this.skippedCount = 0;
             this.errors = new java.util.ArrayList<>();
+            this.warnings = new java.util.ArrayList<>();
         }
 
         // Getters and Setters
@@ -82,5 +84,8 @@ public interface IConfigService {
 
         public java.util.List<String> getErrors() { return errors; }
         public void setErrors(java.util.List<String> errors) { this.errors = errors; }
+
+        public java.util.List<String> getWarnings() { return warnings; }
+        public void setWarnings(java.util.List<String> warnings) { this.warnings = warnings; }
     }
 }

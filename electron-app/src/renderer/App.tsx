@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag } from 'antd';
+import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag, message } from 'antd';
 import {
   DatabaseOutlined,
   KeyOutlined,
@@ -23,6 +23,8 @@ import Statistics from './components/Statistics/Statistics';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import TerminalComponent from './components/Terminal/TerminalComponent';
+import { configAPI } from './services/api';
+import { ConfigImportRequest } from './types';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -36,6 +38,83 @@ const App: React.FC = () => {
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
+  // 全局监听菜单栏的导入导出消息
+  useEffect(() => {
+    const handleImportFromMenu = async (filePath: string) => {
+      console.log('[导入] 收到文件路径:', filePath);
+      try {
+        // 读取文件
+        const content = await window.electronAPI.readFile(filePath);
+        console.log('[导入] 文件内容长度:', content.length);
+
+        // 解析 JSON
+        let data;
+        try {
+          data = JSON.parse(content);
+          console.log('[导入] JSON解析成功');
+        } catch (e) {
+          console.error('[导入] JSON解析失败:', e);
+          message.error('文件格式错误，请选择有效的JSON配置文件');
+          return;
+        }
+
+        // 调用后端 API 导入
+        const request: ConfigImportRequest = {
+          format: 'json',
+          data: content,
+          overwrite: true,
+        };
+
+        console.log('[导入] 调用后端API...');
+        const response = await configAPI.importConfig(request);
+        console.log('[导入] 后端响应:', response);
+
+        message.success('配置导入成功！');
+      } catch (error) {
+        console.error('[导入] 失败:', error);
+        message.error(`导入配置失败: ${error}`);
+      }
+    };
+
+    const handleExportFromMenu = async (filePath: string) => {
+      console.log('[导出] 收到文件路径:', filePath);
+      try {
+        // 从后端获取配置
+        console.log('[导出] 调用后端API...');
+        const response = await configAPI.exportConfig('json');
+        console.log('[导出] 后端响应:', response);
+
+        const content = response.data?.content || '';
+        console.log('[导出] 配置内容长度:', content.length);
+
+        // 写入文件
+        const success = await window.electronAPI.writeFile(filePath, content);
+        console.log('[导出] 文件写入结果:', success);
+
+        if (success) {
+          message.success('配置导出成功！');
+        } else {
+          message.error('配置导出失败');
+        }
+      } catch (error) {
+        console.error('[导出] 失败:', error);
+        message.error(`导出配置失败: ${error}`);
+      }
+    };
+
+    console.log('[App] 注册导入导出监听器');
+    // 注册监听器
+    const unsubscribeImport = window.electronAPI.onImportConfig(handleImportFromMenu);
+    const unsubscribeExport = window.electronAPI.onExportConfig(handleExportFromMenu);
+
+    // 清理监听器
+    return () => {
+      console.log('[App] 清理导入导出监听器');
+      unsubscribeImport();
+      unsubscribeExport();
+    };
+  }, []);
 
   // 是否在会话管理页面
   const isSessionPage = location.pathname === '/sessions';
@@ -65,7 +144,6 @@ const App: React.FC = () => {
     if (!session) return null;
 
     const workingDirName = session.workingDirectory.split(/[\\/]/).filter(Boolean).pop() || 'Terminal';
-    const sessionShortId = session.id.substring(0, 8);
 
     return {
       key: sessionId,
@@ -74,7 +152,7 @@ const App: React.FC = () => {
           <FolderOutlined />
           <span>{workingDirName}</span>
           <Tag color={getStatusColor(session.status)} style={{ marginLeft: 4, marginRight: 0 }}>
-            {sessionShortId}
+            {session.providerName || session.id.substring(0, 8)}
           </Tag>
         </Space>
       ),
@@ -83,6 +161,7 @@ const App: React.FC = () => {
           sessionId={sessionId}
           command={session.command}
           cwd={session.workingDirectory}
+          providerName={session.providerName}
           showCard={false}
         />
       ),

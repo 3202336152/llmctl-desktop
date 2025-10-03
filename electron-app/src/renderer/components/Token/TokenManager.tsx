@@ -178,6 +178,7 @@ const TokenManager: React.FC = () => {
       title: '别名',
       dataIndex: 'alias',
       key: 'alias',
+      align: 'center' as const,
       render: (text: string, record: Token) => (
         <Space>
           <KeyOutlined />
@@ -189,17 +190,20 @@ const TokenManager: React.FC = () => {
       title: 'Token值',
       dataIndex: 'maskedValue',
       key: 'maskedValue',
+      align: 'center' as const,
       render: (text: string) => <code>{text}</code>,
     },
     {
       title: '权重',
       dataIndex: 'weight',
       key: 'weight',
+      align: 'center' as const,
     },
     {
       title: '状态',
       dataIndex: 'enabled',
       key: 'enabled',
+      align: 'center' as const,
       render: (enabled: boolean) => (
         <Tag color={enabled ? 'green' : 'red'} icon={enabled ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}>
           {enabled ? '启用' : '禁用'}
@@ -210,6 +214,7 @@ const TokenManager: React.FC = () => {
       title: '健康状态',
       dataIndex: 'healthy',
       key: 'healthy',
+      align: 'center' as const,
       render: (healthy: boolean) => (
         <div className="status-indicator">
           <div className={`status-dot ${healthy ? 'healthy' : 'unhealthy'}`}></div>
@@ -221,16 +226,19 @@ const TokenManager: React.FC = () => {
       title: '错误次数',
       dataIndex: 'errorCount',
       key: 'errorCount',
+      align: 'center' as const,
     },
     {
       title: '最后使用',
       dataIndex: 'lastUsed',
       key: 'lastUsed',
+      align: 'center' as const,
       render: (text: string) => text ? new Date(text).toLocaleString() : '未使用',
     },
     {
       title: '操作',
       key: 'action',
+      align: 'center' as const,
       render: (_: any, record: Token) => (
         <Space size="middle">
           <Button

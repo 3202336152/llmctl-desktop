@@ -9,20 +9,24 @@ interface TerminalSession {
   window: BrowserWindow;
   shell: string;
   cwd: string;
+  instanceId: number; // 添加实例ID，用于区分不同的会话实例
 }
 
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
+  private instanceCounter: number = 0; // 实例计数器
 
-  createSession(sessionId: string, window: BrowserWindow, options: {
+  async createSession(sessionId: string, window: BrowserWindow, options: {
     command?: string;
     cwd?: string;
     env?: Record<string, string>;
-  } = {}): void {
-    // 如果会话已存在，不重新创建
+  } = {}): Promise<void> {
+    // 如果会话已存在，先清理旧的并等待清理完成
     if (this.sessions.has(sessionId)) {
-      console.log('[TerminalManager] 会话已存在，跳过创建:', sessionId);
-      return;
+      console.log('[TerminalManager] 会话已存在，先清理旧会话:', sessionId);
+      this.killSession(sessionId);
+      // 等待50ms确保PTY进程完全退出
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
 
     const { command = 'cmd.exe', cwd = process.cwd(), env = {} } = options;
@@ -50,21 +54,29 @@ class TerminalManager {
 
       const ptyProcess = pty.spawn(shell, [], ptyOptions);
 
+      // 分配新的实例ID
+      const currentInstanceId = ++this.instanceCounter;
+
       this.sessions.set(sessionId, {
         id: sessionId,
         process: ptyProcess,
         window,
         shell,
         cwd,
+        instanceId: currentInstanceId,
       });
 
       ptyProcess.onData((data: string) => {
-        this.sendOutput(sessionId, data);
+        this.sendOutput(sessionId, data, currentInstanceId);
       });
 
       ptyProcess.onExit(({ exitCode }) => {
-        this.sendOutput(sessionId, `\r\n\x1b[1;31m[进程已退出，退出码: ${exitCode}]\x1b[0m\r\n`);
-        this.sessions.delete(sessionId);
+        // 只有当前实例才发送退出消息
+        const currentSession = this.sessions.get(sessionId);
+        if (currentSession && currentSession.instanceId === currentInstanceId) {
+          this.sendOutput(sessionId, `\r\n\x1b[1;31m[进程已退出，退出码: ${exitCode}]\x1b[0m\r\n`, currentInstanceId);
+          this.sessions.delete(sessionId);
+        }
       });
 
     } catch (error) {
@@ -87,9 +99,15 @@ class TerminalManager {
     }
   }
 
-  private sendOutput(sessionId: string, data: string): void {
+  private sendOutput(sessionId: string, data: string, instanceId: number): void {
     const session = this.sessions.get(sessionId);
     if (!session || session.window.isDestroyed()) {
+      return;
+    }
+
+    // 只发送匹配实例ID的输出，避免旧实例的输出干扰新实例
+    if (session.instanceId !== instanceId) {
+      console.log('[TerminalManager] 忽略旧实例的输出:', sessionId, '旧ID:', instanceId, '新ID:', session.instanceId);
       return;
     }
 

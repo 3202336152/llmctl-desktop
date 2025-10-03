@@ -16,7 +16,6 @@ import com.llmctl.service.TokenService;
 import com.llmctl.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -220,31 +219,6 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
-     * 定时清理空闲会话
-     */
-    @Scheduled(fixedRate = 300000) // 每5分钟执行一次
-    public void cleanupIdleSessions() {
-        try {
-            int idleTimeoutMinutes = getSessionIdleTimeout();
-            List<Session> idleSessions = sessionMapper.findIdleTimeoutSessions(idleTimeoutMinutes);
-
-            if (!idleSessions.isEmpty()) {
-                log.info("发现{}个空闲超时会话，开始清理", idleSessions.size());
-
-                for (Session session : idleSessions) {
-                    try {
-                        updateSessionStatus(session.getId(), "inactive");
-                    } catch (Exception e) {
-                        log.error("清理空闲会话失败: {}", session.getId(), e);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("定时清理空闲会话失败: ", e);
-        }
-    }
-
-    /**
      * 构建环境变量（用于启动进程）
      */
     private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken) {
@@ -299,19 +273,6 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         return envVars;
-    }
-
-    /**
-     * 获取会话空闲超时时间（分钟）
-     */
-    private int getSessionIdleTimeout() {
-        try {
-            String timeoutStr = globalConfigService.getConfigValue("max_session_idle_time", "3600");
-            return Integer.parseInt(timeoutStr) / 60; // 转换为分钟
-        } catch (Exception e) {
-            log.warn("获取会话空闲超时时间失败，使用默认值: ", e);
-            return 60; // 默认60分钟
-        }
     }
 
     /**

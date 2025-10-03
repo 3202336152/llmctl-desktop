@@ -98,19 +98,6 @@ const SessionManager: React.FC = () => {
     form.resetFields();
   };
 
-  const handleUpdateSessionStatus = async (sessionId: string, status: 'active' | 'inactive') => {
-    try {
-      const request: UpdateSessionStatusRequest = { status };
-      const response = await sessionAPI.updateSessionStatus(sessionId, request);
-      if (response.data) {
-        dispatch(updateSession(response.data));
-      }
-      message.success(`会话状态更新为: ${status === 'active' ? '活跃' : '非活跃'}`);
-    } catch (error) {
-      message.error(`更新会话状态失败: ${error}`);
-    }
-  };
-
   const handleTerminateSession = async (sessionId: string) => {
     try {
       await sessionAPI.terminateSession(sessionId);
@@ -141,8 +128,6 @@ const SessionManager: React.FC = () => {
     switch (status) {
       case 'active':
         return 'green';
-      case 'inactive':
-        return 'orange';
       case 'terminated':
         return 'red';
       default:
@@ -154,8 +139,6 @@ const SessionManager: React.FC = () => {
     switch (status) {
       case 'active':
         return '活跃';
-      case 'inactive':
-        return '非活跃';
       case 'terminated':
         return '已终止';
       default:
@@ -168,6 +151,7 @@ const SessionManager: React.FC = () => {
       title: '会话ID',
       dataIndex: 'id',
       key: 'id',
+      align: 'center' as const,
       render: (text: string) => (
         <Space>
           <DesktopOutlined />
@@ -179,18 +163,14 @@ const SessionManager: React.FC = () => {
       title: 'Provider',
       dataIndex: 'providerName',
       key: 'providerName',
+      align: 'center' as const,
       render: (text: string, record: Session) => text || record.providerId,
-    },
-    {
-      title: '进程ID',
-      dataIndex: 'pid',
-      key: 'pid',
-      render: (pid: number) => pid ? <code>{pid}</code> : '-',
     },
     {
       title: '工作目录',
       dataIndex: 'workingDirectory',
       key: 'workingDirectory',
+      align: 'center' as const,
       render: (text: string) => (
         <span title={text}>
           {text.length > 30 ? `${text.substring(0, 30)}...` : text}
@@ -201,11 +181,13 @@ const SessionManager: React.FC = () => {
       title: '命令',
       dataIndex: 'command',
       key: 'command',
+      align: 'center' as const,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      align: 'center' as const,
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
           {getStatusText(status)}
@@ -216,20 +198,23 @@ const SessionManager: React.FC = () => {
       title: '开始时间',
       dataIndex: 'startTime',
       key: 'startTime',
+      align: 'center' as const,
       render: (text: string) => new Date(text).toLocaleString(),
     },
     {
       title: '最后活动',
       dataIndex: 'lastActivity',
       key: 'lastActivity',
+      align: 'center' as const,
       render: (text: string) => text ? new Date(text).toLocaleString() : '-',
     },
     {
       title: '操作',
       key: 'action',
+      align: 'center' as const,
       render: (_: any, record: Session) => (
         <Space size="middle">
-          {(record.status === 'active' || record.status === 'inactive') && (
+          {record.status === 'active' && (
             <>
               <Button
                 type="link"

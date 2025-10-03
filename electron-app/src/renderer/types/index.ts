@@ -116,10 +116,9 @@ export interface ConfigExportResponse {
 }
 
 export interface ConfigImportRequest {
-  format: 'json';
-  data: {
-    providers: CreateProviderRequest[];
-  };
+  format: 'json' | 'env' | 'yaml';
+  data: string;  // JSON字符串
+  overwrite?: boolean;
 }
 
 export interface ConfigValidationResponse {

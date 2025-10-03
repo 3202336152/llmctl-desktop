@@ -103,18 +103,6 @@
         DELETE FROM sessions WHERE status = 'terminated' AND end_time &lt; #{beforeTime}
     </delete>
 
-    <!-- 查询空闲超时的Session列表 -->
-    <select id="findIdleTimeoutSessions" parameterType="int" resultMap="SessionResultMap">
-        SELECT * FROM sessions WHERE status = 'active'
-        AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
-    </select>
-
-    <!-- 批量更新空闲超时Session的状态为inactive -->
-    <update id="markIdleSessionsAsInactive" parameterType="int">
-        UPDATE sessions SET status = 'inactive', last_activity = NOW()
-        WHERE status = 'active' AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
-    </update>
-
     <!-- 统计Session总数 -->
     <select id="count" resultType="long">
         SELECT COUNT(*) FROM sessions

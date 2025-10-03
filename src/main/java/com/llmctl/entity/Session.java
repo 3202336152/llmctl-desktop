@@ -76,11 +76,6 @@ public class Session {
         ACTIVE("active"),
 
         /**
-         * 非活跃状态
-         */
-        INACTIVE("inactive"),
-
-        /**
          * 已终止状态
          */
         TERMINATED("terminated");

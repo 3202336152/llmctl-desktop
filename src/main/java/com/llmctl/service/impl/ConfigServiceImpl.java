@@ -9,10 +9,12 @@ import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.IConfigService;
 import com.llmctl.service.ProviderService;
+import com.llmctl.service.TokenService;
 import com.llmctl.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -34,6 +36,7 @@ public class ConfigServiceImpl implements IConfigService {
 
     private final IGlobalConfigService globalConfigService;
     private final ProviderService providerService;
+    private final TokenService tokenService;
     private final ProviderMapper providerMapper;
     private final TokenMapper tokenMapper;
     private final ObjectMapper objectMapper;
@@ -115,7 +118,6 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
-    @Transactional
     public ConfigImportResult importConfig(ConfigImportRequest request) {
         log.info("导入配置，格式: {}", request.getFormat());
 
@@ -143,6 +145,11 @@ public class ConfigServiceImpl implements IConfigService {
             log.error("导入配置失败: ", e);
             result.setSuccess(false);
             result.getErrors().add("导入失败: " + e.getMessage());
+        }
+
+        // 如果有错误，标记为部分成功
+        if (!result.getErrors().isEmpty()) {
+            result.setSuccess(false);
         }
 
         log.info("配置导入完成: 成功{}, 跳过{}, 错误{}",
@@ -317,20 +324,161 @@ public class ConfigServiceImpl implements IConfigService {
             @SuppressWarnings("unchecked")
             Map<String, Object> config = objectMapper.readValue(jsonData, Map.class);
 
-            // 导入活跃Provider设置
-            if (config.containsKey("activeProviderId")) {
-                String activeProviderId = (String) config.get("activeProviderId");
-                if (activeProviderId != null && providerMapper.findById(activeProviderId) != null) {
-                    globalConfigService.setActiveProviderId(activeProviderId);
-                    result.setImportedCount(result.getImportedCount() + 1);
+            // 导入Providers
+            if (config.containsKey("providers")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> providers = (List<Map<String, Object>>) config.get("providers");
+
+                for (Map<String, Object> providerConfig : providers) {
+                    try {
+                        importProviderFromConfig(providerConfig, overwrite, result);
+                    } catch (Exception e) {
+                        String providerId = (String) providerConfig.get("id");
+                        result.getErrors().add("导入Provider失败 [" + providerId + "]: " + e.getMessage());
+                        log.error("导入Provider失败: {}", providerId, e);
+                    }
                 }
             }
 
-            // TODO: 导入Provider配置需要更复杂的逻辑
-            // 这里只是示例，实际实现需要处理Token安全问题
+            // 导入活跃Provider设置
+            if (config.containsKey("activeProviderId")) {
+                String activeProviderId = (String) config.get("activeProviderId");
+                if (activeProviderId != null) {
+                    Provider provider = providerMapper.findById(activeProviderId);
+                    if (provider != null) {
+                        globalConfigService.setActiveProviderId(activeProviderId);
+                        result.setImportedCount(result.getImportedCount() + 1);
+                        log.info("成功设置活跃Provider: {}", activeProviderId);
+                    } else {
+                        result.getErrors().add("活跃Provider不存在: " + activeProviderId);
+                    }
+                }
+            }
 
         } catch (Exception e) {
             result.getErrors().add("JSON解析失败: " + e.getMessage());
+            log.error("JSON解析失败", e);
+        }
+    }
+
+    /**
+     * 从配置导入单个Provider
+     */
+    private void importProviderFromConfig(Map<String, Object> providerConfig, Boolean overwrite, ConfigImportResult result) {
+        String providerId = (String) providerConfig.get("id");
+        String name = (String) providerConfig.get("name");
+        String type = (String) providerConfig.get("type");
+
+        // 验证必需字段
+        if (DataUtils.isEmpty(providerId) || DataUtils.isEmpty(name) || DataUtils.isEmpty(type)) {
+            result.getErrors().add("Provider配置缺少必需字段: id, name, type");
+            return;
+        }
+
+        Provider existingProvider = providerMapper.findById(providerId);
+
+        // 如果Provider已存在
+        if (existingProvider != null) {
+            if (!overwrite) {
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                log.info("跳过已存在的Provider: {} ({})", name, providerId);
+                return;
+            }
+
+            // 更新现有Provider
+            UpdateProviderRequest updateRequest = new UpdateProviderRequest();
+            updateRequest.setName(name);
+            updateRequest.setDescription((String) providerConfig.get("description"));
+            updateRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
+            updateRequest.setModelName((String) providerConfig.get("modelName"));
+            updateRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
+
+            if (providerConfig.get("temperature") != null) {
+                Object tempValue = providerConfig.get("temperature");
+                if (tempValue instanceof Number) {
+                    updateRequest.setTemperature(new java.math.BigDecimal(tempValue.toString()));
+                }
+            }
+
+            try {
+                providerService.updateProvider(providerId, updateRequest);
+                result.setImportedCount(result.getImportedCount() + 1);
+                log.info("成功更新Provider: {} ({})", name, providerId);
+            } catch (Exception e) {
+                result.getErrors().add("更新Provider失败 [" + name + "]: " + e.getMessage());
+                log.error("更新Provider失败: {}", providerId, e);
+            }
+
+        } else {
+            // 创建新Provider
+            CreateProviderRequest createRequest = new CreateProviderRequest();
+            createRequest.setName(name);
+            createRequest.setDescription((String) providerConfig.get("description"));
+            createRequest.setType(type);
+            createRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
+            createRequest.setModelName((String) providerConfig.get("modelName"));
+            createRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
+
+            if (providerConfig.get("temperature") != null) {
+                Object tempValue = providerConfig.get("temperature");
+                if (tempValue instanceof Number) {
+                    createRequest.setTemperature(new java.math.BigDecimal(tempValue.toString()));
+                }
+            }
+
+            String tokenStrategyType = (String) providerConfig.get("tokenStrategyType");
+            createRequest.setTokenStrategyType(tokenStrategyType != null ? tokenStrategyType : "round-robin");
+
+            // 使用占位符Token创建Provider（因为导出时Token值被隐藏了）
+            createRequest.setToken("PLACEHOLDER_TOKEN_PLEASE_UPDATE");
+            createRequest.setTokenAlias("导入的占位符Token");
+
+            try {
+                ProviderDTO createdProvider = providerService.createProvider(createRequest);
+                result.setImportedCount(result.getImportedCount() + 1);
+
+                // 添加警告：需要更新Token
+                String warning = String.format("Provider '%s' 已导入，但Token为占位符，请手动更新Token值", name);
+                result.getWarnings().add(warning);
+
+                log.info("成功创建Provider: {} ({})", name, providerId);
+                log.warn("Provider {} 使用占位符Token，需要手动更新", providerId);
+
+                // 导入该Provider的Token配置（如果有）
+                if (providerConfig.containsKey("tokens")) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> tokens = (List<Map<String, Object>>) providerConfig.get("tokens");
+
+                    // 跳过第一个Token（已经在createProvider中创建了占位符）
+                    for (int i = 1; i < tokens.size(); i++) {
+                        Map<String, Object> tokenConfig = tokens.get(i);
+                        importTokenForProvider(providerId, tokenConfig, result);
+                    }
+                }
+
+            } catch (Exception e) {
+                result.getErrors().add("创建Provider失败 [" + name + "]: " + e.getMessage());
+                log.error("创建Provider失败: {}", name, e);
+            }
+        }
+    }
+
+    /**
+     * 为Provider导入Token配置
+     */
+    private void importTokenForProvider(String providerId, Map<String, Object> tokenConfig, ConfigImportResult result) {
+        try {
+            CreateTokenRequest tokenRequest = new CreateTokenRequest();
+            tokenRequest.setValue("PLACEHOLDER_TOKEN_PLEASE_UPDATE");
+            tokenRequest.setAlias((String) tokenConfig.get("alias"));
+            tokenRequest.setWeight((Integer) tokenConfig.getOrDefault("weight", 1));
+            tokenRequest.setEnabled((Boolean) tokenConfig.getOrDefault("enabled", true));
+
+            tokenService.createToken(providerId, tokenRequest);
+            log.info("为Provider {} 导入Token配置: {}", providerId, tokenRequest.getAlias());
+
+        } catch (Exception e) {
+            log.warn("为Provider {} 导入Token配置失败: {}", providerId, e.getMessage());
         }
     }
 

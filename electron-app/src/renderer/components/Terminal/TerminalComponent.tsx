@@ -12,6 +12,7 @@ interface TerminalComponentProps {
   command?: string;
   cwd?: string;
   env?: Record<string, string>;
+  providerName?: string;
   onClose?: () => void;
   showCard?: boolean; // 是否显示外层Card
 }
@@ -21,6 +22,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
   command,
   cwd,
   env,
+  providerName,
   onClose,
   showCard = true,
 }) => {
@@ -232,7 +234,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
 
   return (
     <Card
-      title={`终端 - 会话 ${sessionId.substring(0, 8)}`}
+      title={`终端 - ${providerName || sessionId.substring(0, 8)}`}
       style={{ marginTop: 16 }}
       extra={
         onClose && (

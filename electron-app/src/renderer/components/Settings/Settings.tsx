@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Tabs,
@@ -13,18 +13,17 @@ import {
   Col,
   Space,
   Modal,
-  Upload,
   Typography,
 } from 'antd';
 import {
   ExportOutlined,
   ImportOutlined,
-  UploadOutlined,
   DownloadOutlined,
   InfoCircleOutlined,
+  FileOutlined,
 } from '@ant-design/icons';
 import { configAPI } from '../../services/api';
-import { ConfigExportResponse, ConfigImportRequest } from '../../types';
+import { ConfigImportRequest } from '../../types';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -34,11 +33,11 @@ const { Text } = Typography;
 const Settings: React.FC = () => {
   const [form] = Form.useForm();
   const [exportLoading, setExportLoading] = useState(false);
-  const [importLoading, setImportLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportContent, setExportContent] = useState<string>('');
-  const [exportFormat, setExportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('bash');
+  const [exportFormat, setExportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
 
+  // 导出配置（显示在弹窗）
   const handleExportConfig = async (format: 'bash' | 'powershell' | 'cmd' | 'json') => {
     try {
       setExportLoading(true);
@@ -53,6 +52,7 @@ const Settings: React.FC = () => {
     }
   };
 
+  // 下载配置文件（浏览器下载）
   const handleDownloadConfig = () => {
     const fileExtensions = {
       bash: '.sh',
@@ -71,38 +71,6 @@ const Settings: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     message.success('配置文件下载成功');
-  };
-
-  const handleImportConfig = async (file: File) => {
-    try {
-      setImportLoading(true);
-      const text = await file.text();
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        message.error('文件格式错误，请选择有效的JSON配置文件');
-        return;
-      }
-
-      const request: ConfigImportRequest = {
-        format: 'json',
-        data,
-      };
-
-      await configAPI.importConfig(request);
-      message.success('配置导入成功');
-    } catch (error) {
-      message.error(`导入配置失败: ${error}`);
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const beforeUpload = (file: File) => {
-    handleImportConfig(file);
-    return false; // 阻止自动上传
   };
 
   const applicationSettings = (
@@ -172,64 +140,54 @@ const Settings: React.FC = () => {
     <Card title="数据管理">
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <div>
-          <h4>配置导出</h4>
+          <h4>
+            <FileOutlined /> 配置导入导出
+          </h4>
           <Text type="secondary">
-            将当前的Provider配置导出为不同格式的文件，用于备份或在其他环境中使用。
+            <div>使用菜单栏的 <Text strong>文件 → 导入配置 (Ctrl+O)</Text> 和 <Text strong>文件 → 导出配置 (Ctrl+S)</Text> 可以快速导入导出配置文件。</div>
+            <div style={{ marginTop: 8 }}>也可以使用下面的按钮查看和下载不同格式的配置。</div>
+          </Text>
+        </div>
+
+        <Divider />
+
+        <div>
+          <h4>查看和导出配置</h4>
+          <Text type="secondary">
+            将当前的 Provider 配置导出为不同格式的文件，用于备份或在其他环境中使用。
           </Text>
           <div style={{ marginTop: 16 }}>
             <Space wrap>
               <Button
                 icon={<ExportOutlined />}
+                onClick={() => handleExportConfig('json')}
+                loading={exportLoading}
+                type="primary"
+              >
+                查看 JSON 配置
+              </Button>
+              <Button
+                icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('bash')}
                 loading={exportLoading}
               >
-                导出为 Bash 脚本
+                查看 Bash 脚本
               </Button>
               <Button
                 icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('powershell')}
                 loading={exportLoading}
               >
-                导出为 PowerShell 脚本
+                查看 PowerShell 脚本
               </Button>
               <Button
                 icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('cmd')}
                 loading={exportLoading}
               >
-                导出为 CMD 脚本
-              </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => handleExportConfig('json')}
-                loading={exportLoading}
-              >
-                导出为 JSON 文件
+                查看 CMD 脚本
               </Button>
             </Space>
-          </div>
-        </div>
-
-        <Divider />
-
-        <div>
-          <h4>配置导入</h4>
-          <Text type="secondary">
-            从JSON配置文件导入Provider设置。注意：导入将覆盖现有配置。
-          </Text>
-          <div style={{ marginTop: 16 }}>
-            <Upload
-              beforeUpload={beforeUpload}
-              accept=".json"
-              showUploadList={false}
-            >
-              <Button
-                icon={<ImportOutlined />}
-                loading={importLoading}
-              >
-                从 JSON 文件导入
-              </Button>
-            </Upload>
           </div>
         </div>
 

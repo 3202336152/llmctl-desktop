@@ -253,36 +253,10 @@ public class SessionService {
     public SessionStatistics getSessionStatistics() {
         SessionStatistics statistics = new SessionStatistics();
         statistics.setActiveCount(sessionMapper.countByStatus("active"));
-        statistics.setInactiveCount(sessionMapper.countByStatus("inactive"));
         statistics.setTerminatedCount(sessionMapper.countByStatus("terminated"));
         statistics.setTotalCount(sessionMapper.count());
 
         return statistics;
-    }
-
-    /**
-     * 定时清理空闲会话
-     */
-    @Scheduled(fixedRate = 300000) // 每5分钟执行一次
-    public void cleanupIdleSessions() {
-        try {
-            int idleTimeoutMinutes = getSessionIdleTimeout();
-            List<Session> idleSessions = sessionMapper.findIdleTimeoutSessions(idleTimeoutMinutes);
-
-            if (!idleSessions.isEmpty()) {
-                log.info("发现{}个空闲超时会话，开始清理", idleSessions.size());
-
-                for (Session session : idleSessions) {
-                    try {
-                        updateSessionStatus(session.getId(), "inactive");
-                    } catch (Exception e) {
-                        log.error("清理空闲会话失败: {}", session.getId(), e);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("定时清理空闲会话失败: ", e);
-        }
     }
 
     /**
@@ -383,19 +357,6 @@ public class SessionService {
     }
 
     /**
-     * 获取会话空闲超时时间（分钟）
-     */
-    private int getSessionIdleTimeout() {
-        try {
-            String timeoutStr = globalConfigService.getConfigValue("max_session_idle_time", "3600");
-            return Integer.parseInt(timeoutStr) / 60; // 转换为分钟
-        } catch (Exception e) {
-            log.warn("获取会话空闲超时时间失败，使用默认值: ", e);
-            return 60; // 默认60分钟
-        }
-    }
-
-    /**
      * 将Session实体转换为DTO
      */
     private SessionDTO convertToDTO(Session session) {
@@ -437,16 +398,12 @@ public class SessionService {
      */
     public static class SessionStatistics {
         private long activeCount;
-        private long inactiveCount;
         private long terminatedCount;
         private long totalCount;
 
         // Getters and Setters
         public long getActiveCount() { return activeCount; }
         public void setActiveCount(long activeCount) { this.activeCount = activeCount; }
-
-        public long getInactiveCount() { return inactiveCount; }
-        public void setInactiveCount(long inactiveCount) { this.inactiveCount = inactiveCount; }
 
         public long getTerminatedCount() { return terminatedCount; }
         public void setTerminatedCount(long terminatedCount) { this.terminatedCount = terminatedCount; }

@@ -122,11 +122,11 @@ const ProviderManager: React.FC = () => {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: Provider) => (
+      align: 'center' as const,
+      render: (text: string) => (
         <Space>
           <ApiOutlined />
           <span>{text}</span>
-          {record.isActive && <Tag color="green">活跃</Tag>}
         </Space>
       ),
     },
@@ -134,6 +134,7 @@ const ProviderManager: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
+      align: 'center' as const,
       render: (type: string) => {
         const typeColors: Record<string, string> = {
           anthropic: 'blue',
@@ -148,11 +149,13 @@ const ProviderManager: React.FC = () => {
       title: '模型',
       dataIndex: 'modelName',
       key: 'modelName',
+      align: 'center' as const,
     },
     {
       title: 'Base URL',
       dataIndex: 'baseUrl',
       key: 'baseUrl',
+      align: 'center' as const,
       render: (url: string) => (
         <Tooltip title={url}>
           <span>{url.length > 30 ? `${url.substring(0, 30)}...` : url}</span>
@@ -163,16 +166,19 @@ const ProviderManager: React.FC = () => {
       title: 'Max Tokens',
       dataIndex: 'maxTokens',
       key: 'maxTokens',
+      align: 'center' as const,
     },
     {
       title: 'Temperature',
       dataIndex: 'temperature',
       key: 'temperature',
+      align: 'center' as const,
     },
     {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
+      align: 'center' as const,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'} icon={isActive ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}>
           {isActive ? '启用' : '禁用'}
@@ -182,6 +188,7 @@ const ProviderManager: React.FC = () => {
     {
       title: '操作',
       key: 'action',
+      align: 'center' as const,
       render: (_: any, record: Provider) => (
         <Space size="middle">
           <Button
@@ -243,9 +250,6 @@ const ProviderManager: React.FC = () => {
           form={form}
           layout="vertical"
           initialValues={{
-            type: 'anthropic',
-            baseUrl: 'https://api.anthropic.com',
-            modelName: 'claude-sonnet-4-5-20250929',
             maxTokens: 4096,
             temperature: 0.7,
             isActive: true,

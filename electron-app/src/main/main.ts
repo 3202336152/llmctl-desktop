@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { createMenu } from './menu';
 import terminalManager from './services/terminalManager';
 
@@ -94,6 +95,34 @@ ipcMain.handle('close-window', () => {
   mainWindow?.close();
 });
 
+// ==================== 文件操作 IPC Handlers ====================
+
+/**
+ * 读取文件内容
+ */
+ipcMain.handle('read-file', async (_event, filePath: string) => {
+  try {
+    const content = await fs.promises.readFile(filePath, 'utf-8');
+    return content;
+  } catch (error) {
+    console.error('[IPC] read-file 失败:', error);
+    throw error;
+  }
+});
+
+/**
+ * 写入文件内容
+ */
+ipcMain.handle('write-file', async (_event, filePath: string, content: string) => {
+  try {
+    await fs.promises.writeFile(filePath, content, 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('[IPC] write-file 失败:', error);
+    return false;
+  }
+});
+
 // ==================== 终端 IPC Handlers ====================
 
 ipcMain.handle('terminal-create', async (_event, options: {
@@ -107,7 +136,7 @@ ipcMain.handle('terminal-create', async (_event, options: {
       throw new Error('Main window not available');
     }
 
-    terminalManager.createSession(options.sessionId, mainWindow, {
+    await terminalManager.createSession(options.sessionId, mainWindow, {
       command: options.command,
       cwd: options.cwd,
       env: options.env,
