@@ -30,6 +30,11 @@ public class SessionDTO {
     private String providerName;
 
     /**
+     * 关联的Token ID
+     */
+    private String tokenId;
+
+    /**
      * 进程ID
      */
     private Integer pid;

@@ -27,6 +27,11 @@ public class Session {
     private String providerId;
 
     /**
+     * 关联的Token ID
+     */
+    private String tokenId;
+
+    /**
      * 进程ID
      */
     private Integer pid;
@@ -74,11 +79,6 @@ public class Session {
          * 活跃状态
          */
         ACTIVE("active"),
-
-        /**
-         * 非活跃状态
-         */
-        INACTIVE("inactive"),
 
         /**
          * 已终止状态

@@ -12,8 +12,8 @@ export interface ElectronAPI {
   closeWindow(): Promise<void>;
 
   // 文件操作
-  openFile(): Promise<string | null>;
-  saveFile(content: string): Promise<boolean>;
+  readFile(filePath: string): Promise<string>;
+  writeFile(filePath: string, content: string): Promise<boolean>;
 
   // 系统通知
   showNotification(title: string, body: string): void;
@@ -38,6 +38,16 @@ export interface ElectronAPI {
 
   // 监听终端输出
   onTerminalOutput(callback: (data: { sessionId: string; data: string }) => void): () => void;
+
+  // 监听 Token 切换要求
+  onTokenSwitchRequired(callback: (data: { sessionId: string; errorMessage: string }) => void): () => void;
+
+  // ==================== 配置导入导出 ====================
+  // 监听导入配置消息
+  onImportConfig(callback: (filePath: string) => void): () => void;
+
+  // 监听导出配置消息
+  onExportConfig(callback: (filePath: string) => void): () => void;
 }
 
 // 暴露API到渲染进程
@@ -52,8 +62,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke('close-window'),
 
   // 文件操作
-  openFile: () => ipcRenderer.invoke('open-file'),
-  saveFile: (content: string) => ipcRenderer.invoke('save-file', content),
+  readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
+  writeFile: (filePath: string, content: string) => ipcRenderer.invoke('write-file', filePath, content),
 
   // 系统通知
   showNotification: (title: string, body: string) => {
@@ -78,6 +88,40 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 返回取消监听函数
     return () => {
       ipcRenderer.removeListener('terminal-output', listener);
+    };
+  },
+
+  onTokenSwitchRequired: (callback) => {
+    const listener = (_event: any, data: { sessionId: string; errorMessage: string }) => {
+      callback(data);
+    };
+    ipcRenderer.on('token-switch-required', listener);
+
+    return () => {
+      ipcRenderer.removeListener('token-switch-required', listener);
+    };
+  },
+
+  // ==================== 配置导入导出 ====================
+  onImportConfig: (callback) => {
+    const listener = (_event: any, filePath: string) => {
+      callback(filePath);
+    };
+    ipcRenderer.on('import-config', listener);
+
+    return () => {
+      ipcRenderer.removeListener('import-config', listener);
+    };
+  },
+
+  onExportConfig: (callback) => {
+    const listener = (_event: any, filePath: string) => {
+      callback(filePath);
+    };
+    ipcRenderer.on('export-config', listener);
+
+    return () => {
+      ipcRenderer.removeListener('export-config', listener);
     };
   }
 } as ElectronAPI);

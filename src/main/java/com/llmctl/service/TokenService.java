@@ -1,6 +1,7 @@
 package com.llmctl.service;
 
 import com.llmctl.dto.CreateTokenRequest;
+import com.llmctl.dto.UpdateTokenRequest;
 import com.llmctl.dto.TokenDTO;
 import com.llmctl.entity.Token;
 
@@ -59,7 +60,7 @@ public interface TokenService {
      * @return 更新后的Token DTO
      * @throws IllegalArgumentException 如果Token不存在或别名冲突
      */
-    TokenDTO updateToken(String providerId, String tokenId, CreateTokenRequest request);
+    TokenDTO updateToken(String providerId, String tokenId, UpdateTokenRequest request);
 
     /**
      * 删除Token

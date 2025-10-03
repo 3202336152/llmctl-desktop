@@ -10,13 +10,13 @@ import com.llmctl.exception.ResourceNotFoundException;
 import com.llmctl.exception.ServiceException;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.SessionMapper;
+import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.ISessionService;
 import com.llmctl.service.TokenService;
 import com.llmctl.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +42,7 @@ public class SessionServiceImpl implements ISessionService {
 
     private final SessionMapper sessionMapper;
     private final ProviderMapper providerMapper;
+    private final TokenMapper tokenMapper;
     private final TokenService tokenService;
     private final IGlobalConfigService globalConfigService;
 
@@ -87,7 +88,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("Provider", request.getProviderId());
         }
 
-        // 选择可用的Token
+        // 选择可用的Token并保存Token ID
         Token selectedToken = tokenService.selectToken(request.getProviderId());
         if (selectedToken == null) {
             throw new BusinessException("没有可用的Token: " + request.getProviderId());
@@ -97,6 +98,7 @@ public class SessionServiceImpl implements ISessionService {
         Session session = new Session();
         session.setId(IdGenerator.generateSessionId());
         session.setProviderId(request.getProviderId());
+        session.setTokenId(selectedToken.getId()); // 保存选中的Token ID
         session.setWorkingDirectory(request.getWorkingDirectory());
         session.setCommand(request.getCommand());
         session.setStatus(Session.SessionStatus.ACTIVE);
@@ -211,37 +213,17 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("Provider", session.getProviderId());
         }
 
-        Token selectedToken = tokenService.selectToken(session.getProviderId());
+        // 直接使用保存的Token ID，避免重复选择
+        if (session.getTokenId() == null) {
+            throw new BusinessException("会话未关联Token: " + sessionId);
+        }
+
+        Token selectedToken = tokenMapper.findById(session.getTokenId());
         if (selectedToken == null) {
-            throw new BusinessException("没有可用的Token: " + session.getProviderId());
+            throw new BusinessException("Token不存在: " + session.getTokenId());
         }
 
         return buildEnvironmentVariables(provider, selectedToken);
-    }
-
-    /**
-     * 定时清理空闲会话
-     */
-    @Scheduled(fixedRate = 300000) // 每5分钟执行一次
-    public void cleanupIdleSessions() {
-        try {
-            int idleTimeoutMinutes = getSessionIdleTimeout();
-            List<Session> idleSessions = sessionMapper.findIdleTimeoutSessions(idleTimeoutMinutes);
-
-            if (!idleSessions.isEmpty()) {
-                log.info("发现{}个空闲超时会话，开始清理", idleSessions.size());
-
-                for (Session session : idleSessions) {
-                    try {
-                        updateSessionStatus(session.getId(), "inactive");
-                    } catch (Exception e) {
-                        log.error("清理空闲会话失败: {}", session.getId(), e);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("定时清理空闲会话失败: ", e);
-        }
     }
 
     /**
@@ -302,19 +284,6 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
-     * 获取会话空闲超时时间（分钟）
-     */
-    private int getSessionIdleTimeout() {
-        try {
-            String timeoutStr = globalConfigService.getConfigValue("max_session_idle_time", "3600");
-            return Integer.parseInt(timeoutStr) / 60; // 转换为分钟
-        } catch (Exception e) {
-            log.warn("获取会话空闲超时时间失败，使用默认值: ", e);
-            return 60; // 默认60分钟
-        }
-    }
-
-    /**
      * 将Session实体转换为DTO
      */
     private SessionDTO convertToDTO(Session session) {
@@ -325,6 +294,7 @@ public class SessionServiceImpl implements ISessionService {
         SessionDTO dto = new SessionDTO();
         dto.setId(session.getId());
         dto.setProviderId(session.getProviderId());
+        dto.setTokenId(session.getTokenId());
         dto.setPid(session.getPid());
         dto.setWorkingDirectory(session.getWorkingDirectory());
         dto.setCommand(session.getCommand());

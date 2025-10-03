@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag } from 'antd';
+import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag, message, Modal } from 'antd';
 import {
   DatabaseOutlined,
   KeyOutlined,
@@ -14,7 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from './store';
 import type { RootState } from './store';
-import { closeTerminal, setActiveTab } from './store/slices/sessionSlice';
+import { closeTerminal, setActiveTab, addSession, removeSession, openTerminal } from './store/slices/sessionSlice';
 import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
@@ -23,6 +23,8 @@ import Statistics from './components/Statistics/Statistics';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import TerminalComponent from './components/Terminal/TerminalComponent';
+import { configAPI, sessionAPI } from './services/api';
+import { ConfigImportRequest, StartSessionRequest } from './types';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -36,6 +38,143 @@ const App: React.FC = () => {
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
+  // 全局监听菜单栏的导入导出消息
+  useEffect(() => {
+    const handleImportFromMenu = async (filePath: string) => {
+      console.log('[导入] 收到文件路径:', filePath);
+      try {
+        // 读取文件
+        const content = await window.electronAPI.readFile(filePath);
+        console.log('[导入] 文件内容长度:', content.length);
+
+        // 解析 JSON
+        let data;
+        try {
+          data = JSON.parse(content);
+          console.log('[导入] JSON解析成功');
+        } catch (e) {
+          console.error('[导入] JSON解析失败:', e);
+          message.error('文件格式错误，请选择有效的JSON配置文件');
+          return;
+        }
+
+        // 调用后端 API 导入
+        const request: ConfigImportRequest = {
+          format: 'json',
+          data: content,
+          overwrite: true,
+        };
+
+        console.log('[导入] 调用后端API...');
+        const response = await configAPI.importConfig(request);
+        console.log('[导入] 后端响应:', response);
+
+        message.success('配置导入成功！');
+      } catch (error) {
+        console.error('[导入] 失败:', error);
+        message.error(`导入配置失败: ${error}`);
+      }
+    };
+
+    const handleExportFromMenu = async (filePath: string) => {
+      console.log('[导出] 收到文件路径:', filePath);
+      try {
+        // 从后端获取配置
+        console.log('[导出] 调用后端API...');
+        const response = await configAPI.exportConfig('json');
+        console.log('[导出] 后端响应:', response);
+
+        const content = response.data?.content || '';
+        console.log('[导出] 配置内容长度:', content.length);
+
+        // 写入文件
+        const success = await window.electronAPI.writeFile(filePath, content);
+        console.log('[导出] 文件写入结果:', success);
+
+        if (success) {
+          message.success('配置导出成功！');
+        } else {
+          message.error('配置导出失败');
+        }
+      } catch (error) {
+        console.error('[导出] 失败:', error);
+        message.error(`导出配置失败: ${error}`);
+      }
+    };
+
+    console.log('[App] 注册导入导出监听器');
+    // 注册监听器
+    const unsubscribeImport = window.electronAPI.onImportConfig(handleImportFromMenu);
+    const unsubscribeExport = window.electronAPI.onExportConfig(handleExportFromMenu);
+
+    // 清理监听器
+    return () => {
+      console.log('[App] 清理导入导出监听器');
+      unsubscribeImport();
+      unsubscribeExport();
+    };
+  }, []);
+
+  // 监听 Token 切换要求
+  useEffect(() => {
+    const handleTokenSwitchRequired = async (data: { sessionId: string; errorMessage: string }) => {
+      try {
+        // 获取当前会话信息
+        const failedSession = sessions.find(s => s.id === data.sessionId);
+        if (!failedSession) {
+          message.error('无法找到失效的会话');
+          return;
+        }
+
+        // 显示确认对话框
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: 'Token 已失效',
+            content: `当前 Token 已失效，是否自动重启会话以切换到新 Token？`,
+            okText: '重启会话',
+            cancelText: '稍后手动处理',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+
+        if (!confirmed) {
+          return;
+        }
+
+        // 1. 关闭旧终端
+        dispatch(closeTerminal(data.sessionId));
+
+        // 2. 删除旧会话（直接从数据库清除，不保留记录）
+        await sessionAPI.deleteSession(data.sessionId);
+        dispatch(removeSession(data.sessionId));
+
+        // 3. 创建新会话（使用相同的配置）
+        const newSessionRequest: StartSessionRequest = {
+          providerId: failedSession.providerId,
+          workingDirectory: failedSession.workingDirectory,
+          command: failedSession.command,
+        };
+
+        const response = await sessionAPI.startSession(newSessionRequest);
+        if (response.data) {
+          dispatch(addSession(response.data));
+          dispatch(openTerminal(response.data.id));
+          message.success('会话已重启，已切换到新 Token');
+        }
+      } catch (error) {
+        console.error('[App] 重启会话失败:', error);
+        message.error(`重启会话失败: ${error}`);
+      }
+    };
+
+    const unsubscribe = window.electronAPI.onTokenSwitchRequired(handleTokenSwitchRequired);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [sessions, dispatch]);
 
   // 是否在会话管理页面
   const isSessionPage = location.pathname === '/sessions';
@@ -65,7 +204,6 @@ const App: React.FC = () => {
     if (!session) return null;
 
     const workingDirName = session.workingDirectory.split(/[\\/]/).filter(Boolean).pop() || 'Terminal';
-    const sessionShortId = session.id.substring(0, 8);
 
     return {
       key: sessionId,
@@ -74,7 +212,7 @@ const App: React.FC = () => {
           <FolderOutlined />
           <span>{workingDirName}</span>
           <Tag color={getStatusColor(session.status)} style={{ marginLeft: 4, marginRight: 0 }}>
-            {sessionShortId}
+            {session.providerName || session.id.substring(0, 8)}
           </Tag>
         </Space>
       ),
@@ -83,6 +221,7 @@ const App: React.FC = () => {
           sessionId={sessionId}
           command={session.command}
           cwd={session.workingDirectory}
+          providerName={session.providerName}
           showCard={false}
         />
       ),
@@ -224,7 +363,7 @@ const App: React.FC = () => {
                     height: 'calc(100vh - 160px)',
                     minHeight: '750px',
                   }}
-                  bodyStyle={{ padding: 0, height: '100%' }}
+                  styles={{ body: { padding: 0, height: '100%' } }}
                 >
                   <Tabs
                     type="editable-card"

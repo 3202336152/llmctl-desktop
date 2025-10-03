@@ -1,4 +1,4 @@
-import { Menu, MenuItemConstructorOptions, app, shell } from 'electron';
+import { Menu, MenuItemConstructorOptions, app, shell, BrowserWindow, dialog } from 'electron';
 
 export function createMenu(): Menu {
   const template: MenuItemConstructorOptions[] = [
@@ -7,22 +7,52 @@ export function createMenu(): Menu {
       submenu: [
         {
           label: '导入配置',
-          accelerator: 'CmdOrCtrl+I',
-          click: () => {
-            // TODO: 实现导入配置功能
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+
+            const result = await dialog.showOpenDialog(win, {
+              title: '导入配置文件',
+              filters: [
+                { name: 'JSON配置文件', extensions: ['json'] },
+                { name: '所有文件', extensions: ['*'] }
+              ],
+              properties: ['openFile']
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              // 发送消息到渲染进程处理导入
+              win.webContents.send('import-config', result.filePaths[0]);
+            }
           }
         },
         {
           label: '导出配置',
-          accelerator: 'CmdOrCtrl+E',
-          click: () => {
-            // TODO: 实现导出配置功能
+          accelerator: 'CmdOrCtrl+S',
+          click: async () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+
+            const result = await dialog.showSaveDialog(win, {
+              title: '导出配置文件',
+              defaultPath: 'llmctl-config.json',
+              filters: [
+                { name: 'JSON配置文件', extensions: ['json'] },
+                { name: '所有文件', extensions: ['*'] }
+              ]
+            });
+
+            if (!result.canceled && result.filePath) {
+              // 发送消息到渲染进程处理导出
+              win.webContents.send('export-config', result.filePath);
+            }
           }
         },
         { type: 'separator' },
         {
           label: '退出',
-          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
           click: () => {
             app.quit();
           }
@@ -30,15 +60,111 @@ export function createMenu(): Menu {
       ]
     },
     {
-      label: '编辑',
+      label: '会话',
       submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
+        {
+          label: '启动新会话',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.send('new-session');
+          }
+        },
+        {
+          label: '查看所有会话',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/sessions';
+            `);
+          }
+        },
         { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '复制' },
-        { role: 'paste', label: '粘贴' },
-        { role: 'selectAll', label: '全选' }
+        {
+          label: '终止所有会话',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+
+            dialog.showMessageBox(win, {
+              type: 'warning',
+              title: '确认操作',
+              message: '确定要终止所有活跃会话吗？',
+              detail: '此操作将终止所有正在运行的会话，无法恢复。',
+              buttons: ['取消', '确定终止'],
+              defaultId: 0,
+              cancelId: 0
+            }).then(result => {
+              if (result.response === 1) {
+                win.webContents.send('terminate-all-sessions');
+              }
+            });
+          }
+        }
+      ]
+    },
+    {
+      label: '导航',
+      submenu: [
+        {
+          label: 'Provider管理',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/providers';
+            `);
+          }
+        },
+        {
+          label: 'Token管理',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/tokens';
+            `);
+          }
+        },
+        {
+          label: '会话管理',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/sessions';
+            `);
+          }
+        },
+        {
+          label: '统计信息',
+          accelerator: 'CmdOrCtrl+4',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/statistics';
+            `);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '系统设置',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+            win.webContents.executeJavaScript(`
+              window.location.hash = '#/settings';
+            `);
+          }
+        }
       ]
     },
     {
@@ -56,48 +182,55 @@ export function createMenu(): Menu {
       ]
     },
     {
-      label: '工具',
-      submenu: [
-        {
-          label: 'Provider管理',
-          click: () => {
-            // TODO: 切换到Provider管理页面
-          }
-        },
-        {
-          label: 'Token管理',
-          click: () => {
-            // TODO: 切换到Token管理页面
-          }
-        },
-        {
-          label: '会话管理',
-          click: () => {
-            // TODO: 切换到会话管理页面
-          }
-        },
-        { type: 'separator' },
-        {
-          label: '系统设置',
-          click: () => {
-            // TODO: 打开设置页面
-          }
-        }
-      ]
-    },
-    {
       label: '帮助',
       submenu: [
         {
-          label: '关于 LLMctl',
+          label: '使用文档',
           click: () => {
-            // TODO: 打开关于对话框
+            shell.openExternal('https://github.com/your-repo/llmctl/wiki');
           }
         },
         {
           label: '项目主页',
           click: () => {
             shell.openExternal('https://github.com/your-repo/llmctl');
+          }
+        },
+        {
+          label: '报告问题',
+          click: () => {
+            shell.openExternal('https://github.com/your-repo/llmctl/issues');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '关于 LLMctl',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+
+            dialog.showMessageBox(win, {
+              type: 'info',
+              title: '关于 LLMctl',
+              message: 'LLMctl - LLM控制系统',
+              detail: `版本: ${app.getVersion()}\n\n基于 Electron + Spring Boot 构建的桌面应用程序\n用于管理多个 LLM Provider、Token 和会话。\n\n© 2025 LLMctl Team`,
+              buttons: ['确定']
+            });
+          }
+        },
+        {
+          label: '检查更新',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (!win) return;
+
+            dialog.showMessageBox(win, {
+              type: 'info',
+              title: '检查更新',
+              message: '当前已是最新版本',
+              detail: `版本: ${app.getVersion()}`,
+              buttons: ['确定']
+            });
           }
         }
       ]
@@ -120,15 +253,6 @@ export function createMenu(): Menu {
         { role: 'quit', label: '退出 LLMctl' }
       ]
     });
-
-    // Window menu
-    template[4].submenu = [
-      { role: 'close', label: '关闭' },
-      { role: 'minimize', label: '最小化' },
-      { role: 'zoom', label: '缩放' },
-      { type: 'separator' },
-      { role: 'front', label: '前置全部窗口' }
-    ];
   }
 
   return Menu.buildFromTemplate(template);

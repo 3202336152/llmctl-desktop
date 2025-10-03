@@ -1,6 +1,7 @@
 package com.llmctl.service.impl;
 
 import com.llmctl.dto.CreateTokenRequest;
+import com.llmctl.dto.UpdateTokenRequest;
 import com.llmctl.dto.TokenDTO;
 import com.llmctl.entity.Provider;
 import com.llmctl.entity.Token;
@@ -116,7 +117,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     @Transactional
-    public TokenDTO updateToken(String providerId, String tokenId, CreateTokenRequest request) {
+    public TokenDTO updateToken(String providerId, String tokenId, UpdateTokenRequest request) {
         log.info("更新Token: {} (ID: {})", request.getAlias(), tokenId);
 
         // 检查Token是否存在且属于指定Provider
@@ -125,14 +126,14 @@ public class TokenServiceImpl implements TokenService {
             throw new IllegalArgumentException("Token不存在或不属于指定Provider: " + tokenId);
         }
 
-        // 检查别名是否冲突
+        // 检查别名是否冲突（只有在提供了新别名且与原别名不同时才检查）
         if (StringUtils.hasText(request.getAlias()) &&
             !request.getAlias().equals(existingToken.getAlias()) &&
             tokenMapper.existsByProviderIdAndAliasAndIdNot(providerId, request.getAlias(), tokenId)) {
             throw new IllegalArgumentException("Token别名已存在: " + request.getAlias());
         }
 
-        // 更新字段
+        // 只更新提供的字段
         if (StringUtils.hasText(request.getValue())) {
             existingToken.setValue(encryptTokenValue(request.getValue()));
         }
@@ -144,6 +145,9 @@ public class TokenServiceImpl implements TokenService {
         }
         if (request.getEnabled() != null) {
             existingToken.setEnabled(request.getEnabled());
+        }
+        if (request.getHealthy() != null) {
+            existingToken.setHealthy(request.getHealthy());
         }
 
         existingToken.setUpdatedAt(LocalDateTime.now());
@@ -195,6 +199,15 @@ public class TokenServiceImpl implements TokenService {
             return null;
         }
 
+        log.info("📋 [可用Token] Provider: {} | 总数: {} | Token列表: {}",
+                providerId, availableTokens.size(),
+                availableTokens.stream()
+                        .map(t -> String.format("%s(权重:%d,健康:%s)",
+                                t.getAlias() != null ? t.getAlias() : "未命名",
+                                t.getWeight(),
+                                t.getHealthy()))
+                        .collect(Collectors.joining(", ")));
+
         // 根据策略选择Token
         Token selectedToken = null;
         Provider.TokenStrategyType strategy = provider.getTokenStrategyType();
@@ -223,7 +236,12 @@ public class TokenServiceImpl implements TokenService {
             // TODO: 异步更新最后使用时间（暂时禁用以避免事务锁冲突）
             // 注意：由于自调用AOP不生效，且会导致数据库锁等待，暂时禁用此功能
             // updateTokenLastUsedAsync(selectedToken.getId());
-            log.debug("选择Token: {} (策略: {})", selectedToken.getAlias(), strategy);
+            log.info("✅ [Token选择] Provider: {} | 策略: {} | 选中Token: {} (ID: {}) | 权重: {} | 健康: {}",
+                    providerId, strategy,
+                    selectedToken.getAlias() != null ? selectedToken.getAlias() : "未命名",
+                    selectedToken.getId().substring(0, 8) + "...",
+                    selectedToken.getWeight(),
+                    selectedToken.getHealthy());
         }
 
         return selectedToken;
@@ -245,8 +263,33 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void updateTokenHealth(String tokenId, boolean healthy) {
-        log.debug("更新Token健康状态: {} -> {}", tokenId, healthy);
-        tokenMapper.updateHealthStatus(tokenId, healthy);
+        log.info("📝 [更新Token健康状态] Token ID: {} | 健康状态: {} -> {}", tokenId, "?", healthy);
+
+        // 查询当前状态
+        Token token = tokenMapper.findById(tokenId);
+        if (token == null) {
+            log.error("❌ [更新Token健康状态失败] Token不存在: {}", tokenId);
+            throw new ResourceNotFoundException("Token", tokenId);
+        }
+
+        log.info("📝 [更新前状态] Token: {} | 当前健康: {} | 目标健康: {}",
+                token.getAlias(), token.getHealthy(), healthy);
+
+        int result = tokenMapper.updateHealthStatus(tokenId, healthy);
+
+        if (result > 0) {
+            log.info("✅ [更新Token健康状态成功] Token: {} | 新状态: {} | 影响行数: {}",
+                    token.getAlias(), healthy, result);
+
+            // 再次查询验证
+            Token updatedToken = tokenMapper.findById(tokenId);
+            if (updatedToken != null) {
+                log.info("🔍 [验证更新结果] Token: {} | 数据库实际状态: healthy={}, enabled={}",
+                        updatedToken.getAlias(), updatedToken.getHealthy(), updatedToken.getEnabled());
+            }
+        } else {
+            log.error("❌ [更新Token健康状态失败] Token: {} | 影响行数: 0", token.getAlias());
+        }
     }
 
     @Override

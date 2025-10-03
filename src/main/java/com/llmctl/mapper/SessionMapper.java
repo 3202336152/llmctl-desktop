@@ -129,22 +129,6 @@ public interface SessionMapper {
     int deleteTerminatedBefore(@Param("beforeTime") LocalDateTime beforeTime);
 
     /**
-     * 查询空闲超时的Session列表
-     *
-     * @param idleTimeoutMinutes 空闲超时时间（分钟）
-     * @return 空闲超时的Session列表
-     */
-    List<Session> findIdleTimeoutSessions(@Param("idleTimeoutMinutes") int idleTimeoutMinutes);
-
-    /**
-     * 批量更新空闲超时Session的状态为inactive
-     *
-     * @param idleTimeoutMinutes 空闲超时时间（分钟）
-     * @return 影响的行数
-     */
-    int markIdleSessionsAsInactive(@Param("idleTimeoutMinutes") int idleTimeoutMinutes);
-
-    /**
      * 统计Session总数
      *
      * @return Session总数

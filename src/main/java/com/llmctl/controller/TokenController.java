@@ -4,6 +4,7 @@ import com.llmctl.dto.*;
 import com.llmctl.service.TokenService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -117,7 +118,7 @@ public class TokenController {
     public ResponseEntity<ApiResponse<TokenDTO>> updateToken(
             @PathVariable @NotBlank(message = "Provider ID不能为空") String providerId,
             @PathVariable @NotBlank(message = "Token ID不能为空") String tokenId,
-            @Valid @RequestBody CreateTokenRequest request) {
+            @Valid @RequestBody UpdateTokenRequest request) {
         log.info("更新Token: {} (Provider: {})", tokenId, providerId);
 
         TokenDTO token = tokenService.updateToken(providerId, tokenId, request);
@@ -158,9 +159,12 @@ public class TokenController {
             @PathVariable @NotBlank(message = "Provider ID不能为空") String providerId,
             @PathVariable @NotBlank(message = "Token ID不能为空") String tokenId,
             @Valid @RequestBody TokenHealthRequest request) {
-        log.info("更新Token健康状态: {} -> {} (Provider: {})", tokenId, request.getHealthy(), providerId);
+        log.info("🔧 [API] 收到Token健康状态更新请求 - Provider: {}, Token: {}, Healthy: {}",
+                providerId, tokenId, request.getHealthy());
 
         tokenService.updateTokenHealth(tokenId, request.getHealthy());
+
+        log.info("✅ [API] Token健康状态更新完成 - Token: {}", tokenId);
         ApiResponse<Object> response = ApiResponse.success("Token健康状态更新成功");
 
         return ResponseEntity.ok(response);
@@ -189,7 +193,7 @@ public class TokenController {
      * Token健康状态更新请求DTO
      */
     public static class TokenHealthRequest {
-        @NotBlank(message = "健康状态不能为空")
+        @NotNull(message = "健康状态不能为空")
         private Boolean healthy;
 
         public Boolean getHealthy() {

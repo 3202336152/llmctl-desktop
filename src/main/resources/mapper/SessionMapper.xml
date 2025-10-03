@@ -7,6 +7,7 @@
     <resultMap id="SessionResultMap" type="com.llmctl.entity.Session">
         <id column="id" property="id"/>
         <result column="provider_id" property="providerId"/>
+        <result column="token_id" property="tokenId"/>
         <result column="pid" property="pid"/>
         <result column="working_directory" property="workingDirectory"/>
         <result column="command" property="command"/>
@@ -56,14 +57,15 @@
 
     <!-- 插入Session -->
     <insert id="insert" parameterType="com.llmctl.entity.Session">
-        INSERT INTO sessions (id, provider_id, pid, working_directory, command, status, start_time, last_activity, end_time)
-        VALUES (#{id}, #{providerId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
+        INSERT INTO sessions (id, provider_id, token_id, pid, working_directory, command, status, start_time, last_activity, end_time)
+        VALUES (#{id}, #{providerId}, #{tokenId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
     </insert>
 
     <!-- 更新Session -->
     <update id="update" parameterType="com.llmctl.entity.Session">
         UPDATE sessions SET
             provider_id = #{providerId},
+            token_id = #{tokenId},
             pid = #{pid},
             working_directory = #{workingDirectory},
             command = #{command},
@@ -102,18 +104,6 @@
     <delete id="deleteTerminatedBefore" parameterType="java.time.LocalDateTime">
         DELETE FROM sessions WHERE status = 'terminated' AND end_time &lt; #{beforeTime}
     </delete>
-
-    <!-- 查询空闲超时的Session列表 -->
-    <select id="findIdleTimeoutSessions" parameterType="int" resultMap="SessionResultMap">
-        SELECT * FROM sessions WHERE status = 'active'
-        AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
-    </select>
-
-    <!-- 批量更新空闲超时Session的状态为inactive -->
-    <update id="markIdleSessionsAsInactive" parameterType="int">
-        UPDATE sessions SET status = 'inactive', last_activity = NOW()
-        WHERE status = 'active' AND last_activity &lt; DATE_SUB(NOW(), INTERVAL #{idleTimeoutMinutes} MINUTE)
-    </update>
 
     <!-- 统计Session总数 -->
     <select id="count" resultType="long">
