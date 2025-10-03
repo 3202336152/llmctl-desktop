@@ -237,7 +237,7 @@ const ProviderManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}

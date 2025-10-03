@@ -21,9 +21,17 @@
         SELECT * FROM sessions WHERE id = #{id}
     </select>
 
-    <!-- 查询所有Session -->
+    <!-- 查询所有Session，优先显示活跃会话 -->
     <select id="findAll" resultMap="SessionResultMap">
-        SELECT * FROM sessions ORDER BY start_time DESC
+        SELECT * FROM sessions
+        ORDER BY
+            CASE status
+                WHEN 'active' THEN 1
+                WHEN 'inactive' THEN 2
+                WHEN 'terminated' THEN 3
+                ELSE 4
+            END,
+            start_time DESC
     </select>
 
     <!-- 根据状态查询Session列表 -->

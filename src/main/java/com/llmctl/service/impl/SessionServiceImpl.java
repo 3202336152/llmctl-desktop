@@ -160,6 +160,24 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     @Override
+    public void deleteSession(String sessionId) {
+        log.info("删除会话记录: {}", sessionId);
+
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 从数据库中永久删除会话记录
+        int result = sessionMapper.deleteById(sessionId);
+        if (result <= 0) {
+            throw new ServiceException("删除会话记录", "数据库删除失败");
+        }
+
+        log.info("成功删除会话记录: {}", sessionId);
+    }
+
+    @Override
     public void updateLastActivity(String sessionId) {
         log.debug("更新会话最后活动时间: {}", sessionId);
         sessionMapper.updateLastActivity(sessionId);

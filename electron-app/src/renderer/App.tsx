@@ -1,14 +1,20 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Layout, Menu, theme } from 'antd';
+import React, { useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag } from 'antd';
 import {
   DatabaseOutlined,
   KeyOutlined,
   DesktopOutlined,
   SettingOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from './store';
+import type { RootState } from './store';
+import { closeTerminal, setActiveTab } from './store/slices/sessionSlice';
 import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
@@ -16,6 +22,7 @@ import Settings from './components/Settings/Settings';
 import Statistics from './components/Statistics/Statistics';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
+import TerminalComponent from './components/Terminal/TerminalComponent';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -23,9 +30,65 @@ const { Header, Sider, Content } = Layout;
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
+  const [collapsed, setCollapsed] = useState(false);
+  const { sessions, openTerminalSessions, activeTabKey } = useAppSelector((state: RootState) => state.session);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
+  // 是否在会话管理页面
+  const isSessionPage = location.pathname === '/sessions';
+
+  // 获取状态颜色
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'green';
+      case 'inactive':
+        return 'orange';
+      case 'terminated':
+        return 'red';
+      default:
+        return 'default';
+    }
+  };
+
+  // 处理关闭终端
+  const handleCloseTerminal = (sessionId: string) => {
+    dispatch(closeTerminal(sessionId));
+  };
+
+  // 生成标签页数据
+  const tabItems = openTerminalSessions.map(sessionId => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return null;
+
+    const workingDirName = session.workingDirectory.split(/[\\/]/).filter(Boolean).pop() || 'Terminal';
+    const sessionShortId = session.id.substring(0, 8);
+
+    return {
+      key: sessionId,
+      label: (
+        <Space size={4}>
+          <FolderOutlined />
+          <span>{workingDirName}</span>
+          <Tag color={getStatusColor(session.status)} style={{ marginLeft: 4, marginRight: 0 }}>
+            {sessionShortId}
+          </Tag>
+        </Space>
+      ),
+      children: (
+        <TerminalComponent
+          sessionId={sessionId}
+          command={session.command}
+          cwd={session.workingDirectory}
+          showCard={false}
+        />
+      ),
+      closable: true,
+    };
+  }).filter(item => item !== null);
 
   const menuItems = [
     {
@@ -66,8 +129,14 @@ const App: React.FC = () => {
         <Sider
           theme="light"
           width={200}
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          trigger={null}
           style={{
             borderRight: '1px solid #f0f0f0',
+            overflow: 'hidden',
+            transition: 'all 0.2s',
           }}
         >
           <div
@@ -80,9 +149,11 @@ const App: React.FC = () => {
               fontSize: '16px',
               fontWeight: 'bold',
               color: '#1890ff',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
             }}
           >
-            LLMctl Desktop
+            {collapsed ? 'LLM' : 'LLMctl Desktop'}
           </div>
           <Menu
             mode="inline"
@@ -101,11 +172,24 @@ const App: React.FC = () => {
               borderBottom: '1px solid #f0f0f0',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
             }}
           >
-            <h2 style={{ margin: 0, color: '#333' }}>
-              {menuItems.find(item => item.key === location.pathname)?.label || 'LLM控制系统'}
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <Button
+                type="text"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setCollapsed(!collapsed)}
+                style={{
+                  fontSize: '16px',
+                  width: 40,
+                  height: 40,
+                }}
+              />
+              <h2 style={{ margin: 0, color: '#333' }}>
+                {menuItems.find(item => item.key === location.pathname)?.label || 'LLM控制系统'}
+              </h2>
+            </div>
           </Header>
 
           <Content
@@ -114,6 +198,8 @@ const App: React.FC = () => {
               padding: 24,
               background: colorBgContainer,
               overflow: 'auto',
+              height: 'calc(100vh - 64px)',
+              paddingBottom: isSessionPage && openTerminalSessions.length > 0 ? 0 : 24,
             }}
           >
             <ErrorBoundary>
@@ -126,6 +212,42 @@ const App: React.FC = () => {
                 <Route path="/" element={<ProviderManager />} />
               </Routes>
             </ErrorBoundary>
+
+            {/* 全局终端容器 - 只在会话管理页面显示 */}
+            {openTerminalSessions.length > 0 && (
+              <div style={{
+                display: isSessionPage ? 'block' : 'none',
+                marginTop: isSessionPage ? 16 : 0,
+              }}>
+                <Card
+                  style={{
+                    height: 'calc(100vh - 160px)',
+                    minHeight: '750px',
+                  }}
+                  bodyStyle={{ padding: 0, height: '100%' }}
+                >
+                  <Tabs
+                    type="editable-card"
+                    activeKey={activeTabKey}
+                    onChange={(key: string) => dispatch(setActiveTab(key))}
+                    onEdit={(targetKey: React.MouseEvent | React.KeyboardEvent | string, action: 'add' | 'remove') => {
+                      if (action === 'remove' && typeof targetKey === 'string') {
+                        handleCloseTerminal(targetKey);
+                      }
+                    }}
+                    items={tabItems as any}
+                    hideAdd
+                    style={{ height: '100%' }}
+                    tabBarStyle={{
+                      marginBottom: 0,
+                      paddingLeft: 16,
+                      paddingRight: 16,
+                      background: '#f5f5f5',
+                    }}
+                  />
+                </Card>
+              </div>
+            )}
           </Content>
         </Layout>
       </Layout>

@@ -11,35 +11,41 @@ import {
   Select,
   Tag,
   Popconfirm,
-  Row,
-  Col,
-  Statistic,
+  Tabs,
+  Collapse,
 } from 'antd';
 import {
   PlusOutlined,
   StopOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
   DesktopOutlined,
   CodeOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders } from '../../store/slices/providerSlice';
-import { setSessions, addSession, updateSession, removeSession, setLoading, setError } from '../../store/slices/sessionSlice';
+import {
+  setSessions,
+  addSession,
+  updateSession,
+  setLoading,
+  setError,
+  openTerminal,
+} from '../../store/slices/sessionSlice';
 import { sessionAPI } from '../../services/api';
 import { Session, StartSessionRequest, UpdateSessionStatusRequest } from '../../types';
 import type { RootState } from '../../store';
-import TerminalComponent from '../Terminal/TerminalComponent';
 
 const { Option } = Select;
 
 const SessionManager: React.FC = () => {
   const dispatch = useAppDispatch();
   const { providers } = useAppSelector((state: RootState) => state.provider);
-  const { sessions, loading } = useAppSelector((state: RootState) => state.session);
+  const { sessions, loading, openTerminalSessions } = useAppSelector((state: RootState) => state.session);
   const [modalVisible, setModalVisible] = useState(false);
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'terminated'>('all');
   const [form] = Form.useForm();
-  const [openTerminalSessions, setOpenTerminalSessions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     dispatch(fetchProviders());
@@ -76,8 +82,8 @@ const SessionManager: React.FC = () => {
       const response = await sessionAPI.startSession(request);
       if (response.data) {
         dispatch(addSession(response.data));
-        // 自动打开终端
-        setOpenTerminalSessions(prev => new Set(prev).add(response.data!.id));
+        // 自动打开终端并切换到该标签
+        dispatch(openTerminal(response.data.id));
       }
       message.success('会话启动成功');
       setModalVisible(false);
@@ -108,29 +114,27 @@ const SessionManager: React.FC = () => {
   const handleTerminateSession = async (sessionId: string) => {
     try {
       await sessionAPI.terminateSession(sessionId);
-      dispatch(removeSession(sessionId));
-      // 如果关闭的是打开的终端，则关闭终端显示
-      setOpenTerminalSessions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(sessionId);
-        return newSet;
-      });
+      // 重新加载会话列表以获取更新后的状态
+      await loadSessions();
       message.success('会话终止成功');
     } catch (error) {
       message.error(`终止会话失败: ${error}`);
     }
   };
 
-  const handleOpenTerminal = (sessionId: string) => {
-    setOpenTerminalSessions(prev => new Set(prev).add(sessionId));
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await sessionAPI.deleteSession(sessionId);
+      // 重新加载会话列表
+      await loadSessions();
+      message.success('会话记录已清除');
+    } catch (error) {
+      message.error(`清除会话失败: ${error}`);
+    }
   };
 
-  const handleCloseTerminal = (sessionId: string) => {
-    setOpenTerminalSessions(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(sessionId);
-      return newSet;
-    });
+  const handleOpenTerminal = (sessionId: string) => {
+    dispatch(openTerminal(sessionId));
   };
 
   const getStatusColor = (status: string) => {
@@ -226,99 +230,169 @@ const SessionManager: React.FC = () => {
       render: (_: any, record: Session) => (
         <Space size="middle">
           {(record.status === 'active' || record.status === 'inactive') && (
-            <Button
-              type="link"
-              icon={<CodeOutlined />}
-              onClick={() => handleOpenTerminal(record.id)}
-              disabled={openTerminalSessions.has(record.id)}
-            >
-              {openTerminalSessions.has(record.id) ? '已打开' : '打开终端'}
-            </Button>
+            <>
+              <Button
+                type="link"
+                icon={<CodeOutlined />}
+                onClick={() => handleOpenTerminal(record.id)}
+                disabled={openTerminalSessions.includes(record.id)}
+              >
+                {openTerminalSessions.includes(record.id) ? '已打开' : '打开终端'}
+              </Button>
+              <Popconfirm
+                title="确定要终止这个会话吗？"
+                description="终止后将无法恢复，进程将被彻底结束"
+                onConfirm={() => handleTerminateSession(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<StopOutlined />}>
+                  终止
+                </Button>
+              </Popconfirm>
+            </>
           )}
-          {record.status === 'active' && (
-            <Button
-              type="link"
-              icon={<PauseCircleOutlined />}
-              onClick={() => handleUpdateSessionStatus(record.id, 'inactive')}
+          {record.status === 'terminated' && (
+            <Popconfirm
+              title="确定要清除这个会话记录吗？"
+              description="清除后将从数据库中永久删除，无法恢复"
+              onConfirm={() => handleDeleteSession(record.id)}
+              okText="确定"
+              cancelText="取消"
             >
-              暂停
-            </Button>
+              <Button type="link" danger icon={<DeleteOutlined />}>
+                清除
+              </Button>
+            </Popconfirm>
           )}
-          {record.status === 'inactive' && (
-            <Button
-              type="link"
-              icon={<PlayCircleOutlined />}
-              onClick={() => handleUpdateSessionStatus(record.id, 'active')}
-            >
-              恢复
-            </Button>
-          )}
-          <Popconfirm
-            title="确定要终止这个会话吗？"
-            description="终止后将无法恢复"
-            onConfirm={() => handleTerminateSession(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" danger icon={<StopOutlined />}>
-              终止
-            </Button>
-          </Popconfirm>
         </Space>
       ),
     },
   ];
 
   const activeSessions = sessions.filter(session => session.status === 'active');
-  const inactiveSessions = sessions.filter(session => session.status === 'inactive');
   const terminatedSessions = sessions.filter(session => session.status === 'terminated');
+
+  // 根据筛选条件获取显示的会话列表
+  const getFilteredSessions = () => {
+    switch (sessionFilter) {
+      case 'active':
+        return activeSessions;
+      case 'terminated':
+        return terminatedSessions;
+      case 'all':
+      default:
+        return sessions;
+    }
+  };
+
+  const filteredSessions = getFilteredSessions();
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="总会话数" value={sessions.length} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="活跃会话" value={activeSessions.length} valueStyle={{ color: '#3f8600' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="非活跃会话" value={inactiveSessions.length} valueStyle={{ color: '#cf1322' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="已终止会话" value={terminatedSessions.length} />
-          </Card>
-        </Col>
-      </Row>
+      {/* 紧凑型统计信息 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 24,
+      }}>
+        <Space size={24}>
+          <Space size={8}>
+            <DesktopOutlined style={{ fontSize: 16, color: '#1890ff' }} />
+            <span style={{ color: '#666' }}>总会话数:</span>
+            <span style={{ fontWeight: 600, fontSize: 16 }}>{sessions.length}</span>
+          </Space>
+          <Space size={8}>
+            <CheckCircleOutlined style={{ fontSize: 16, color: '#52c41a' }} />
+            <span style={{ color: '#666' }}>活跃:</span>
+            <span style={{ fontWeight: 600, fontSize: 16, color: '#52c41a' }}>{activeSessions.length}</span>
+          </Space>
+          <Space size={8}>
+            <CloseCircleOutlined style={{ fontSize: 16, color: '#f5222d' }} />
+            <span style={{ color: '#666' }}>已终止:</span>
+            <span style={{ fontWeight: 600, fontSize: 16, color: '#f5222d' }}>{terminatedSessions.length}</span>
+          </Space>
+        </Space>
+      </div>
 
-      <Card
-        title="会话管理"
-        extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleStartSession}>
-            启动新会话
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={sessions}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showQuickJumper: true,
-            showSizeChanger: true,
-            showTotal: (total: number) => `共 ${total} 条记录`,
-          }}
-        />
-      </Card>
+      <Collapse
+        defaultActiveKey={['sessions']}
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            key: 'sessions',
+            label: (
+              <Space>
+                <DesktopOutlined />
+                <span>会话列表</span>
+              </Space>
+            ),
+            extra: (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  handleStartSession();
+                }}
+              >
+                启动新会话
+              </Button>
+            ),
+            children: (
+              <>
+                <Tabs
+                  activeKey={sessionFilter}
+                  onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'terminated')}
+                  items={[
+                    {
+                      key: 'all',
+                      label: (
+                        <span>
+                          总会话 <Tag color="blue">{sessions.length}</Tag>
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'active',
+                      label: (
+                        <span>
+                          活跃会话 <Tag color="green">{activeSessions.length}</Tag>
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'terminated',
+                      label: (
+                        <span>
+                          已终止 <Tag color="red">{terminatedSessions.length}</Tag>
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+                <Table
+                  columns={columns}
+                  dataSource={filteredSessions}
+                  rowKey="id"
+                  loading={loading}
+                  scroll={{ x: 'max-content' }}
+                  pagination={{
+                    pageSize: 10,
+                    showQuickJumper: true,
+                    showSizeChanger: true,
+                    showTotal: (total: number) => `共 ${total} 条记录`,
+                  }}
+                />
+              </>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         title="启动新会话"
@@ -326,7 +400,7 @@ const SessionManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={500}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}
@@ -370,20 +444,6 @@ const SessionManager: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* 内置终端 - 支持多个终端 */}
-      {Array.from(openTerminalSessions).map(sessionId => {
-        const session = sessions.find(s => s.id === sessionId);
-        return session ? (
-          <TerminalComponent
-            key={sessionId}
-            sessionId={sessionId}
-            command={session.command}
-            cwd={session.workingDirectory}
-            onClose={() => handleCloseTerminal(sessionId)}
-          />
-        ) : null;
-      })}
     </div>
   );
 };

@@ -338,7 +338,7 @@ const TokenManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={500}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}
@@ -384,7 +384,7 @@ const TokenManager: React.FC = () => {
         onOk={handleStrategyModalOk}
         onCancel={() => setStrategyModalVisible(false)}
         width={400}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={strategyForm}

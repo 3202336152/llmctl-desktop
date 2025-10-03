@@ -19,6 +19,12 @@ class TerminalManager {
     cwd?: string;
     env?: Record<string, string>;
   } = {}): void {
+    // 如果会话已存在，不重新创建
+    if (this.sessions.has(sessionId)) {
+      console.log('[TerminalManager] 会话已存在，跳过创建:', sessionId);
+      return;
+    }
+
     const { command = 'cmd.exe', cwd = process.cwd(), env = {} } = options;
 
     const isWindows = os.platform() === 'win32';

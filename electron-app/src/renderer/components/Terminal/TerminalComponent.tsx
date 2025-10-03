@@ -13,6 +13,7 @@ interface TerminalComponentProps {
   cwd?: string;
   env?: Record<string, string>;
   onClose?: () => void;
+  showCard?: boolean; // 是否显示外层Card
 }
 
 const TerminalComponent: React.FC<TerminalComponentProps> = ({
@@ -20,7 +21,8 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
   command,
   cwd,
   env,
-  onClose
+  onClose,
+  showCard = true,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -213,6 +215,21 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
     initTerminal();
   }, []); // 空依赖数组，只在挂载时执行一次
 
+  const terminalDiv = (
+    <div
+      ref={terminalRef}
+      style={{
+        width: '100%',
+        height: showCard ? '500px' : 'calc(100vh - 220px)',
+        minHeight: '650px',
+      }}
+    />
+  );
+
+  if (!showCard) {
+    return terminalDiv;
+  }
+
   return (
     <Card
       title={`终端 - 会话 ${sessionId.substring(0, 8)}`}
@@ -230,13 +247,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
         )
       }
     >
-      <div
-        ref={terminalRef}
-        style={{
-          width: '100%',
-          height: '500px',
-        }}
-      />
+      {terminalDiv}
     </Card>
   );
 };

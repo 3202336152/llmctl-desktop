@@ -69,6 +69,14 @@ public interface ISessionService {
     void terminateSession(String sessionId);
 
     /**
+     * 删除会话记录（从数据库中永久删除）
+     *
+     * @param sessionId 会话ID
+     * @throws IllegalArgumentException 如果会话不存在
+     */
+    void deleteSession(String sessionId);
+
+    /**
      * 更新会话最后活动时间
      *
      * @param sessionId 会话ID

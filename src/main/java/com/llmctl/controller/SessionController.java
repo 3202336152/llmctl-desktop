@@ -133,6 +133,23 @@ public class SessionController {
     }
 
     /**
+     * 删除会话记录（从数据库中永久删除）
+     *
+     * @param sessionId 会话ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/{sessionId}/record")
+    public ResponseEntity<ApiResponse<Object>> deleteSession(
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
+        log.info("删除会话记录: {}", sessionId);
+
+        sessionService.deleteSession(sessionId);
+        ApiResponse<Object> response = ApiResponse.success("会话记录删除成功");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 更新会话最后活动时间
      *
      * @param sessionId 会话ID

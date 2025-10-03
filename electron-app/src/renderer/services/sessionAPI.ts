@@ -7,9 +7,9 @@ import {
 } from '../types';
 
 export const sessionAPI = {
-  // 获取所有活跃会话
+  // 获取所有会话
   getAllSessions: (): Promise<ApiResponse<Session[]>> => {
-    return httpClient.get('/sessions').then(response => response.data);
+    return httpClient.get('/sessions/all').then(response => response.data);
   },
 
   // 根据ID获取会话信息
@@ -30,6 +30,11 @@ export const sessionAPI = {
   // 终止会话
   terminateSession: (sessionId: string): Promise<ApiResponse<void>> => {
     return httpClient.delete(`/sessions/${sessionId}`).then(response => response.data);
+  },
+
+  // 删除会话记录
+  deleteSession: (sessionId: string): Promise<ApiResponse<void>> => {
+    return httpClient.delete(`/sessions/${sessionId}/record`).then(response => response.data);
   },
 
   // 获取会话环境变量
