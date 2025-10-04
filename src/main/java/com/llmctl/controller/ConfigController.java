@@ -1,7 +1,9 @@
 package com.llmctl.controller;
 
 import com.llmctl.dto.*;
+import com.llmctl.entity.GlobalConfig;
 import com.llmctl.service.IConfigService;
+import com.llmctl.service.IGlobalConfigService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 配置管理REST控制器
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class ConfigController {
 
     private final IConfigService configService;
+    private final IGlobalConfigService globalConfigService;
 
     /**
      * 获取当前活跃Provider配置
@@ -129,13 +135,21 @@ public class ConfigController {
      * @return 全局配置列表
      */
     @GetMapping("/global")
-    public ResponseEntity<ApiResponse<java.util.List<GlobalConfigDTO>>> getGlobalConfigs() {
+    public ResponseEntity<ApiResponse<List<GlobalConfigDTO>>> getGlobalConfigs() {
         log.info("获取所有全局配置");
 
-        // TODO: 实现获取全局配置列表
-        ApiResponse<java.util.List<GlobalConfigDTO>> response =
-                ApiResponse.success(java.util.Collections.emptyList());
+        List<GlobalConfig> configs = globalConfigService.getAllConfigs();
+        List<GlobalConfigDTO> configDTOs = configs.stream()
+                .map(config -> {
+                    GlobalConfigDTO dto = new GlobalConfigDTO();
+                    dto.setConfigKey(config.getConfigKey());
+                    dto.setConfigValue(config.getConfigValue());
+                    dto.setDescription(config.getDescription());
+                    return dto;
+                })
+                .collect(Collectors.toList());
 
+        ApiResponse<List<GlobalConfigDTO>> response = ApiResponse.success(configDTOs);
         return ResponseEntity.ok(response);
     }
 
@@ -150,9 +164,28 @@ public class ConfigController {
             @Valid @RequestBody SetGlobalConfigRequest request) {
         log.info("设置全局配置: {} = {}", request.getConfigKey(), request.getConfigValue());
 
-        // TODO: 实现设置全局配置
-        ApiResponse<Object> response = ApiResponse.success("全局配置设置成功");
+        globalConfigService.setConfig(request.getConfigKey(), request.getConfigValue());
 
+        ApiResponse<Object> response = ApiResponse.success("全局配置设置成功");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 批量设置全局配置
+     *
+     * @param configs 配置列表
+     * @return 设置结果
+     */
+    @PostMapping("/global/batch")
+    public ResponseEntity<ApiResponse<Object>> setBatchGlobalConfigs(
+            @Valid @RequestBody List<SetGlobalConfigRequest> configs) {
+        log.info("批量设置全局配置，共 {} 项", configs.size());
+
+        for (SetGlobalConfigRequest request : configs) {
+            globalConfigService.setConfig(request.getConfigKey(), request.getConfigValue());
+        }
+
+        ApiResponse<Object> response = ApiResponse.success("批量配置设置成功");
         return ResponseEntity.ok(response);
     }
 

@@ -84,6 +84,33 @@ public class GlobalConfig {
          * Token冷却时间（秒）
          */
         public static final String TOKEN_COOLDOWN_PERIOD = "token_cooldown_period";
+
+        // ==================== 应用设置相关配置 ====================
+
+        /**
+         * 是否开机自启动
+         */
+        public static final String AUTO_START = "app.auto_start";
+
+        /**
+         * 是否最小化到系统托盘
+         */
+        public static final String MINIMIZE_TO_TRAY = "app.minimize_to_tray";
+
+        /**
+         * 是否显示通知
+         */
+        public static final String SHOW_NOTIFICATIONS = "app.show_notifications";
+
+        /**
+         * 主题设置 (light/dark/auto)
+         */
+        public static final String THEME = "app.theme";
+
+        /**
+         * 语言设置 (zh/en)
+         */
+        public static final String LANGUAGE = "app.language";
     }
 
     /**

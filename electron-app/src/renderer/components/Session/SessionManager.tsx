@@ -10,7 +10,6 @@ import {
   Input,
   Select,
   Tag,
-  Popconfirm,
   Tabs,
   Collapse,
 } from 'antd';
@@ -66,7 +65,23 @@ const SessionManager: React.FC = () => {
   };
 
   const handleStartSession = () => {
+    // 从 localStorage 读取上次选择的 Provider ID
+    const lastSelectedProviderId = localStorage.getItem('lastSelectedSessionProviderId');
+
+    // 重置表单
     form.resetFields();
+
+    // 如果有上次选择的Provider且该Provider仍然存在且激活，则设置为默认值
+    if (lastSelectedProviderId && providers.some(p => p.id === lastSelectedProviderId && p.isActive)) {
+      form.setFieldsValue({ providerId: lastSelectedProviderId });
+    } else if (providers.length > 0) {
+      // 否则选择第一个激活的Provider
+      const firstActiveProvider = providers.find(p => p.isActive);
+      if (firstActiveProvider) {
+        form.setFieldsValue({ providerId: firstActiveProvider.id });
+      }
+    }
+
     setModalVisible(true);
   };
 
@@ -78,6 +93,9 @@ const SessionManager: React.FC = () => {
         workingDirectory: values.workingDirectory,
         command: values.command || 'claude',
       };
+
+      // 保存当前选择的 Provider ID 到 localStorage
+      localStorage.setItem('lastSelectedSessionProviderId', values.providerId);
 
       const response = await sessionAPI.startSession(request);
       if (response.data) {
@@ -99,25 +117,43 @@ const SessionManager: React.FC = () => {
   };
 
   const handleTerminateSession = async (sessionId: string) => {
-    try {
-      await sessionAPI.terminateSession(sessionId);
-      // 重新加载会话列表以获取更新后的状态
-      await loadSessions();
-      message.success('会话终止成功');
-    } catch (error) {
-      message.error(`终止会话失败: ${error}`);
-    }
+    Modal.confirm({
+      title: '确定要终止这个会话吗？',
+      content: '终止后将无法恢复，进程将被彻底结束',
+      okText: '确定',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await sessionAPI.terminateSession(sessionId);
+          // 重新加载会话列表以获取更新后的状态
+          await loadSessions();
+          message.success('会话终止成功');
+        } catch (error) {
+          message.error(`终止会话失败: ${error}`);
+        }
+      },
+    });
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    try {
-      await sessionAPI.deleteSession(sessionId);
-      // 重新加载会话列表
-      await loadSessions();
-      message.success('会话记录已清除');
-    } catch (error) {
-      message.error(`清除会话失败: ${error}`);
-    }
+    Modal.confirm({
+      title: '确定要清除这个会话记录吗？',
+      content: '清除后将从数据库中永久删除，无法恢复',
+      okText: '确定',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await sessionAPI.deleteSession(sessionId);
+          // 重新加载会话列表
+          await loadSessions();
+          message.success('会话记录已清除');
+        } catch (error) {
+          message.error(`清除会话失败: ${error}`);
+        }
+      },
+    });
   };
 
   const handleOpenTerminal = (sessionId: string) => {
@@ -224,31 +260,25 @@ const SessionManager: React.FC = () => {
               >
                 {openTerminalSessions.includes(record.id) ? '已打开' : '打开终端'}
               </Button>
-              <Popconfirm
-                title="确定要终止这个会话吗？"
-                description="终止后将无法恢复，进程将被彻底结束"
-                onConfirm={() => handleTerminateSession(record.id)}
-                okText="确定"
-                cancelText="取消"
+              <Button
+                type="link"
+                danger
+                icon={<StopOutlined />}
+                onClick={() => handleTerminateSession(record.id)}
               >
-                <Button type="link" danger icon={<StopOutlined />}>
-                  终止
-                </Button>
-              </Popconfirm>
+                终止
+              </Button>
             </>
           )}
           {record.status === 'terminated' && (
-            <Popconfirm
-              title="确定要清除这个会话记录吗？"
-              description="清除后将从数据库中永久删除，无法恢复"
-              onConfirm={() => handleDeleteSession(record.id)}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteSession(record.id)}
             >
-              <Button type="link" danger icon={<DeleteOutlined />}>
-                清除
-              </Button>
-            </Popconfirm>
+              清除
+            </Button>
           )}
         </Space>
       ),
@@ -385,7 +415,7 @@ const SessionManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={500}
-        destroyOnClose
+        destroyOnHidden
         afterClose={() => form.resetFields()}
       >
         <Form

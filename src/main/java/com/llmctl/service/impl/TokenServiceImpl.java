@@ -98,7 +98,6 @@ public class TokenServiceImpl implements TokenService {
         token.setWeight(request.getWeight() != null ? request.getWeight() : 1);
         token.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
         token.setHealthy(true);
-        token.setErrorCount(0);
 
         // 设置时间戳
         LocalDateTime now = LocalDateTime.now();
@@ -293,18 +292,6 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
-    public void incrementTokenError(String tokenId) {
-        log.debug("增加Token错误计数: {}", tokenId);
-        tokenMapper.incrementErrorCount(tokenId);
-    }
-
-    @Override
-    public void resetTokenError(String tokenId) {
-        log.debug("重置Token错误计数: {}", tokenId);
-        tokenMapper.resetErrorCount(tokenId);
-    }
-
-    @Override
     public TokenDTO convertToDTO(Token token) {
         if (token == null) {
             return null;
@@ -318,8 +305,6 @@ public class TokenServiceImpl implements TokenService {
         dto.setEnabled(token.getEnabled());
         dto.setHealthy(token.getHealthy());
         dto.setLastUsed(token.getLastUsed());
-        dto.setErrorCount(token.getErrorCount());
-        dto.setLastErrorTime(token.getLastErrorTime());
         dto.setCreatedAt(token.getCreatedAt());
         dto.setUpdatedAt(token.getUpdatedAt());
 

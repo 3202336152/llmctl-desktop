@@ -11,7 +11,6 @@ import {
   Select,
   Switch,
   InputNumber,
-  Popconfirm,
   Tag,
   Tooltip,
 } from 'antd';
@@ -27,11 +26,13 @@ import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders, createProvider, updateProvider, deleteProvider } from '../../store/slices/providerSlice';
 import { Provider, CreateProviderRequest, UpdateProviderRequest } from '../../types';
 import type { RootState } from '../../store';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 const ProviderManager: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const { providers, loading, error } = useAppSelector((state: RootState) => state.provider);
   const [modalVisible, setModalVisible] = useState(false);
@@ -63,13 +64,22 @@ const ProviderManager: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDeleteProvider = async (id: string) => {
-    try {
-      await dispatch(deleteProvider(id)).unwrap();
-      message.success('Provider删除成功');
-    } catch (error) {
-      message.error(`删除失败: ${error}`);
-    }
+  const handleDeleteProvider = (id: string) => {
+    Modal.confirm({
+      title: t('providers.deleteConfirm'),
+      content: t('providers.deleteDesc'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await dispatch(deleteProvider(id)).unwrap();
+          message.success('Provider删除成功');
+        } catch (error) {
+          message.error(`删除失败: ${error}`);
+        }
+      },
+    });
   };
 
   const handleModalOk = async () => {
@@ -119,7 +129,7 @@ const ProviderManager: React.FC = () => {
 
   const columns = [
     {
-      title: '名称',
+      title: t('providers.name'),
       dataIndex: 'name',
       key: 'name',
       align: 'center' as const,
@@ -131,7 +141,7 @@ const ProviderManager: React.FC = () => {
       ),
     },
     {
-      title: '类型',
+      title: t('providers.type'),
       dataIndex: 'type',
       key: 'type',
       align: 'center' as const,
@@ -146,13 +156,13 @@ const ProviderManager: React.FC = () => {
       },
     },
     {
-      title: '模型',
+      title: t('providers.model'),
       dataIndex: 'modelName',
       key: 'modelName',
       align: 'center' as const,
     },
     {
-      title: 'Base URL',
+      title: t('providers.baseUrl'),
       dataIndex: 'baseUrl',
       key: 'baseUrl',
       align: 'center' as const,
@@ -163,30 +173,30 @@ const ProviderManager: React.FC = () => {
       ),
     },
     {
-      title: 'Max Tokens',
+      title: t('providers.maxTokens'),
       dataIndex: 'maxTokens',
       key: 'maxTokens',
       align: 'center' as const,
     },
     {
-      title: 'Temperature',
+      title: t('providers.temperature'),
       dataIndex: 'temperature',
       key: 'temperature',
       align: 'center' as const,
     },
     {
-      title: '状态',
+      title: t('providers.status'),
       dataIndex: 'isActive',
       key: 'isActive',
       align: 'center' as const,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'} icon={isActive ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}>
-          {isActive ? '启用' : '禁用'}
+          {isActive ? t('common.enabled') : t('common.disabled')}
         </Tag>
       ),
     },
     {
-      title: '操作',
+      title: t('providers.actions'),
       key: 'action',
       align: 'center' as const,
       render: (_: any, record: Provider) => (
@@ -196,19 +206,16 @@ const ProviderManager: React.FC = () => {
             icon={<EditOutlined />}
             onClick={() => handleEditProvider(record)}
           >
-            编辑
+            {t('common.edit')}
           </Button>
-          <Popconfirm
-            title="确定要删除这个Provider吗？"
-            description="删除后将无法恢复"
-            onConfirm={() => handleDeleteProvider(record.id)}
-            okText="确定"
-            cancelText="取消"
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteProvider(record.id)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            {t('common.delete')}
+          </Button>
         </Space>
       ),
     },
@@ -217,10 +224,10 @@ const ProviderManager: React.FC = () => {
   return (
     <div>
       <Card
-        title="Provider管理"
+        title={t('providers.title')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateProvider}>
-            新建Provider
+            {t('providers.createProvider')}
           </Button>
         }
       >
@@ -233,47 +240,45 @@ const ProviderManager: React.FC = () => {
             pageSize: 10,
             showQuickJumper: true,
             showSizeChanger: true,
-            showTotal: (total: number) => `共 ${total} 条记录`,
+            showTotal: (total: number) => t('providers.totalRecords', { total }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingProvider ? '编辑Provider' : '新建Provider'}
+        title={editingProvider ? t('providers.editProvider') : t('providers.createProvider')}
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}
           layout="vertical"
           initialValues={{
-            maxTokens: 4096,
-            temperature: 0.7,
             isActive: true,
           }}
         >
           <Form.Item
-            label="名称"
+            label={t('providers.name')}
             name="name"
-            rules={[{ required: true, message: '请输入Provider名称' }]}
+            rules={[{ required: true, message: t('providers.nameRequired') }]}
           >
-            <Input placeholder="请输入Provider名称" />
+            <Input placeholder={t('providers.namePlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="描述" name="description">
-            <TextArea rows={3} placeholder="请输入Provider描述" />
+          <Form.Item label={t('providers.description')} name="description">
+            <TextArea rows={3} placeholder={t('providers.descriptionPlaceholder')} />
           </Form.Item>
 
           {!editingProvider && (
             <Form.Item
-              label="类型"
+              label={t('providers.type')}
               name="type"
-              rules={[{ required: true, message: '请选择Provider类型' }]}
+              rules={[{ required: true, message: t('providers.typeRequired') }]}
             >
-              <Select placeholder="请选择Provider类型">
+              <Select placeholder={t('providers.typePlaceholder')}>
                 <Option value="anthropic">Anthropic</Option>
                 <Option value="openai">OpenAI</Option>
                 <Option value="qwen">通义千问</Option>
@@ -282,45 +287,45 @@ const ProviderManager: React.FC = () => {
             </Form.Item>
           )}
 
-          <Form.Item label="Base URL" name="baseUrl">
-            <Input placeholder="请输入API Base URL" />
+          <Form.Item label={t('providers.baseUrl')} name="baseUrl">
+            <Input placeholder={t('providers.baseUrlPlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="模型名称" name="modelName">
-            <Input placeholder="请输入模型名称" />
+          <Form.Item label={t('providers.model')} name="modelName">
+            <Input placeholder={t('providers.modelPlaceholder')} />
           </Form.Item>
 
           {!editingProvider && (
             <Form.Item
               label="Token"
               name="token"
-              rules={[{ required: true, message: '请输入API Token' }]}
+              rules={[{ required: true, message: t('providers.tokenPlaceholder') }]}
             >
-              <Input.Password placeholder="请输入API Token" />
+              <Input.Password placeholder={t('providers.tokenPlaceholder')} />
             </Form.Item>
           )}
 
-          <Form.Item label="最大Token数" name="maxTokens">
+          <Form.Item label={t('providers.maxTokens')} name="maxTokens">
             <InputNumber
               min={1}
               max={100000}
-              placeholder="最大Token数"
+              placeholder={t('providers.maxTokens')}
               style={{ width: '100%' }}
             />
           </Form.Item>
 
-          <Form.Item label="Temperature" name="temperature">
+          <Form.Item label={t('providers.temperature')} name="temperature">
             <InputNumber
               min={0}
               max={2}
               step={0.1}
-              placeholder="Temperature"
+              placeholder={t('providers.temperature')}
               style={{ width: '100%' }}
             />
           </Form.Item>
 
-          <Form.Item label="启用状态" name="isActive" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+          <Form.Item label={t('providers.status')} name="isActive" valuePropName="checked">
+            <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
           </Form.Item>
         </Form>
       </Modal>

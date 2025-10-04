@@ -54,7 +54,6 @@ export interface Token {
   enabled: boolean;
   healthy: boolean;
   lastUsed?: string;
-  errorCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,11 +104,9 @@ export interface UpdateSessionStatusRequest {
 
 // Configuration 相关类型
 export interface GlobalConfig {
-  key: string;
-  value: string;
-  category: string;
+  configKey: string;
+  configValue: string;
   description?: string;
-  updatedAt: string;
 }
 
 export interface ConfigExportResponse {

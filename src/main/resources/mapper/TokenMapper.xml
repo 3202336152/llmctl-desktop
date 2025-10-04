@@ -14,8 +14,6 @@
         <result column="enabled" property="enabled" jdbcType="BOOLEAN"/>
         <result column="healthy" property="healthy" jdbcType="BOOLEAN"/>
         <result column="last_used" property="lastUsed" jdbcType="TIMESTAMP"/>
-        <result column="error_count" property="errorCount" jdbcType="INTEGER"/>
-        <result column="last_error_time" property="lastErrorTime" jdbcType="TIMESTAMP"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -23,7 +21,7 @@
     <!-- 基础列 -->
     <sql id="Base_Column_List">
         id, provider_id, value, alias, weight, enabled, healthy, last_used,
-        error_count, last_error_time, created_at, updated_at
+        created_at, updated_at
     </sql>
 
     <!-- 根据ID查询Token -->
@@ -64,11 +62,11 @@
     <insert id="insert" parameterType="com.llmctl.entity.Token">
         INSERT INTO tokens (
             id, provider_id, value, alias, weight, enabled, healthy,
-            last_used, error_count, last_error_time, created_at, updated_at
+            last_used, created_at, updated_at
         )
         VALUES (
             #{id}, #{providerId}, #{value}, #{alias}, #{weight}, #{enabled}, #{healthy},
-            #{lastUsed}, #{errorCount}, #{lastErrorTime}, #{createdAt}, #{updatedAt}
+            #{lastUsed}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -82,8 +80,6 @@
             enabled = #{enabled},
             healthy = #{healthy},
             last_used = #{lastUsed},
-            error_count = #{errorCount},
-            last_error_time = #{lastErrorTime},
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -99,27 +95,6 @@
     <update id="updateLastUsed" parameterType="java.lang.String">
         UPDATE tokens
         SET last_used = NOW(), updated_at = NOW()
-        WHERE id = #{id}
-    </update>
-
-    <!-- 增加Token错误计数 -->
-    <update id="incrementErrorCount" parameterType="java.lang.String">
-        UPDATE tokens
-        SET
-            error_count = error_count + 1,
-            last_error_time = NOW(),
-            updated_at = NOW()
-        WHERE id = #{id}
-    </update>
-
-    <!-- 重置Token错误计数 -->
-    <update id="resetErrorCount" parameterType="java.lang.String">
-        UPDATE tokens
-        SET
-            error_count = 0,
-            last_error_time = NULL,
-            healthy = 1,
-            updated_at = NOW()
         WHERE id = #{id}
     </update>
 

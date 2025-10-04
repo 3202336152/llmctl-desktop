@@ -88,20 +88,6 @@ public interface TokenService {
     void updateTokenHealth(String tokenId, boolean healthy);
 
     /**
-     * 增加Token错误计数
-     *
-     * @param tokenId Token ID
-     */
-    void incrementTokenError(String tokenId);
-
-    /**
-     * 重置Token错误计数
-     *
-     * @param tokenId Token ID
-     */
-    void resetTokenError(String tokenId);
-
-    /**
      * 将Token实体转换为DTO
      *
      * @param token Token实体

@@ -50,16 +50,6 @@ public class TokenDTO {
     private LocalDateTime lastUsed;
 
     /**
-     * 错误次数
-     */
-    private Integer errorCount;
-
-    /**
-     * 最后错误时间
-     */
-    private LocalDateTime lastErrorTime;
-
-    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

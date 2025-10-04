@@ -15,8 +15,10 @@ export interface ElectronAPI {
   readFile(filePath: string): Promise<string>;
   writeFile(filePath: string, content: string): Promise<boolean>;
 
-  // 系统通知
+  // 系统功能
   showNotification(title: string, body: string): void;
+  openExternal(url: string): Promise<void>;
+  send(channel: string, data?: any): void;
 
   // ==================== 终端 API ====================
   // 创建终端会话
@@ -65,10 +67,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('write-file', filePath, content),
 
-  // 系统通知
+  // 系统功能
   showNotification: (title: string, body: string) => {
     new Notification(title, { body });
   },
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  send: (channel: string, data?: any) => ipcRenderer.send(channel, data),
 
   // ==================== 终端 API ====================
   terminalCreate: (options) => ipcRenderer.invoke('terminal-create', options),

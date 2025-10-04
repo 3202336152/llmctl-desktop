@@ -81,22 +81,6 @@ public interface TokenMapper {
     int updateLastUsed(@Param("id") String id);
 
     /**
-     * 增加Token错误计数
-     *
-     * @param id Token ID
-     * @return 影响的行数
-     */
-    int incrementErrorCount(@Param("id") String id);
-
-    /**
-     * 重置Token错误计数
-     *
-     * @param id Token ID
-     * @return 影响的行数
-     */
-    int resetErrorCount(@Param("id") String id);
-
-    /**
      * 根据ID删除Token
      *
      * @param id Token ID

@@ -44,8 +44,6 @@ CREATE TABLE `tokens` (
     `enabled` BOOLEAN DEFAULT TRUE COMMENT '是否启用',
     `healthy` BOOLEAN DEFAULT TRUE COMMENT '健康状态',
     `last_used` TIMESTAMP NULL COMMENT '最后使用时间',
-    `error_count` INT DEFAULT 0 COMMENT '错误次数',
-    `last_error_time` TIMESTAMP NULL COMMENT '最后错误时间',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

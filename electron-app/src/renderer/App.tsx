@@ -25,7 +25,9 @@ import NotificationManager from './components/Common/NotificationManager';
 import TerminalComponent from './components/Terminal/TerminalComponent';
 import { configAPI, sessionAPI } from './services/api';
 import { ConfigImportRequest, StartSessionRequest } from './types';
+import './i18n'; // 引入 i18n 配置
 import './App.css';
+import { useTranslation } from 'react-i18next';
 
 const { Header, Sider, Content } = Layout;
 
@@ -33,11 +35,41 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const { t, i18n } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const { sessions, openTerminalSessions, activeTabKey } = useAppSelector((state: RootState) => state.session);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
+  // 加载初始设置（语言和托盘）
+  useEffect(() => {
+    const loadInitialSettings = async () => {
+      try {
+        const response = await configAPI.getGlobalConfigs();
+        const configs = response.data || [];
+
+        configs.forEach(config => {
+          switch (config.configKey) {
+            case 'app.language':
+              if (config.configValue && config.configValue !== i18n.language) {
+                i18n.changeLanguage(config.configValue);
+                window.electronAPI?.send('set-menu-language', config.configValue);
+              }
+              break;
+            case 'app.minimize_to_tray':
+              const minimizeToTray = config.configValue === 'true';
+              window.electronAPI?.send('enable-tray', minimizeToTray);
+              break;
+          }
+        });
+      } catch (error) {
+        console.error('[App] 加载初始设置失败:', error);
+      }
+    };
+
+    loadInitialSettings();
+  }, [i18n]);
 
   // 全局监听菜单栏的导入导出消息
   useEffect(() => {
@@ -233,27 +265,27 @@ const App: React.FC = () => {
     {
       key: '/providers',
       icon: <DatabaseOutlined />,
-      label: 'Provider管理',
+      label: t('nav.providers'),
     },
     {
       key: '/tokens',
       icon: <KeyOutlined />,
-      label: 'Token管理',
+      label: t('nav.tokens'),
     },
     {
       key: '/sessions',
       icon: <DesktopOutlined />,
-      label: '会话管理',
+      label: t('nav.sessions'),
     },
     {
       key: '/statistics',
       icon: <BarChartOutlined />,
-      label: '使用统计',
+      label: t('nav.statistics'),
     },
     {
       key: '/settings',
       icon: <SettingOutlined />,
-      label: '系统设置',
+      label: t('nav.settings'),
     },
   ];
 
@@ -326,7 +358,7 @@ const App: React.FC = () => {
                 }}
               />
               <h2 style={{ margin: 0, color: '#333' }}>
-                {menuItems.find(item => item.key === location.pathname)?.label || 'LLM控制系统'}
+                {menuItems.find(item => item.key === location.pathname)?.label || t('nav.appTitle')}
               </h2>
             </div>
           </Header>

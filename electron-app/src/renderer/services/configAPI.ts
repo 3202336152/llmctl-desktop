@@ -4,6 +4,7 @@ import {
   ConfigExportResponse,
   ConfigImportRequest,
   ConfigValidationResponse,
+  GlobalConfig,
 } from '../types';
 
 export const configAPI = {
@@ -30,5 +31,22 @@ export const configAPI = {
   // 设置活跃Provider
   setActiveProvider: (providerId: string): Promise<ApiResponse<void>> => {
     return httpClient.put('/config/active-provider', { providerId }).then(response => response.data);
+  },
+
+  // ==================== 全局配置 API ====================
+
+  // 获取所有全局配置
+  getGlobalConfigs: (): Promise<ApiResponse<GlobalConfig[]>> => {
+    return httpClient.get('/config/global').then(response => response.data);
+  },
+
+  // 设置单个全局配置
+  setGlobalConfig: (configKey: string, configValue: string): Promise<ApiResponse<void>> => {
+    return httpClient.post('/config/global', { configKey, configValue }).then(response => response.data);
+  },
+
+  // 批量设置全局配置
+  setBatchGlobalConfigs: (configs: { configKey: string; configValue: string }[]): Promise<ApiResponse<void>> => {
+    return httpClient.post('/config/global/batch', configs).then(response => response.data);
   },
 };

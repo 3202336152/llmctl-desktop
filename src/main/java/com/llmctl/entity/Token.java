@@ -57,16 +57,6 @@ public class Token {
     private LocalDateTime lastUsed;
 
     /**
-     * 错误次数
-     */
-    private Integer errorCount;
-
-    /**
-     * 最后错误时间
-     */
-    private LocalDateTime lastErrorTime;
-
-    /**
      * 创建时间
      */
     private LocalDateTime createdAt;
@@ -88,25 +78,6 @@ public class Token {
      */
     public boolean isAvailable() {
         return Boolean.TRUE.equals(enabled) && Boolean.TRUE.equals(healthy);
-    }
-
-    /**
-     * 增加错误计数
-     */
-    public void incrementErrorCount() {
-        if (this.errorCount == null) {
-            this.errorCount = 0;
-        }
-        this.errorCount++;
-        this.lastErrorTime = LocalDateTime.now();
-    }
-
-    /**
-     * 重置错误计数
-     */
-    public void resetErrorCount() {
-        this.errorCount = 0;
-        this.lastErrorTime = null;
     }
 
     /**

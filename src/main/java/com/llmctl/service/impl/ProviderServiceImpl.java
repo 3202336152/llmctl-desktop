@@ -88,9 +88,9 @@ public class ProviderServiceImpl implements ProviderService {
         provider.setType(request.getType());
         provider.setBaseUrl(request.getBaseUrl());
         provider.setModelName(request.getModelName());
-        provider.setMaxTokens(request.getMaxTokens() != null ? request.getMaxTokens() : 4096);
+        provider.setMaxTokens(request.getMaxTokens());
         provider.setMaxOutputTokens(request.getMaxOutputTokens());
-        provider.setTemperature(request.getTemperature() != null ? request.getTemperature() : new BigDecimal("0.7"));
+        provider.setTemperature(request.getTemperature());
         provider.setExtraHeaders(request.getExtraHeaders());
 
         // 设置Token策略

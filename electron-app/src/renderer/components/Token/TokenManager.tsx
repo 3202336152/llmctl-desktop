@@ -12,7 +12,6 @@ import {
   InputNumber,
   Switch,
   Tag,
-  Popconfirm,
   Row,
   Col,
   Statistic,
@@ -53,16 +52,27 @@ const TokenManager: React.FC = () => {
     dispatch(fetchProviders());
   }, [dispatch]);
 
-  // 当 providers 加载完成后，自动选择第一个 Provider
+  // 当 providers 加载完成后，恢复上次选择的 Provider 或选择第一个
   useEffect(() => {
     if (providers.length > 0 && !selectedProviderId) {
-      setSelectedProviderId(providers[0].id);
+      // 从 localStorage 读取上次选择的 Provider ID
+      const lastSelectedProviderId = localStorage.getItem('lastSelectedProviderId');
+
+      // 检查上次选择的 Provider 是否仍然存在
+      if (lastSelectedProviderId && providers.some(p => p.id === lastSelectedProviderId)) {
+        setSelectedProviderId(lastSelectedProviderId);
+      } else {
+        // 否则选择第一个
+        setSelectedProviderId(providers[0].id);
+      }
     }
   }, [providers, selectedProviderId]);
 
   useEffect(() => {
     if (selectedProviderId) {
       loadTokens();
+      // 保存当前选择的 Provider ID 到 localStorage
+      localStorage.setItem('lastSelectedProviderId', selectedProviderId);
     }
   }, [selectedProviderId]);
 
@@ -98,16 +108,25 @@ const TokenManager: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDeleteToken = async (tokenId: string) => {
+  const handleDeleteToken = (tokenId: string) => {
     if (!selectedProviderId) return;
 
-    try {
-      await tokenAPI.deleteToken(selectedProviderId, tokenId);
-      dispatch(removeToken(tokenId));
-      message.success('Token删除成功');
-    } catch (error) {
-      message.error(`删除失败: ${error}`);
-    }
+    Modal.confirm({
+      title: '确定要删除这个Token吗？',
+      content: '删除后将无法恢复',
+      okText: '确定',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await tokenAPI.deleteToken(selectedProviderId, tokenId);
+          dispatch(removeToken(tokenId));
+          message.success('Token删除成功');
+        } catch (error) {
+          message.error(`删除失败: ${error}`);
+        }
+      },
+    });
   };
 
   const handleModalOk = async () => {
@@ -225,12 +244,6 @@ const TokenManager: React.FC = () => {
       ),
     },
     {
-      title: '错误次数',
-      dataIndex: 'errorCount',
-      key: 'errorCount',
-      align: 'center' as const,
-    },
-    {
       title: '最后使用',
       dataIndex: 'lastUsed',
       key: 'lastUsed',
@@ -250,17 +263,14 @@ const TokenManager: React.FC = () => {
           >
             编辑
           </Button>
-          <Popconfirm
-            title="确定要删除这个Token吗？"
-            description="删除后将无法恢复"
-            onConfirm={() => handleDeleteToken(record.id)}
-            okText="确定"
-            cancelText="取消"
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteToken(record.id)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -348,7 +358,7 @@ const TokenManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={500}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}
@@ -400,7 +410,7 @@ const TokenManager: React.FC = () => {
         onOk={handleStrategyModalOk}
         onCancel={() => setStrategyModalVisible(false)}
         width={400}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={strategyForm}

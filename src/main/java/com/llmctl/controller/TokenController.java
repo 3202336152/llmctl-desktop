@@ -171,25 +171,6 @@ public class TokenController {
     }
 
     /**
-     * 重置Token错误计数
-     *
-     * @param providerId Provider ID
-     * @param tokenId Token ID
-     * @return 重置结果
-     */
-    @PostMapping("/{tokenId}/reset-errors")
-    public ResponseEntity<ApiResponse<Object>> resetTokenErrors(
-            @PathVariable @NotBlank(message = "Provider ID不能为空") String providerId,
-            @PathVariable @NotBlank(message = "Token ID不能为空") String tokenId) {
-        log.info("重置Token错误计数: {} (Provider: {})", tokenId, providerId);
-
-        tokenService.resetTokenError(tokenId);
-        ApiResponse<Object> response = ApiResponse.success("Token错误计数重置成功");
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
      * Token健康状态更新请求DTO
      */
     public static class TokenHealthRequest {

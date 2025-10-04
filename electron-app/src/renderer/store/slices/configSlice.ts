@@ -23,7 +23,7 @@ const configSlice = createSlice({
       state.configs = action.payload;
     },
     updateConfig: (state, action: PayloadAction<GlobalConfig>) => {
-      const index = state.configs.findIndex((c: GlobalConfig) => c.key === action.payload.key);
+      const index = state.configs.findIndex((c: GlobalConfig) => c.configKey === action.payload.configKey);
       if (index !== -1) {
         state.configs[index] = action.payload;
       } else {

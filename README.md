@@ -1,7 +1,6 @@
-# LLMctl - LLM控制系统
-
 <div align="center">
 
+# LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
 [![Version](https://img.shields.io/badge/version-2.0.2-blue.svg)](https://github.com/yourusername/llmctl/releases)

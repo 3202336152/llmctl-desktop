@@ -14,16 +14,16 @@ import {
   Space,
   Modal,
   Typography,
+  Popconfirm,
 } from 'antd';
 import {
   ExportOutlined,
-  ImportOutlined,
   DownloadOutlined,
-  InfoCircleOutlined,
   FileOutlined,
+  GithubOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { configAPI } from '../../services/api';
-import { ConfigImportRequest } from '../../types';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -31,11 +31,96 @@ const { TextArea } = Input;
 const { Text } = Typography;
 
 const Settings: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [exportLoading, setExportLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportContent, setExportContent] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
+
+  // 加载设置
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await configAPI.getGlobalConfigs();
+      const configs = response.data || [];
+
+      // 将配置转换为表单值
+      const formValues: any = {
+        autoStart: false,
+        minimizeToTray: true,
+        showNotifications: true,
+        theme: 'light',
+        language: 'zh',
+      };
+
+      configs.forEach(config => {
+        switch (config.configKey) {
+          case 'app.auto_start':
+            formValues.autoStart = config.configValue === 'true';
+            break;
+          case 'app.minimize_to_tray':
+            formValues.minimizeToTray = config.configValue === 'true';
+            break;
+          case 'app.show_notifications':
+            formValues.showNotifications = config.configValue === 'true';
+            break;
+          case 'app.theme':
+            formValues.theme = config.configValue;
+            break;
+          case 'app.language':
+            formValues.language = config.configValue;
+            // 应用语言设置
+            i18n.changeLanguage(config.configValue);
+            break;
+        }
+      });
+
+      form.setFieldsValue(formValues);
+    } catch (error) {
+      console.error('加载设置失败:', error);
+    }
+  };
+
+  // 保存设置
+  const handleSaveSettings = async () => {
+    try {
+      setSaveLoading(true);
+      const values = form.getFieldsValue();
+
+      // 构造配置数组
+      const configs = [
+        { configKey: 'app.auto_start', configValue: String(values.autoStart || false) },
+        { configKey: 'app.minimize_to_tray', configValue: String(values.minimizeToTray || false) },
+        { configKey: 'app.show_notifications', configValue: String(values.showNotifications || false) },
+        { configKey: 'app.theme', configValue: values.theme || 'light' },
+        { configKey: 'app.language', configValue: values.language || 'zh' },
+      ];
+
+      await configAPI.setBatchGlobalConfigs(configs);
+      message.success(t('settings.settingsSaved'));
+
+      // 应用语言切换
+      if (values.language && values.language !== i18n.language) {
+        i18n.changeLanguage(values.language);
+        // 通知主进程更新菜单语言
+        window.electronAPI?.send('set-menu-language', values.language);
+      }
+
+      // 应用最小化到托盘设置
+      if (values.minimizeToTray !== undefined) {
+        window.electronAPI?.send('enable-tray', values.minimizeToTray);
+      }
+    } catch (error) {
+      message.error(`${t('settings.settingsSaveFailed')}: ${error}`);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   // 导出配置（显示在弹窗）
   const handleExportConfig = async (format: 'bash' | 'powershell' | 'cmd' | 'json') => {
@@ -46,13 +131,13 @@ const Settings: React.FC = () => {
       setExportFormat(format);
       setExportModalVisible(true);
     } catch (error) {
-      message.error(`导出配置失败: ${error}`);
+      message.error(`${t('settings.exportFailed')}: ${error}`);
     } finally {
       setExportLoading(false);
     }
   };
 
-  // 下载配置文件（浏览器下载）
+  // 下载配置文件
   const handleDownloadConfig = () => {
     const fileExtensions = {
       bash: '.sh',
@@ -70,47 +155,42 @@ const Settings: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    message.success('配置文件下载成功');
+    message.success(t('settings.configDownloaded'));
+  };
+
+  // 打开项目主页
+  const handleOpenProjectPage = () => {
+    window.electronAPI?.openExternal('https://github.com/3202336152/llmctl-desktop');
   };
 
   const applicationSettings = (
-    <Card title="应用设置">
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          autoStart: false,
-          minimizeToTray: true,
-          showNotifications: true,
-          theme: 'light',
-          language: 'zh',
-        }}
-      >
+    <Card title={t('settings.appSettings')}>
+      <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item label="开机自启动" name="autoStart" valuePropName="checked">
-              <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Form.Item label={t('settings.autoStart')} name="autoStart" valuePropName="checked">
+              <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="最小化到系统托盘" name="minimizeToTray" valuePropName="checked">
-              <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Form.Item label={t('settings.minimizeToTray')} name="minimizeToTray" valuePropName="checked">
+              <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item label="显示通知" name="showNotifications" valuePropName="checked">
-              <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Form.Item label={t('settings.showNotifications')} name="showNotifications" valuePropName="checked">
+              <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="主题" name="theme">
+            <Form.Item label={t('settings.theme')} name="theme">
               <Select>
-                <Option value="light">亮色主题</Option>
-                <Option value="dark">暗色主题</Option>
-                <Option value="auto">跟随系统</Option>
+                <Option value="light">{t('settings.themeLight')}</Option>
+                <Option value="dark">{t('settings.themeDark')}</Option>
+                <Option value="auto">{t('settings.themeAuto')}</Option>
               </Select>
             </Form.Item>
           </Col>
@@ -118,10 +198,10 @@ const Settings: React.FC = () => {
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item label="语言" name="language">
+            <Form.Item label={t('settings.language')} name="language">
               <Select>
-                <Option value="zh">简体中文</Option>
-                <Option value="en">English</Option>
+                <Option value="zh">{t('settings.languageZh')}</Option>
+                <Option value="en">{t('settings.languageEn')}</Option>
               </Select>
             </Form.Item>
           </Col>
@@ -129,33 +209,31 @@ const Settings: React.FC = () => {
 
         <Divider />
 
-        <Button type="primary" onClick={() => message.success('设置已保存')}>
-          保存设置
+        <Button type="primary" onClick={handleSaveSettings} loading={saveLoading}>
+          {t('settings.saveSettings')}
         </Button>
       </Form>
     </Card>
   );
 
   const dataManagement = (
-    <Card title="数据管理">
+    <Card title={t('settings.dataManagement')}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <div>
           <h4>
-            <FileOutlined /> 配置导入导出
+            <FileOutlined /> {t('settings.configImportExport')}
           </h4>
           <Text type="secondary">
-            <div>使用菜单栏的 <Text strong>文件 → 导入配置 (Ctrl+O)</Text> 和 <Text strong>文件 → 导出配置 (Ctrl+S)</Text> 可以快速导入导出配置文件。</div>
-            <div style={{ marginTop: 8 }}>也可以使用下面的按钮查看和下载不同格式的配置。</div>
+            <div>{t('settings.configImportExportDesc')}</div>
+            <div style={{ marginTop: 8 }}>{t('settings.configImportExportDesc2')}</div>
           </Text>
         </div>
 
         <Divider />
 
         <div>
-          <h4>查看和导出配置</h4>
-          <Text type="secondary">
-            将当前的 Provider 配置导出为不同格式的文件，用于备份或在其他环境中使用。
-          </Text>
+          <h4>{t('settings.viewExportConfig')}</h4>
+          <Text type="secondary">{t('settings.viewExportConfigDesc')}</Text>
           <div style={{ marginTop: 16 }}>
             <Space wrap>
               <Button
@@ -164,28 +242,20 @@ const Settings: React.FC = () => {
                 loading={exportLoading}
                 type="primary"
               >
-                查看 JSON 配置
+                {t('settings.viewJsonConfig')}
               </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => handleExportConfig('bash')}
-                loading={exportLoading}
-              >
-                查看 Bash 脚本
+              <Button icon={<ExportOutlined />} onClick={() => handleExportConfig('bash')} loading={exportLoading}>
+                {t('settings.viewBashScript')}
               </Button>
               <Button
                 icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('powershell')}
                 loading={exportLoading}
               >
-                查看 PowerShell 脚本
+                {t('settings.viewPowershellScript')}
               </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => handleExportConfig('cmd')}
-                loading={exportLoading}
-              >
-                查看 CMD 脚本
+              <Button icon={<ExportOutlined />} onClick={() => handleExportConfig('cmd')} loading={exportLoading}>
+                {t('settings.viewCmdScript')}
               </Button>
             </Space>
           </div>
@@ -194,21 +264,22 @@ const Settings: React.FC = () => {
         <Divider />
 
         <div>
-          <h4>数据清理</h4>
-          <Text type="secondary">
-            清理应用数据，包括日志文件和缓存数据。
-          </Text>
+          <h4>{t('settings.dataCleanup')}</h4>
+          <Text type="secondary">{t('settings.dataCleanupDesc')}</Text>
           <div style={{ marginTop: 16 }}>
             <Space>
-              <Button onClick={() => message.success('日志已清理')}>
-                清理日志文件
-              </Button>
-              <Button onClick={() => message.success('缓存已清理')}>
-                清理缓存数据
-              </Button>
-              <Button danger onClick={() => message.success('所有数据已重置')}>
-                重置所有数据
-              </Button>
+              <Button onClick={() => message.success(t('settings.logsCleaned'))}>{t('settings.cleanLogs')}</Button>
+              <Button onClick={() => message.success(t('settings.cacheCleaned'))}>{t('settings.cleanCache')}</Button>
+              <Popconfirm
+                title={t('settings.resetDataConfirm')}
+                description={t('settings.resetDataDesc')}
+                onConfirm={() => message.success(t('settings.dataReset'))}
+                okText={t('settings.resetDataButton')}
+                cancelText={t('common.cancel')}
+                okButtonProps={{ danger: true }}
+              >
+                <Button danger>{t('settings.resetAllData')}</Button>
+              </Popconfirm>
             </Space>
           </div>
         </div>
@@ -217,16 +288,16 @@ const Settings: React.FC = () => {
   );
 
   const aboutInfo = (
-    <Card title="关于 LLMctl">
+    <Card title={t('settings.aboutLlmctl')}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <div>
           <Row gutter={16}>
             <Col span={12}>
-              <Text strong>应用名称：</Text>
-              <Text>LLMctl Desktop</Text>
+              <Text strong>{t('settings.appName')}：</Text>
+              <Text>{t('settings.appNameValue')}</Text>
             </Col>
             <Col span={12}>
-              <Text strong>版本：</Text>
+              <Text strong>{t('settings.version')}：</Text>
               <Text>2.0.0</Text>
             </Col>
           </Row>
@@ -235,11 +306,11 @@ const Settings: React.FC = () => {
         <div>
           <Row gutter={16}>
             <Col span={12}>
-              <Text strong>作者：</Text>
-              <Text>Liu Yifan</Text>
+              <Text strong>{t('settings.author')}：</Text>
+              <Text>{t('settings.authorName')}</Text>
             </Col>
             <Col span={12}>
-              <Text strong>许可证：</Text>
+              <Text strong>{t('settings.license')}：</Text>
               <Text>MIT</Text>
             </Col>
           </Row>
@@ -248,35 +319,31 @@ const Settings: React.FC = () => {
         <Divider />
 
         <div>
-          <h4>技术栈</h4>
+          <h4>{t('settings.techStack')}</h4>
           <ul>
-            <li>前端：Electron + React + TypeScript + Ant Design</li>
-            <li>后端：Spring Boot + MyBatis + MySQL</li>
-            <li>状态管理：Redux Toolkit</li>
-            <li>网络请求：Axios</li>
+            <li>{t('settings.techStackFrontend')}</li>
+            <li>{t('settings.techStackBackend')}</li>
+            <li>{t('settings.techStackState')}</li>
+            <li>{t('settings.techStackHttp')}</li>
           </ul>
         </div>
 
         <Divider />
 
         <div>
-          <h4>功能特性</h4>
+          <h4>{t('settings.features')}</h4>
           <ul>
-            <li>多Provider支持（Claude、OpenAI、通义千问、Gemini）</li>
-            <li>智能Token轮询与负载均衡</li>
-            <li>CLI会话管理与实时监控</li>
-            <li>配置导入导出与备份恢复</li>
-            <li>使用统计与性能分析</li>
+            <li>{t('settings.featureMultiProvider')}</li>
+            <li>{t('settings.featureTokenPolling')}</li>
+            <li>{t('settings.featureSessionManagement')}</li>
+            <li>{t('settings.featureConfigManagement')}</li>
+            <li>{t('settings.featureStatistics')}</li>
           </ul>
         </div>
 
         <div>
-          <Button
-            type="primary"
-            icon={<InfoCircleOutlined />}
-            onClick={() => message.info('更多信息请访问项目主页')}
-          >
-            查看项目主页
+          <Button type="primary" icon={<GithubOutlined />} onClick={handleOpenProjectPage}>
+            {t('settings.viewProjectPage')}
           </Button>
         </div>
       </Space>
@@ -286,38 +353,33 @@ const Settings: React.FC = () => {
   return (
     <div>
       <Tabs defaultActiveKey="1">
-        <TabPane tab="应用设置" key="1">
+        <TabPane tab={t('settings.appSettings')} key="1">
           {applicationSettings}
         </TabPane>
-        <TabPane tab="数据管理" key="2">
+        <TabPane tab={t('settings.dataManagement')} key="2">
           {dataManagement}
         </TabPane>
-        <TabPane tab="关于" key="3">
+        <TabPane tab={t('settings.about')} key="3">
           {aboutInfo}
         </TabPane>
       </Tabs>
 
       {/* 导出配置Modal */}
       <Modal
-        title={`导出的${exportFormat.toUpperCase()}配置`}
+        title={t('settings.exportConfigTitle', { format: exportFormat.toUpperCase() })}
         open={exportModalVisible}
         onCancel={() => setExportModalVisible(false)}
         width={800}
         footer={[
           <Button key="close" onClick={() => setExportModalVisible(false)}>
-            关闭
+            {t('common.close')}
           </Button>,
           <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={handleDownloadConfig}>
-            下载文件
+            {t('settings.downloadFile')}
           </Button>,
         ]}
       >
-        <TextArea
-          value={exportContent}
-          readOnly
-          rows={15}
-          style={{ fontFamily: 'monospace' }}
-        />
+        <TextArea value={exportContent} readOnly rows={15} style={{ fontFamily: 'monospace' }} />
       </Modal>
     </div>
   );

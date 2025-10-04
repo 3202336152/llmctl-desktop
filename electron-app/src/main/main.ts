@@ -1,10 +1,13 @@
-import { app, BrowserWindow, Menu, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import { createMenu } from './menu';
+import { createMenu, setMenuLanguage, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let minimizeToTray = false;
+let isQuitting = false; // 使用局部变量而不是 app.isQuitting
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -49,7 +52,70 @@ function createMainWindow(): BrowserWindow {
     mainWindow = null;
   });
 
+  // 监听窗口关闭事件
+  mainWindow.on('close', (event) => {
+    if (minimizeToTray && !isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+    }
+  });
+
   return mainWindow;
+}
+
+/**
+ * 创建系统托盘
+ */
+function createTray() {
+  if (tray) return;
+
+  // 创建托盘图标
+  const iconPath = path.join(__dirname, '../../assets/icon.png');
+  const trayIcon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
+
+  tray.setToolTip(t('trayTooltip'));
+
+  // 创建托盘菜单
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: t('showMainWindow'),
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: t('exit'),
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // 双击托盘图标显示窗口
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+/**
+ * 销毁系统托盘
+ */
+function destroyTray() {
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 }
 
 app.whenReady().then(() => {
@@ -93,6 +159,49 @@ ipcMain.handle('maximize-window', () => {
 
 ipcMain.handle('close-window', () => {
   mainWindow?.close();
+});
+
+// ==================== 系统功能 IPC Handlers ====================
+
+/**
+ * 打开外部链接
+ */
+ipcMain.handle('open-external', async (_event, url: string) => {
+  try {
+    await shell.openExternal(url);
+  } catch (error) {
+    console.error('[IPC] open-external 失败:', error);
+    throw error;
+  }
+});
+
+/**
+ * 启用/禁用系统托盘
+ */
+ipcMain.on('enable-tray', (_event, enabled: boolean) => {
+  console.log('[IPC] enable-tray:', enabled);
+  minimizeToTray = enabled;
+
+  if (enabled) {
+    createTray();
+  } else {
+    destroyTray();
+  }
+});
+
+/**
+ * 设置菜单语言
+ */
+ipcMain.on('set-menu-language', (_event, language: 'zh' | 'en') => {
+  console.log('[IPC] set-menu-language:', language);
+  setMenuLanguage(language);
+  Menu.setApplicationMenu(createMenu());
+
+  // 如果托盘已创建，重新创建以更新语言
+  if (tray) {
+    destroyTray();
+    createTray();
+  }
 });
 
 // ==================== 文件操作 IPC Handlers ====================

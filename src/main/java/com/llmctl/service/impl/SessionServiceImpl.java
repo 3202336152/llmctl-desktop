@@ -94,6 +94,10 @@ public class SessionServiceImpl implements ISessionService {
             throw new BusinessException("没有可用的Token: " + request.getProviderId());
         }
 
+        // 更新Token的最后使用时间
+        tokenMapper.updateLastUsed(selectedToken.getId());
+        log.debug("更新Token[{}]的最后使用时间", selectedToken.getId());
+
         // 创建Session实体（仅记录元数据，进程由Electron管理）
         Session session = new Session();
         session.setId(IdGenerator.generateSessionId());
@@ -244,6 +248,12 @@ public class SessionServiceImpl implements ISessionService {
                 if (provider.getModelName() != null) {
                     envVars.put("ANTHROPIC_MODEL", provider.getModelName());
                 }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", String.valueOf(provider.getMaxTokens()));
+                }
+                if (provider.getTemperature() != null) {
+                    envVars.put("CLAUDE_CODE_TEMPERATURE", provider.getTemperature().toString());
+                }
                 break;
 
             case "openai":
@@ -253,6 +263,12 @@ public class SessionServiceImpl implements ISessionService {
                 }
                 if (provider.getModelName() != null) {
                     envVars.put("OPENAI_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("OPENAI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                }
+                if (provider.getTemperature() != null) {
+                    envVars.put("OPENAI_TEMPERATURE", provider.getTemperature().toString());
                 }
                 break;
 
@@ -264,6 +280,12 @@ public class SessionServiceImpl implements ISessionService {
                 if (provider.getModelName() != null) {
                     envVars.put("QWEN_MODEL", provider.getModelName());
                 }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("QWEN_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                }
+                if (provider.getTemperature() != null) {
+                    envVars.put("QWEN_TEMPERATURE", provider.getTemperature().toString());
+                }
                 break;
 
             case "gemini":
@@ -273,6 +295,12 @@ public class SessionServiceImpl implements ISessionService {
                 }
                 if (provider.getModelName() != null) {
                     envVars.put("GEMINI_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("GEMINI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                }
+                if (provider.getTemperature() != null) {
+                    envVars.put("GEMINI_TEMPERATURE", provider.getTemperature().toString());
                 }
                 break;
 
