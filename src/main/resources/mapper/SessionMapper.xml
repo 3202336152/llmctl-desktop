@@ -85,9 +85,19 @@
         UPDATE sessions SET last_activity = NOW() WHERE id = #{id}
     </update>
 
-    <!-- 终止Session -->
+    <!-- 终止Session（设置为非活跃状态） -->
     <update id="terminate" parameterType="string">
-        UPDATE sessions SET status = 'terminated', end_time = NOW(), last_activity = NOW() WHERE id = #{id}
+        UPDATE sessions SET status = 'inactive', end_time = NOW(), last_activity = NOW() WHERE id = #{id}
+    </update>
+
+    <!-- 重新激活Session（将inactive状态改为active） -->
+    <update id="reactivate" parameterType="string">
+        UPDATE sessions SET
+            status = 'active',
+            start_time = NOW(),
+            end_time = NULL,
+            last_activity = NOW()
+        WHERE id = #{id} AND status = 'inactive'
     </update>
 
     <!-- 根据ID删除Session -->
@@ -100,7 +110,8 @@
         DELETE FROM sessions WHERE provider_id = #{providerId}
     </delete>
 
-    <!-- 删除指定时间之前的已终止Session -->
+    <!-- 删除指定时间之前的已终止Session
+         注意：'terminated'状态已废弃，保留此查询仅为数据库兼容性考虑 -->
     <delete id="deleteTerminatedBefore" parameterType="java.time.LocalDateTime">
         DELETE FROM sessions WHERE status = 'terminated' AND end_time &lt; #{beforeTime}
     </delete>

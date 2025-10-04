@@ -31,6 +31,7 @@ import {
   setLoading,
   setError,
   openTerminal,
+  destroyTerminal,
 } from '../../store/slices/sessionSlice';
 import { sessionAPI } from '../../services/api';
 import { Session, StartSessionRequest, UpdateSessionStatusRequest } from '../../types';
@@ -43,7 +44,7 @@ const SessionManager: React.FC = () => {
   const { providers } = useAppSelector((state: RootState) => state.provider);
   const { sessions, loading, openTerminalSessions } = useAppSelector((state: RootState) => state.session);
   const [modalVisible, setModalVisible] = useState(false);
-  const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'terminated'>('all');
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -85,6 +86,17 @@ const SessionManager: React.FC = () => {
     setModalVisible(true);
   };
 
+  const handleSelectDirectory = async () => {
+    try {
+      const result = await window.electronAPI.selectDirectory();
+      if (!result.canceled && result.path) {
+        form.setFieldsValue({ workingDirectory: result.path });
+      }
+    } catch (error) {
+      message.error(`选择文件夹失败: ${error}`);
+    }
+  };
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
@@ -119,16 +131,28 @@ const SessionManager: React.FC = () => {
   const handleTerminateSession = async (sessionId: string) => {
     Modal.confirm({
       title: '确定要终止这个会话吗？',
-      content: '终止后将无法恢复，进程将被彻底结束',
+      content: '终止后当前对话将被清除，下次打开将是全新会话',
       okText: '确定',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
+          // 1. 终止Electron端的终端进程
+          try {
+            await window.electronAPI.terminalKill(sessionId);
+          } catch (error) {
+            console.error('终止终端进程失败:', error);
+          }
+
+          // 2. 销毁前端终端实例
+          dispatch(destroyTerminal(sessionId));
+
+          // 3. 终止后端会话（设置为 inactive 状态）
           await sessionAPI.terminateSession(sessionId);
-          // 重新加载会话列表以获取更新后的状态
+
+          // 4. 重新加载会话列表以获取更新后的状态
           await loadSessions();
-          message.success('会话终止成功');
+          message.success('会话已终止，下次打开将是全新会话');
         } catch (error) {
           message.error(`终止会话失败: ${error}`);
         }
@@ -139,14 +163,26 @@ const SessionManager: React.FC = () => {
   const handleDeleteSession = async (sessionId: string) => {
     Modal.confirm({
       title: '确定要清除这个会话记录吗？',
-      content: '清除后将从数据库中永久删除，无法恢复',
+      content: '清除后将永久删除，无法恢复',
       okText: '确定',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
+          // 1. 删除后端会话记录
           await sessionAPI.deleteSession(sessionId);
-          // 重新加载会话列表
+
+          // 2. 尝试终止终端进程（如果还在运行）
+          try {
+            await window.electronAPI.terminalKill(sessionId);
+          } catch (error) {
+            console.error('终止终端进程失败（可能已终止）:', error);
+          }
+
+          // 3. 销毁前端终端实例
+          dispatch(destroyTerminal(sessionId));
+
+          // 4. 重新加载会话列表
           await loadSessions();
           message.success('会话记录已清除');
         } catch (error) {
@@ -156,7 +192,23 @@ const SessionManager: React.FC = () => {
     });
   };
 
-  const handleOpenTerminal = (sessionId: string) => {
+  const handleOpenTerminal = async (sessionId: string) => {
+    // 检查会话状态，如果是 inactive，先重新激活
+    const session = sessions.find(s => s.id === sessionId);
+    if (session?.status === 'inactive') {
+      try {
+        // 调用后端 API 重新激活会话
+        await sessionAPI.reactivateSession(sessionId);
+        // 重新加载会话列表
+        await loadSessions();
+        message.success('会话已重新激活');
+      } catch (error) {
+        message.error(`重新激活会话失败: ${error}`);
+        return;
+      }
+    }
+
+    // 打开终端
     dispatch(openTerminal(sessionId));
   };
 
@@ -164,7 +216,9 @@ const SessionManager: React.FC = () => {
     switch (status) {
       case 'active':
         return 'green';
-      case 'terminated':
+      case 'inactive':
+        return 'orange';
+      case 'terminated': // 废弃状态，保留仅为兼容历史数据
         return 'red';
       default:
         return 'default';
@@ -175,7 +229,9 @@ const SessionManager: React.FC = () => {
     switch (status) {
       case 'active':
         return '活跃';
-      case 'terminated':
+      case 'inactive':
+        return '非活跃';
+      case 'terminated': // 废弃状态，保留仅为兼容历史数据
         return '已终止';
       default:
         return '未知';
@@ -270,14 +326,33 @@ const SessionManager: React.FC = () => {
               </Button>
             </>
           )}
-          {record.status === 'terminated' && (
+          {record.status === 'inactive' && (
+            <>
+              <Button
+                type="link"
+                icon={<CodeOutlined />}
+                onClick={() => handleOpenTerminal(record.id)}
+              >
+                重新启动
+              </Button>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteSession(record.id)}
+              >
+                删除
+              </Button>
+            </>
+          )}
+          {(record.status === 'inactive' || record.status === 'terminated') && (
             <Button
               type="link"
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDeleteSession(record.id)}
             >
-              清除
+              删除
             </Button>
           )}
         </Space>
@@ -286,15 +361,15 @@ const SessionManager: React.FC = () => {
   ];
 
   const activeSessions = sessions.filter(session => session.status === 'active');
-  const terminatedSessions = sessions.filter(session => session.status === 'terminated');
+  const inactiveSessions = sessions.filter(session => session.status === 'inactive');
 
   // 根据筛选条件获取显示的会话列表
   const getFilteredSessions = () => {
     switch (sessionFilter) {
       case 'active':
         return activeSessions;
-      case 'terminated':
-        return terminatedSessions;
+      case 'inactive':
+        return inactiveSessions;
       case 'all':
       default:
         return sessions;
@@ -327,9 +402,9 @@ const SessionManager: React.FC = () => {
             <span style={{ fontWeight: 600, fontSize: 16, color: '#52c41a' }}>{activeSessions.length}</span>
           </Space>
           <Space size={8}>
-            <CloseCircleOutlined style={{ fontSize: 16, color: '#f5222d' }} />
-            <span style={{ color: '#666' }}>已终止:</span>
-            <span style={{ fontWeight: 600, fontSize: 16, color: '#f5222d' }}>{terminatedSessions.length}</span>
+            <CloseCircleOutlined style={{ fontSize: 16, color: '#fa8c16' }} />
+            <span style={{ color: '#666' }}>非活跃:</span>
+            <span style={{ fontWeight: 600, fontSize: 16, color: '#fa8c16' }}>{inactiveSessions.length}</span>
           </Space>
         </Space>
       </div>
@@ -362,7 +437,7 @@ const SessionManager: React.FC = () => {
               <>
                 <Tabs
                   activeKey={sessionFilter}
-                  onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'terminated')}
+                  onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'inactive')}
                   items={[
                     {
                       key: 'all',
@@ -381,10 +456,10 @@ const SessionManager: React.FC = () => {
                       ),
                     },
                     {
-                      key: 'terminated',
+                      key: 'inactive',
                       label: (
                         <span>
-                          已终止 <Tag color="red">{terminatedSessions.length}</Tag>
+                          非活跃 <Tag color="orange">{inactiveSessions.length}</Tag>
                         </span>
                       ),
                     },
@@ -446,9 +521,20 @@ const SessionManager: React.FC = () => {
           <Form.Item
             label="工作目录"
             name="workingDirectory"
-            rules={[{ required: true, message: '请输入工作目录' }]}
+            rules={[{ required: true, message: '请输入或选择工作目录' }]}
           >
-            <Input placeholder="请输入工作目录路径" />
+            <Input
+              placeholder="请输入工作目录路径或点击浏览按钮选择"
+              addonAfter={
+                <Button
+                  type="link"
+                  onClick={handleSelectDirectory}
+                  style={{ padding: 0, height: 'auto' }}
+                >
+                  浏览
+                </Button>
+              }
+            />
           </Form.Item>
 
           <Form.Item

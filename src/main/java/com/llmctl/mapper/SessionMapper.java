@@ -105,6 +105,14 @@ public interface SessionMapper {
     int terminate(@Param("id") String id);
 
     /**
+     * 重新激活Session（将inactive状态改为active）
+     *
+     * @param id Session ID
+     * @return 影响的行数
+     */
+    int reactivate(@Param("id") String id);
+
+    /**
      * 根据ID删除Session
      *
      * @param id Session ID

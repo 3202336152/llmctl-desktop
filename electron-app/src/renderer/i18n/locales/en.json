@@ -170,7 +170,7 @@
     "terminateDesc": "The process will be completely terminated and cannot be recovered",
     "clearRecord": "Clear",
     "clearConfirm": "Are you sure you want to clear this session record?",
-    "clearDesc": "This will permanently delete the record from the database and cannot be recovered",
+    "clearDesc": "This will permanently delete the record and cannot be recovered",
     "selectProvider": "Please select a Provider",
     "enterWorkingDir": "Please enter working directory",
     "enterCommand": "Please enter startup command",

@@ -69,6 +69,15 @@ public interface ISessionService {
     void terminateSession(String sessionId);
 
     /**
+     * 重新激活会话（将inactive状态改为active）
+     *
+     * @param sessionId 会话ID
+     * @return 重新激活后的会话
+     * @throws IllegalArgumentException 如果会话不存在或状态不是inactive
+     */
+    SessionDTO reactivateSession(String sessionId);
+
+    /**
      * 删除会话记录（从数据库中永久删除）
      *
      * @param sessionId 会话ID

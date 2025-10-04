@@ -30,6 +30,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const createdRef = useRef<boolean>(false);
+  const [fontSize, setFontSize] = useState<number>(16); // 默认字体大小
 
   useEffect(() => {
     if (!terminalRef.current || createdRef.current) return;
@@ -50,7 +51,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
 
       const terminal = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: fontSize,
       fontFamily: 'Consolas, "Courier New", monospace',
       theme: {
         background: '#1e1e1e',
@@ -111,13 +112,22 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
         if (result && !result.success) {
           terminal.write(`\r\n\x1b[1;31m[错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
         } else {
-          // 等待 CMD 启动完成后自动执行用户命令
-          if (command && command.trim() !== '' && command.toLowerCase() !== 'cmd.exe') {
-            setTimeout(() => {
-              window.electronAPI.terminalInput(sessionId, command + '\r').catch((error) => {
-                console.error('自动执行命令失败:', error);
-              });
-            }, 1000);
+          // 检查是否是重新连接到已存在的会话
+          const existed = (result as any)?.existed || false;
+
+          if (existed) {
+            // 会话已存在，重新连接
+            console.log('[Terminal] 重新连接到已存在的会话:', sessionId);
+            terminal.write('\r\n\x1b[1;32m[已恢复会话]\x1b[0m\r\n');
+          } else {
+            // 新创建的会话，等待 CMD 启动完成后自动执行用户命令
+            if (command && command.trim() !== '' && command.toLowerCase() !== 'cmd.exe') {
+              setTimeout(() => {
+                window.electronAPI.terminalInput(sessionId, command + '\r').catch((error) => {
+                  console.error('自动执行命令失败:', error);
+                });
+              }, 1000);
+            }
           }
         }
       })
@@ -197,17 +207,45 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
+    // 监听终端容器可见性变化，自动调整尺寸
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // 当终端变为可见时，重新调整尺寸
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              try {
+                fitAddon.fit();
+                // 同步通知后端调整PTY大小
+                const { cols, rows } = terminal;
+                window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
+                  console.error('调整终端大小失败:', error);
+                });
+              } catch (error) {
+                console.error('终端自适应失败:', error);
+              }
+            }, 100); // 延迟 100ms 确保容器尺寸已稳定
+          }
+        });
+      },
+      { threshold: 0.1 } // 当至少 10% 的元素可见时触发
+    );
+
+    if (terminalRef.current) {
+      observer.observe(terminalRef.current);
+    }
+
     // 清理
     return () => {
       window.removeEventListener('resize', handleResize);
+      observer.disconnect();
 
       // 取消监听输出
       unsubscribe();
 
-      // 终止终端会话
-      window.electronAPI.terminalKill(sessionId).catch((error) => {
-        console.error('终止终端会话失败:', error);
-      });
+      // 注意：不在这里终止终端会话
+      // 终端会话的销毁由会话管理器在终止会话时控制
+      // 这样可以保持会话持久化，关闭标签只是隐藏，不会销毁会话
 
       terminal.dispose();
     };
@@ -217,13 +255,69 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
     initTerminal();
   }, []); // 空依赖数组，只在挂载时执行一次
 
+  // 监听字体大小变化，更新终端字体
+  useEffect(() => {
+    if (!xtermRef.current || !fitAddonRef.current) return;
+
+    // 更新终端字体大小
+    xtermRef.current.options.fontSize = fontSize;
+
+    // 重新调整尺寸以适应新字体
+    setTimeout(() => {
+      try {
+        fitAddonRef.current?.fit();
+        // 同步通知后端调整PTY大小
+        if (xtermRef.current) {
+          const { cols, rows } = xtermRef.current;
+          window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
+            console.error('调整终端大小失败:', error);
+          });
+        }
+      } catch (error) {
+        console.error('终端自适应失败:', error);
+      }
+    }, 50);
+  }, [fontSize, sessionId]);
+
+  // Ctrl + 鼠标滚轮调整字体大小
+  useEffect(() => {
+    if (!terminalRef.current) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // 只有按下 Ctrl 键时才调整字体
+      if (e.ctrlKey) {
+        e.preventDefault();
+
+        setFontSize((prevSize) => {
+          let newSize = prevSize;
+
+          // deltaY < 0 表示向上滚动（放大），> 0 表示向下滚动（缩小）
+          if (e.deltaY < 0) {
+            newSize = Math.min(prevSize + 1, 30); // 最大 30px
+          } else {
+            newSize = Math.max(prevSize - 1, 8); // 最小 8px
+          }
+
+          return newSize;
+        });
+      }
+    };
+
+    const container = terminalRef.current;
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const terminalDiv = (
     <div
       ref={terminalRef}
       style={{
         width: '100%',
-        height: showCard ? '500px' : 'calc(100vh - 220px)',
-        minHeight: '650px',
+        height: showCard ? '500px' : '100%',
+        minHeight: showCard ? '500px' : '100%',
       }}
     />
   );

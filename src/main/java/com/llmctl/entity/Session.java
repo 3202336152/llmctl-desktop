@@ -81,8 +81,16 @@ public class Session {
         ACTIVE("active"),
 
         /**
-         * 已终止状态
+         * 非活跃状态（已终止但可重新启动）
          */
+        INACTIVE("inactive"),
+
+        /**
+         * 已终止状态
+         * @deprecated 该状态已废弃，不再使用。终止会话现在使用 INACTIVE 状态。
+         *             保留此枚举值仅为数据库兼容性考虑。
+         */
+        @Deprecated
         TERMINATED("terminated");
 
         private final String value;
@@ -125,10 +133,10 @@ public class Session {
     }
 
     /**
-     * 终止会话
+     * 终止会话（设置为非活跃状态）
      */
     public void terminate() {
-        this.status = SessionStatus.TERMINATED;
+        this.status = SessionStatus.INACTIVE;
         this.endTime = LocalDateTime.now();
     }
 

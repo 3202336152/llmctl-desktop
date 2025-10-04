@@ -134,6 +134,7 @@ public class SessionServiceImpl implements ISessionService {
         session.setStatus(newStatus);
         session.setLastActivity(LocalDateTime.now());
 
+        // 兼容废弃的TERMINATED状态（仅为向后兼容保留）
         if (newStatus == Session.SessionStatus.TERMINATED) {
             session.setEndTime(LocalDateTime.now());
         }
@@ -156,13 +157,39 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("会话", sessionId);
         }
 
-        // 更新数据库状态（进程由Electron管理和终止）
+        // 更新数据库状态为inactive（进程由Electron管理和终止）
         int result = sessionMapper.terminate(sessionId);
         if (result <= 0) {
             throw new ServiceException("终止会话", "数据库更新失败");
         }
 
         log.info("成功终止会话: {}", sessionId);
+    }
+
+    @Override
+    public SessionDTO reactivateSession(String sessionId) {
+        log.info("重新激活会话: {}", sessionId);
+
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        if (session.getStatus() != Session.SessionStatus.INACTIVE) {
+            throw new BusinessException("只能重新激活非活跃状态的会话，当前状态: " + session.getStatus().getValue());
+        }
+
+        // 重新激活会话
+        int result = sessionMapper.reactivate(sessionId);
+        if (result <= 0) {
+            throw new ServiceException("重新激活会话", "数据库更新失败");
+        }
+
+        // 重新查询更新后的会话
+        Session reactivatedSession = sessionMapper.findById(sessionId);
+        log.info("成功重新激活会话: {}", sessionId);
+
+        return convertToDTO(reactivatedSession);
     }
 
     @Override

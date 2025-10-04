@@ -170,7 +170,7 @@
     "terminateDesc": "终止后将无法恢复，进程将被彻底结束",
     "clearRecord": "清除",
     "clearConfirm": "确定要清除这个会话记录吗？",
-    "clearDesc": "清除后将从数据库中永久删除，无法恢复",
+    "clearDesc": "清除后将永久删除，无法恢复",
     "selectProvider": "请选择Provider",
     "enterWorkingDir": "请输入工作目录",
     "enterCommand": "请输入启动命令",

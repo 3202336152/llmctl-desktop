@@ -10,11 +10,13 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   FolderOutlined,
+  ExpandOutlined,
+  CompressOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from './store';
 import type { RootState } from './store';
-import { closeTerminal, setActiveTab, addSession, removeSession, openTerminal } from './store/slices/sessionSlice';
+import { closeTerminal, setActiveTab, addSession, removeSession, openTerminal, destroyTerminal, toggleTerminalFullscreen } from './store/slices/sessionSlice';
 import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
@@ -37,7 +39,7 @@ const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const { t, i18n } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
-  const { sessions, openTerminalSessions, activeTabKey } = useAppSelector((state: RootState) => state.session);
+  const { sessions, createdTerminalSessions, openTerminalSessions, activeTabKey, terminalSessionData, isTerminalFullscreen } = useAppSelector((state: RootState) => state.session);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
@@ -175,14 +177,21 @@ const App: React.FC = () => {
           return;
         }
 
-        // 1. 关闭旧终端
-        dispatch(closeTerminal(data.sessionId));
+        // 1. 终止Electron端的终端进程
+        try {
+          await window.electronAPI.terminalKill(data.sessionId);
+        } catch (error) {
+          console.error('终止终端进程失败:', error);
+        }
 
-        // 2. 删除旧会话（直接从数据库清除，不保留记录）
+        // 2. 销毁前端终端实例
+        dispatch(destroyTerminal(data.sessionId));
+
+        // 3. 删除旧会话（直接从数据库清除，不保留记录）
         await sessionAPI.deleteSession(data.sessionId);
         dispatch(removeSession(data.sessionId));
 
-        // 3. 创建新会话（使用相同的配置）
+        // 4. 创建新会话（使用相同的配置）
         const newSessionRequest: StartSessionRequest = {
           providerId: failedSession.providerId,
           workingDirectory: failedSession.workingDirectory,
@@ -208,6 +217,25 @@ const App: React.FC = () => {
     };
   }, [sessions, dispatch]);
 
+  // 全屏快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F11 切换全屏
+      if (e.key === 'F11') {
+        e.preventDefault();
+        dispatch(toggleTerminalFullscreen());
+      }
+      // ESC 退出全屏
+      else if (e.key === 'Escape' && isTerminalFullscreen) {
+        e.preventDefault();
+        dispatch(toggleTerminalFullscreen());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dispatch, isTerminalFullscreen]);
+
   // 是否在会话管理页面
   const isSessionPage = location.pathname === '/sessions';
 
@@ -230,7 +258,7 @@ const App: React.FC = () => {
     dispatch(closeTerminal(sessionId));
   };
 
-  // 生成标签页数据
+  // 生成标签页数据 - Tabs只用于导航，不包含实际的终端组件
   const tabItems = openTerminalSessions.map(sessionId => {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return null;
@@ -248,18 +276,55 @@ const App: React.FC = () => {
           </Tag>
         </Space>
       ),
-      children: (
-        <TerminalComponent
-          sessionId={sessionId}
-          command={session.command}
-          cwd={session.workingDirectory}
-          providerName={session.providerName}
-          showCard={false}
-        />
-      ),
+      // 空内容，实际的终端在外部渲染
+      children: <div style={{ height: '100%' }} />,
       closable: true,
     };
   }).filter(item => item !== null);
+
+  // 渲染所有已创建的终端实例，所有终端始终可见，通过z-index叠加
+  const allTerminalComponents = createdTerminalSessions.map(sessionId => {
+    const session = terminalSessionData[sessionId];
+
+    // 判断该终端是否应该在最上层
+    const isActive = openTerminalSessions.includes(sessionId) && activeTabKey === sessionId;
+
+    // 如果session数据不存在，使用默认值确保组件不被卸载
+    const sessionData = session || {
+      id: sessionId,
+      command: 'claude',
+      workingDirectory: 'D:\\',
+      providerName: '',
+      providerId: '',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 无条件渲染TerminalComponent，确保组件永远不被卸载
+    return (
+      <div
+        key={sessionId}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: isActive ? 10 : 1,
+          visibility: openTerminalSessions.includes(sessionId) ? 'visible' : 'hidden',
+        }}
+      >
+        <TerminalComponent
+          sessionId={sessionId}
+          command={sessionData.command}
+          cwd={sessionData.workingDirectory}
+          providerName={sessionData.providerName}
+          showCard={false}
+        />
+      </div>
+    );
+  });
 
   const menuItems = [
     {
@@ -297,128 +362,163 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <NotificationManager />
       <Layout style={{ height: '100vh' }}>
-        <Sider
-          theme="light"
-          width={200}
-          collapsible
-          collapsed={collapsed}
-          onCollapse={setCollapsed}
-          trigger={null}
-          style={{
-            borderRight: '1px solid #f0f0f0',
-            overflow: 'hidden',
-            transition: 'all 0.2s',
-          }}
-        >
-          <div
+        {/* 全屏时隐藏侧边栏 */}
+        {!isTerminalFullscreen && (
+          <Sider
+            theme="light"
+            width={200}
+            collapsible
+            collapsed={collapsed}
+            onCollapse={setCollapsed}
+            trigger={null}
             style={{
-              height: 32,
-              margin: 16,
-              background: 'rgba(255, 255, 255, 0.2)',
-              textAlign: 'center',
-              lineHeight: '32px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: '#1890ff',
+              borderRight: '1px solid #f0f0f0',
               overflow: 'hidden',
-              whiteSpace: 'nowrap',
+              transition: 'all 0.2s',
             }}
           >
-            {collapsed ? 'LLM' : 'LLMctl Desktop'}
-          </div>
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            items={menuItems}
-            onClick={({ key }: { key: string }) => handleMenuClick(key)}
-            style={{ height: 'calc(100% - 64px)', borderRight: 0 }}
-          />
-        </Sider>
+            <div
+              style={{
+                height: 32,
+                margin: 16,
+                background: 'rgba(255, 255, 255, 0.2)',
+                textAlign: 'center',
+                lineHeight: '32px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#1890ff',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {collapsed ? 'LLM' : 'LLMctl Desktop'}
+            </div>
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={({ key }: { key: string }) => handleMenuClick(key)}
+              style={{ height: 'calc(100% - 64px)', borderRight: 0 }}
+            />
+          </Sider>
+        )}
 
         <Layout>
-          <Header
-            style={{
-              padding: '0 16px',
-              background: colorBgContainer,
-              borderBottom: '1px solid #f0f0f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <Button
-                type="text"
-                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={() => setCollapsed(!collapsed)}
-                style={{
-                  fontSize: '16px',
-                  width: 40,
-                  height: 40,
-                }}
-              />
-              <h2 style={{ margin: 0, color: '#333' }}>
-                {menuItems.find(item => item.key === location.pathname)?.label || t('nav.appTitle')}
-              </h2>
-            </div>
-          </Header>
+          {/* 全屏时隐藏顶部导航栏 */}
+          {!isTerminalFullscreen && (
+            <Header
+              style={{
+                padding: '0 16px',
+                background: colorBgContainer,
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <Button
+                  type="text"
+                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                  onClick={() => setCollapsed(!collapsed)}
+                  style={{
+                    fontSize: '16px',
+                    width: 40,
+                    height: 40,
+                  }}
+                />
+                <h2 style={{ margin: 0, color: '#333' }}>
+                  {menuItems.find(item => item.key === location.pathname)?.label || t('nav.appTitle')}
+                </h2>
+              </div>
+            </Header>
+          )}
 
           <Content
             style={{
               margin: 0,
-              padding: 24,
+              padding: isTerminalFullscreen ? 0 : 24,
               background: colorBgContainer,
               overflow: 'auto',
-              height: 'calc(100vh - 64px)',
-              paddingBottom: isSessionPage && openTerminalSessions.length > 0 ? 0 : 24,
+              height: isTerminalFullscreen ? '100vh' : 'calc(100vh - 64px)',
+              paddingBottom: isSessionPage && openTerminalSessions.length > 0 && !isTerminalFullscreen ? 0 : 24,
             }}
           >
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/providers" element={<ProviderManager />} />
-                <Route path="/tokens" element={<TokenManager />} />
-                <Route path="/sessions" element={<SessionManager />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/" element={<ProviderManager />} />
-              </Routes>
-            </ErrorBoundary>
-
-            {/* 全局终端容器 - 只在会话管理页面显示 */}
-            {openTerminalSessions.length > 0 && (
-              <div style={{
-                display: isSessionPage ? 'block' : 'none',
-                marginTop: isSessionPage ? 16 : 0,
-              }}>
-                <Card
-                  style={{
-                    height: 'calc(100vh - 160px)',
-                    minHeight: '750px',
-                  }}
-                  styles={{ body: { padding: 0, height: '100%' } }}
-                >
-                  <Tabs
-                    type="editable-card"
-                    activeKey={activeTabKey}
-                    onChange={(key: string) => dispatch(setActiveTab(key))}
-                    onEdit={(targetKey: React.MouseEvent | React.KeyboardEvent | string, action: 'add' | 'remove') => {
-                      if (action === 'remove' && typeof targetKey === 'string') {
-                        handleCloseTerminal(targetKey);
-                      }
-                    }}
-                    items={tabItems as any}
-                    hideAdd
-                    style={{ height: '100%' }}
-                    tabBarStyle={{
-                      marginBottom: 0,
-                      paddingLeft: 16,
-                      paddingRight: 16,
-                      background: '#f5f5f5',
-                    }}
-                  />
-                </Card>
-              </div>
+            {/* 全屏时隐藏路由内容（会话列表等） */}
+            {!isTerminalFullscreen && (
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/providers" element={<ProviderManager />} />
+                  <Route path="/tokens" element={<TokenManager />} />
+                  <Route path="/sessions" element={<SessionManager />} />
+                  <Route path="/statistics" element={<Statistics />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<ProviderManager />} />
+                </Routes>
+              </ErrorBoundary>
             )}
+
+            {/* 全局终端容器 */}
+            <div style={{
+              display: (isSessionPage || isTerminalFullscreen) && openTerminalSessions.length > 0 ? 'block' : 'none',
+              marginTop: isTerminalFullscreen ? 0 : (isSessionPage && openTerminalSessions.length > 0 ? 16 : 0),
+              position: isTerminalFullscreen ? 'fixed' : 'relative',
+              top: isTerminalFullscreen ? 0 : 'auto',
+              left: isTerminalFullscreen ? 0 : 'auto',
+              right: isTerminalFullscreen ? 0 : 'auto',
+              bottom: isTerminalFullscreen ? 0 : 'auto',
+              zIndex: isTerminalFullscreen ? 1000 : 'auto',
+            }}>
+              <Card
+                style={{
+                  height: isTerminalFullscreen ? '100vh' : 'calc(100vh - 160px)',
+                  minHeight: isTerminalFullscreen ? '100vh' : '750px',
+                }}
+                styles={{ body: { padding: 0, height: '100%', position: 'relative' } }}
+              >
+                {/* Tabs导航栏 */}
+                <Tabs
+                  type="editable-card"
+                  activeKey={activeTabKey}
+                  onChange={(key: string) => dispatch(setActiveTab(key))}
+                  onEdit={(targetKey: React.MouseEvent | React.KeyboardEvent | string, action: 'add' | 'remove') => {
+                    if (action === 'remove' && typeof targetKey === 'string') {
+                      handleCloseTerminal(targetKey);
+                    }
+                  }}
+                  items={tabItems as any}
+                  hideAdd
+                  style={{ height: '100%' }}
+                  tabBarStyle={{
+                    marginBottom: 0,
+                    paddingLeft: 16,
+                    paddingRight: 16,
+                    background: '#f5f5f5',
+                  }}
+                  tabBarExtraContent={
+                    <Button
+                      type="text"
+                      icon={isTerminalFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
+                      onClick={() => dispatch(toggleTerminalFullscreen())}
+                      title={isTerminalFullscreen ? '退出全屏 (F11)' : '全屏显示 (F11)'}
+                      style={{
+                        marginRight: 8,
+                      }}
+                    />
+                  }
+                />
+                {/* 所有终端实例容器 - 绝对定位覆盖在Tabs内容区 */}
+                <div style={{
+                  position: 'absolute',
+                  top: '46px', // Tabs标签栏的高度
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}>
+                  {allTerminalComponents}
+                </div>
+              </Card>
+            </div>
           </Content>
         </Layout>
       </Layout>

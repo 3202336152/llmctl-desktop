@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createMenu, setMenuLanguage, translate as t } from './menu';
@@ -205,6 +205,27 @@ ipcMain.on('set-menu-language', (_event, language: 'zh' | 'en') => {
 });
 
 // ==================== 文件操作 IPC Handlers ====================
+
+/**
+ * 打开文件夹选择对话框
+ */
+ipcMain.handle('select-directory', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory'],
+      title: '选择工作目录',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, path: null };
+    }
+
+    return { canceled: false, path: result.filePaths[0] };
+  } catch (error) {
+    console.error('[IPC] select-directory 失败:', error);
+    throw error;
+  }
+});
 
 /**
  * 读取文件内容

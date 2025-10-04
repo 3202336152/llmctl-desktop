@@ -51,13 +51,22 @@ class TerminalManager {
     command?: string;
     cwd?: string;
     env?: Record<string, string>;
-  } = {}): Promise<void> {
-    // 如果会话已存在，先清理旧的并等待清理完成
-    if (this.sessions.has(sessionId)) {
-      console.log('[TerminalManager] 会话已存在，先清理旧会话:', sessionId);
-      this.killSession(sessionId);
-      // 等待50ms确保PTY进程完全退出
-      await new Promise(resolve => setTimeout(resolve, 50));
+  } = {}): Promise<{ existed: boolean }> {
+    // 如果会话已存在且进程还活着，不重新创建，直接返回
+    const existingSession = this.sessions.get(sessionId);
+    if (existingSession) {
+      try {
+        // 检查进程是否还活着（尝试发送空数据）
+        existingSession.process.write('');
+        console.log('[TerminalManager] 会话已存在且正在运行，重用现有会话:', sessionId);
+        // 更新window引用，以防窗口已重新创建
+        existingSession.window = window;
+        return { existed: true };
+      } catch (error) {
+        // 进程已死，清理并重新创建
+        console.log('[TerminalManager] 会话存在但进程已死，重新创建:', sessionId);
+        this.sessions.delete(sessionId);
+      }
     }
 
     const { command = 'cmd.exe', cwd = process.cwd(), env = {} } = options;
@@ -122,6 +131,7 @@ class TerminalManager {
         }
       });
 
+      return { existed: false };
     } catch (error) {
       console.error('[TerminalManager] 启动PTY进程失败:', error);
       throw error;

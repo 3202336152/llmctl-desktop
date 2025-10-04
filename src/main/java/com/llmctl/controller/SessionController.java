@@ -133,6 +133,23 @@ public class SessionController {
     }
 
     /**
+     * 重新激活会话（将inactive状态改为active）
+     *
+     * @param sessionId 会话ID
+     * @return 重新激活后的会话
+     */
+    @PostMapping("/{sessionId}/reactivate")
+    public ResponseEntity<ApiResponse<SessionDTO>> reactivateSession(
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
+        log.info("重新激活会话: {}", sessionId);
+
+        SessionDTO session = sessionService.reactivateSession(sessionId);
+        ApiResponse<SessionDTO> response = ApiResponse.success(session, "会话重新激活成功");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 删除会话记录（从数据库中永久删除）
      *
      * @param sessionId 会话ID

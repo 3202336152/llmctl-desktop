@@ -32,6 +32,11 @@ export const sessionAPI = {
     return httpClient.delete(`/sessions/${sessionId}`).then(response => response.data);
   },
 
+  // 重新激活会话（将inactive状态改为active）
+  reactivateSession: (sessionId: string): Promise<ApiResponse<Session>> => {
+    return httpClient.post(`/sessions/${sessionId}/reactivate`).then(response => response.data);
+  },
+
   // 删除会话记录
   deleteSession: (sessionId: string): Promise<ApiResponse<void>> => {
     return httpClient.delete(`/sessions/${sessionId}/record`).then(response => response.data);

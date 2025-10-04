@@ -14,6 +14,7 @@ export interface ElectronAPI {
   // 文件操作
   readFile(filePath: string): Promise<string>;
   writeFile(filePath: string, content: string): Promise<boolean>;
+  selectDirectory(): Promise<{ canceled: boolean; path: string | null }>;
 
   // 系统功能
   showNotification(title: string, body: string): void;
@@ -66,6 +67,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 文件操作
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('write-file', filePath, content),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
 
   // 系统功能
   showNotification: (title: string, body: string) => {
