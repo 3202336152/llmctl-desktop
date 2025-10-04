@@ -7,6 +7,172 @@
 
 ---
 
+## [2.0.3] - 2025-10-04
+
+### 🎉 新增功能
+
+#### 终端全屏显示
+- 支持F11快捷键切换全屏模式
+- 支持ESC快捷键退出全屏
+- 标签栏添加全屏/退出全屏按钮（ExpandOutlined / CompressOutlined图标）
+- 全屏时自动隐藏侧边栏和导航栏
+- 全屏时终端覆盖整个窗口（fixed定位，z-index: 1000）
+- 按钮提示信息显示快捷键说明
+
+**使用场景**:
+- 需要专注于终端操作，最大化显示区域
+- 查看长日志输出或大量终端内容
+- 类似本地终端的全屏体验
+
+#### 终端字体动态调整
+- 支持Ctrl + 鼠标滚轮动态调整字体大小
+- 字体范围：8px（最小）- 30px（最大）
+- 默认字体大小调整为16px（原14px）
+- 字体变化时自动调整终端尺寸
+- 自动同步PTY大小到后端
+
+**操作方式**:
+- `Ctrl + 向上滚动` → 字体增大
+- `Ctrl + 向下滚动` → 字体缩小
+
+#### 会话状态管理优化
+- **工作目录选择器**：从手动输入改为系统文件夹选择对话框
+  - 添加"浏览"按钮打开文件夹选择器
+  - 使用Electron的`dialog.showOpenDialog` API
+  - 避免路径输入错误，提升用户体验
+
+- **会话状态重新设计**：
+  - 添加`INACTIVE`状态，表示会话已终止但可重新激活
+  - 废弃`TERMINATED`状态（标记为@Deprecated，保留向后兼容）
+  - 终止会话时设置为`INACTIVE`而非完全销毁
+  - 支持重新激活`INACTIVE`状态的会话
+  - 重新激活时创建全新会话，保留原工作目录配置
+
+- **前端UI简化**：
+  - 移除"已终止"标签页显示
+  - 移除"已终止"会话统计卡片
+  - `INACTIVE`会话显示"重新启动"和"删除"按钮
+  - 保留状态颜色和文本函数以确保兼容性
+
+**状态流转**:
+```
+创建会话 → ACTIVE（活跃）
+   ↓ 终止
+INACTIVE（非活跃，可重启）
+   ↓ 重新激活          ↓ 删除
+ACTIVE（活跃）      物理删除
+```
+
+#### 应用国际化支持
+- 集成i18next国际化框架
+- 支持中文（zh）和英文（en）双语切换
+- 语言选择持久化到localStorage
+- 覆盖所有主要界面文本
+- 添加语言切换下拉菜单
+
+#### 系统托盘功能
+- 应用最小化到系统托盘
+- 托盘图标菜单（显示/隐藏窗口、退出应用）
+- 点击托盘图标恢复窗口
+- 关闭窗口时最小化到托盘而非退出
+
+### 🐛 Bug修复
+
+- **修复终端切换显示异常** (#007)
+  - 问题：切换到其他菜单再返回会话页面时，终端只显示左侧1/5区域，右侧全黑
+  - 原因：终端容器隐藏时xterm.js无法正确计算尺寸
+  - 解决：添加IntersectionObserver监听终端可见性，自动触发fit()调整尺寸
+  - 配置：threshold: 0.1，延迟100ms确保容器尺寸稳定
+
+- **修复全屏时底部空白区域** (#008)
+  - 问题：全屏时终端下方有大片空白区域
+  - 原因：终端高度设置为`calc(100vh - 220px)`
+  - 解决：非Card模式时高度改为`100%`，完全填充容器
+
+### ⚡ 性能优化
+
+- 终端尺寸自适应优化：
+  - 使用IntersectionObserver代替手动可见性检测
+  - 减少不必要的fit()调用
+  - 仅在元素真正可见时触发调整
+
+- 字体缩放性能优化：
+  - 使用passive: false确保preventDefault生效
+  - 50ms延迟批量处理字体变化
+  - 避免频繁触发PTY调整
+
+### 🔧 技术细节
+
+#### 后端变更
+- `Session.java`:
+  - 添加`SessionStatus.INACTIVE`枚举值
+  - `SessionStatus.TERMINATED`标记为@Deprecated
+  - `terminate()`方法改为设置`INACTIVE`状态
+  - 添加详细的废弃说明注释
+
+- `SessionMapper.xml`:
+  - 修改`terminate`查询：设置status为'inactive'
+  - 添加`reactivate`查询：将inactive会话恢复为active
+  - 添加兼容性注释说明
+
+- `SessionServiceImpl.java`:
+  - 实现`reactivateSession()`方法
+  - 重置会话开始时间、结束时间
+  - 更新最后活动时间
+
+- `SessionController.java`:
+  - 添加`POST /sessions/{sessionId}/reactivate`端点
+  - 参数验证和异常处理
+
+#### 前端变更
+- `main.ts` (Electron主进程):
+  - 添加`select-directory` IPC处理器
+  - 使用`dialog.showOpenDialog`实现文件夹选择
+
+- `preload.ts`:
+  - 暴露`selectDirectory()` API到渲染进程
+
+- `sessionSlice.ts`:
+  - 添加`isTerminalFullscreen`状态
+  - 添加`toggleTerminalFullscreen` action
+
+- `App.tsx`:
+  - 实现全屏布局逻辑：条件渲染侧边栏/头部/路由内容
+  - 终端容器使用fixed定位
+  - 监听F11和ESC键盘事件
+  - 标签栏添加全屏切换按钮
+
+- `TerminalComponent.tsx`:
+  - 添加`fontSize`状态（默认16px）
+  - 实现Ctrl+滚轮字体调整
+  - 添加IntersectionObserver监听可见性
+  - 修复全屏时高度为100%
+  - 字体变化时自动fit和同步PTY
+
+- `SessionManager.tsx`:
+  - 添加文件夹选择器按钮
+  - 实现`handleSelectDirectory`方法
+  - 添加重新激活会话逻辑
+  - 移除已终止会话的UI显示
+  - INACTIVE会话显示"重新启动"按钮
+
+- `sessionAPI.ts`:
+  - 添加`reactivateSession` API调用
+
+- `i18n/` (新增):
+  - `i18n.ts`: i18next配置
+  - `locales/en.json`: 英文翻译
+  - `locales/zh.json`: 中文翻译
+
+### 📖 文档更新
+
+- 更新CHANGELOG.md，添加v2.0.3版本记录
+- 更新README.md，添加终端全屏和字体调整功能说明
+- 添加会话状态管理优化说明
+- 添加国际化和系统托盘功能说明
+
+---
+
 ## [2.0.2] - 2025-10-03
 
 ### 🎉 新增功能
@@ -276,8 +442,8 @@ LLMctl最初作为命令行工具开发，提供基础的Provider和Token管理�
 
 ## 链接
 
-- [GitHub仓库](https://github.com/yourusername/llmctl)
-- [发布页面](https://github.com/yourusername/llmctl/releases)
-- [问题追踪](https://github.com/yourusername/llmctl/issues)
+- [GitHub仓库](https://github.com/3202336152/llmctl-desktop)
+- [发布页面](https://github.com/3202336152/llmctl-desktop/releases)
+- [问题追踪](https://github.com/3202336152/llmctl-desktop/issues)
 - [用户手册](docs/USER_GUIDE.md)
 - [开发文档](docs/DEVELOPMENT.md)
