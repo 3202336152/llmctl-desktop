@@ -345,16 +345,6 @@ const SessionManager: React.FC = () => {
               </Button>
             </>
           )}
-          {(record.status === 'inactive' || record.status === 'terminated') && (
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDeleteSession(record.id)}
-            >
-              删除
-            </Button>
-          )}
         </Space>
       ),
     },

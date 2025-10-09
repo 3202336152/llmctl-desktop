@@ -146,7 +146,31 @@ class TerminalManager {
     }
 
     try {
-      session.process.write(data);
+      // 如果数据较小，直接写入
+      if (data.length <= 1024) {
+        session.process.write(data);
+        return;
+      }
+
+      // 大数据分块写入，避免PTY缓冲区溢出
+      const chunkSize = 1024; // 每块1KB
+      const delay = 5; // 每块之间延迟5ms
+
+      let offset = 0;
+      const writeChunk = () => {
+        if (offset >= data.length) {
+          return; // 写入完成
+        }
+
+        const chunk = data.slice(offset, offset + chunkSize);
+        session.process.write(chunk);
+        offset += chunkSize;
+
+        // 延迟后写入下一块
+        setTimeout(writeChunk, delay);
+      };
+
+      writeChunk();
     } catch (error) {
       console.error('[TerminalManager] 发送输入失败:', error);
     }
