@@ -216,6 +216,25 @@ public class SessionController {
     }
 
     /**
+     * 批量停用所有活跃会话（Electron应用退出时调用）
+     * 原因：Electron应用关闭后，所有终端进程已全部终止
+     *
+     * @return 影响的行数
+     */
+    @PostMapping("/deactivate-all")
+    public ResponseEntity<ApiResponse<Integer>> deactivateAllActiveSessions() {
+        log.info("Electron应用退出，批量停用所有活跃会话");
+
+        int count = sessionService.deactivateAllActiveSessions();
+        String message = count > 0
+                ? String.format("已将 %d 个活跃会话设置为非活跃状态", count)
+                : "无需处理，当前没有活跃会话";
+        ApiResponse<Integer> response = ApiResponse.success(count, message);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 更新会话状态请求DTO
      */
     public static class UpdateSessionStatusRequest {

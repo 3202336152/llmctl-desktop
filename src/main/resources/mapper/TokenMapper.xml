@@ -14,6 +14,7 @@
         <result column="enabled" property="enabled" jdbcType="BOOLEAN"/>
         <result column="healthy" property="healthy" jdbcType="BOOLEAN"/>
         <result column="last_used" property="lastUsed" jdbcType="TIMESTAMP"/>
+        <result column="encryption_version" property="encryptionVersion" jdbcType="VARCHAR"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -21,7 +22,7 @@
     <!-- 基础列 -->
     <sql id="Base_Column_List">
         id, provider_id, value, alias, weight, enabled, healthy, last_used,
-        created_at, updated_at
+        encryption_version, created_at, updated_at
     </sql>
 
     <!-- 根据ID查询Token -->
@@ -62,11 +63,11 @@
     <insert id="insert" parameterType="com.llmctl.entity.Token">
         INSERT INTO tokens (
             id, provider_id, value, alias, weight, enabled, healthy,
-            last_used, created_at, updated_at
+            last_used, encryption_version, created_at, updated_at
         )
         VALUES (
             #{id}, #{providerId}, #{value}, #{alias}, #{weight}, #{enabled}, #{healthy},
-            #{lastUsed}, #{createdAt}, #{updatedAt}
+            #{lastUsed}, #{encryptionVersion}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -80,6 +81,7 @@
             enabled = #{enabled},
             healthy = #{healthy},
             last_used = #{lastUsed},
+            encryption_version = #{encryptionVersion},
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -136,6 +138,14 @@
         SELECT COUNT(*) > 0
         FROM tokens
         WHERE provider_id = #{providerId} AND alias = #{alias}
+    </select>
+
+    <!-- 查询需要迁移的明文Token（用于数据迁移） -->
+    <select id="findPlaintextTokens" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM tokens
+        WHERE encryption_version IS NULL OR encryption_version = 'plaintext'
     </select>
 
 </mapper>

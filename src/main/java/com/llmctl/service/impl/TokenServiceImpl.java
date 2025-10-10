@@ -8,6 +8,7 @@ import com.llmctl.entity.Token;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.TokenService;
+import com.llmctl.service.ITokenEncryptionService;
 import com.llmctl.exception.ServiceException;
 import com.llmctl.exception.ResourceNotFoundException;
 import com.llmctl.exception.BusinessException;
@@ -38,6 +39,7 @@ public class TokenServiceImpl implements TokenService {
 
     private final TokenMapper tokenMapper;
     private final ProviderMapper providerMapper;
+    private final ITokenEncryptionService encryptionService;
     private final Random random = new Random();
 
     @Override
@@ -93,11 +95,12 @@ public class TokenServiceImpl implements TokenService {
         Token token = new Token();
         token.setId(generateTokenId());
         token.setProviderId(providerId);
-        token.setValue(encryptTokenValue(request.getValue())); // 加密存储
+        token.setValue(encryptTokenValue(request.getValue())); // AES-256-GCM加密存储
         token.setAlias(StringUtils.hasText(request.getAlias()) ? request.getAlias() : "Token-" + System.currentTimeMillis());
         token.setWeight(request.getWeight() != null ? request.getWeight() : 1);
         token.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
         token.setHealthy(true);
+        token.setEncryptionVersion("v1"); // 标记为加密存储
 
         // 设置时间戳
         LocalDateTime now = LocalDateTime.now();
@@ -135,6 +138,7 @@ public class TokenServiceImpl implements TokenService {
         // 只更新提供的字段
         if (StringUtils.hasText(request.getValue())) {
             existingToken.setValue(encryptTokenValue(request.getValue()));
+            existingToken.setEncryptionVersion("v1"); // 更新加密版本
         }
         if (StringUtils.hasText(request.getAlias())) {
             existingToken.setAlias(request.getAlias());
@@ -308,10 +312,23 @@ public class TokenServiceImpl implements TokenService {
         dto.setCreatedAt(token.getCreatedAt());
         dto.setUpdatedAt(token.getUpdatedAt());
 
-        // 设置遮掩的Token值
-        dto.setMaskedValue(decryptTokenValue(token.getValue()));
+        // 解密Token值并遮掩显示（只显示前4位和后4位）
+        String decryptedValue = decryptTokenValue(token.getValue());
+        dto.setMaskedValue(maskTokenValue(decryptedValue));
 
         return dto;
+    }
+
+    /**
+     * 遮掩Token值，只显示前4位和后4位
+     */
+    private String maskTokenValue(String value) {
+        if (value == null || value.length() <= 8) {
+            return "****";
+        }
+        String prefix = value.substring(0, 4);
+        String suffix = value.substring(value.length() - 4);
+        return prefix + "****" + suffix;
     }
 
     /**
@@ -381,19 +398,34 @@ public class TokenServiceImpl implements TokenService {
 
     /**
      * 加密Token值
-     * TODO: 实现真正的加密逻辑
+     * 使用AES-256-GCM算法加密
      */
     private String encryptTokenValue(String value) {
-        // 这里应该实现真正的加密逻辑
-        return value;
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException("Token值不能为空");
+        }
+        try {
+            return encryptionService.encrypt(value);
+        } catch (Exception e) {
+            log.error("Token加密失败", e);
+            throw new ServiceException("Token加密", "加密失败: " + e.getMessage());
+        }
     }
 
     /**
      * 解密Token值
-     * TODO: 实现真正的解密逻辑
+     * 使用AES-256-GCM算法解密
+     * 兼容明文Token（用于数据迁移）
      */
     private String decryptTokenValue(String encryptedValue) {
-        // 这里应该实现真正的解密逻辑
-        return encryptedValue;
+        if (encryptedValue == null || encryptedValue.isEmpty()) {
+            return "";
+        }
+        try {
+            return encryptionService.decrypt(encryptedValue);
+        } catch (Exception e) {
+            log.error("Token解密失败", e);
+            throw new ServiceException("Token解密", "解密失败: " + e.getMessage());
+        }
     }
 }

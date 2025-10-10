@@ -1,0 +1,53 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /llmctl
+
+spring:
+  application:
+    name: llmctl
+
+  # 启用CGLIB代理模式（支持@Scheduled和@Async注解在实现类上）
+  aop:
+    proxy-target-class: true
+
+  datasource:
+    url: jdbc:mysql://117.72.200.2:3306/llmctl?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC
+    username: huanyu
+    password: ENC(P4JtACctTK7jRQERpp3ODF31VeH080Ak)
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.llmctl.entity
+  type-handlers-package: com.llmctl.config
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    cache-enabled: true
+    lazy-loading-enabled: true
+    aggressive-lazy-loading: false
+
+
+# 应用信息
+info:
+  app:
+    name: LLMctl
+    description: LLM Control System
+    version: 2.0.4
+    author: Liu Yifan
+
+# Jasypt加密配置
+jasypt:
+  encryptor:
+    password: ${JASYPT_PASSWORD}
+    algorithm: PBEWithMD5AndDES
+    iv-generator-classname: org.jasypt.iv.NoIvGenerator

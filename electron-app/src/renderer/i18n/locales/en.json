@@ -32,7 +32,7 @@
   },
   "nav": {
     "providers": "Providers",
-    "tokens": "Tokens",
+    "tokens": "API Keys",
     "sessions": "Sessions",
     "statistics": "Statistics",
     "settings": "Settings",
@@ -101,7 +101,7 @@
     "exportFailed": "Failed to export configuration"
   },
   "providers": {
-    "title": "Provider Management",
+    "title": "Providers",
     "createProvider": "Create Provider",
     "editProvider": "Edit Provider",
     "deleteProvider": "Delete Provider",
@@ -131,7 +131,7 @@
     "typeRequired": "Please select provider type"
   },
   "tokens": {
-    "title": "Token Management",
+    "title": "API Keys",
     "addToken": "Add Token",
     "editToken": "Edit Token",
     "deleteToken": "Delete Token",
@@ -150,7 +150,7 @@
     "leastUsed": "Least Used"
   },
   "sessions": {
-    "title": "Session Management",
+    "title": "Sessions",
     "startSession": "Start New Session",
     "allSessions": "All Sessions",
     "activeSessions": "Active Sessions",

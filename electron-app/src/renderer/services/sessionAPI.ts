@@ -46,4 +46,9 @@ export const sessionAPI = {
   getSessionEnvironment: (sessionId: string): Promise<ApiResponse<Record<string, string>>> => {
     return httpClient.get(`/sessions/${sessionId}/environment`).then(response => response.data);
   },
+
+  // 批量停用所有活跃会话（Electron应用退出时调用）
+  deactivateAllActiveSessions: (): Promise<ApiResponse<number>> => {
+    return httpClient.post('/sessions/deactivate-all').then(response => response.data);
+  },
 };

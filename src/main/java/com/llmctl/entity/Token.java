@@ -67,6 +67,13 @@ public class Token {
     private LocalDateTime updatedAt;
 
     /**
+     * 加密版本
+     * - null 或 "plaintext": 明文存储（旧数据，待迁移）
+     * - "v1": AES-256-GCM加密
+     */
+    private String encryptionVersion;
+
+    /**
      * 关联的Provider对象 (多对一关系)
      */
     private Provider provider;

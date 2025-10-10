@@ -7,6 +7,235 @@
 
 ---
 
+## [2.0.4] - 2025-10-9
+
+### 🎨 UI改进
+
+#### 菜单项重命名
+- 将导航菜单名称从中文"管理"风格改为英文开发者友好的命名
+- **Provider管理** → **Providers**
+- **Token管理** → **API Keys**
+- **会话管理** → **Sessions**
+
+**更新范围**:
+- 顶部导航菜单标签
+- 页面标题（Card组件）
+- 命令面板（Command Palette）
+- 中英文国际化翻译文件
+
+**设计理念**:
+- 更符合开发者工具的命名习惯
+- 简洁直观，减少冗余词汇
+- 与国际主流开发工具保持一致风格
+- 提升专业度和现代感
+
+#### 终端标签页间距优化
+- **修复非全屏模式下标签页与终端间距过小** (#012)
+  - 问题：非全屏时标签页和终端黑框太近，影响观感
+  - 解决：增加标签页底部间距（marginBottom: 8px）和终端容器顶部位置（top: 56px）
+  - 效果：全屏和非全屏模式都保持良好的视觉呼吸感
+
+### 🐛 Bug修复
+
+- **修复全屏终端关闭后界面空白** (#009)
+  - 问题：关闭最后一个全屏终端时，界面保持空白直到手动按F11退出全屏
+  - 原因：关闭终端时未检测全屏状态并自动退出
+  - 解决：在handleCloseTerminal中添加全屏状态检测，关闭最后一个终端时自动退出全屏
+
+- **修复全屏模式下终端底部空白** (#010)
+  - 问题：首次打开全屏时终端下方有空白区域，需要Ctrl+滚轮调整字体后才正常
+  - 原因：xterm.js FitAddon未在全屏切换时触发resize
+  - 解决：监听isTerminalFullscreen状态变化，多次触发window resize事件（0ms、50ms、150ms、300ms）
+  - 效果：确保DOM完全渲染后终端正确适配尺寸
+
+- **修复全屏模式下标签页与终端间距过小** (#011)
+  - 问题：全屏时标签页和终端黑框距离太近，影响观感
+  - 解决：全屏模式下增加标签页底部间距（marginBottom: 8px）和终端容器顶部位置（top: 48px）
+
+- **修复应用重启后会话按钮显示错误** (#013)
+  - 问题：Electron应用重启后，数据库中的ACTIVE会话仍显示"打开终端"，但Electron终端进程已全部终止
+  - 原因：Electron退出时，数据库状态未同步实际终端进程状态
+  - 解决：Electron应用退出时自动调用后端API，将所有ACTIVE状态的会话改为INACTIVE
+  - 效果：重启后所有会话正确显示"重新启动"按钮，用户体验更符合预期
+
+### 🔐 安全改进
+
+#### Token加密存储 (#014)
+- **问题**: API Token以明文形式存储在数据库中，存在严重安全风险
+- **解决方案**: 实现AES-256-GCM加密算法，对Token进行加密存储
+- **加密算法**: AES-256-GCM
+  - 美国政府批准的最高级别加密标准（NSA绝密信息级）
+  - 认证加密（AEAD），同时保证机密性和完整性
+  - 防止密文被篡改
+  - 硬件加速支持，性能优秀
+- **密钥管理**:
+  - 优先级1: 环境变量 `LLMCTL_MASTER_KEY`（用户可自定义）
+  - 优先级2: 配置文件 `~/.llmctl/master.key`（首次启动自动生成）
+  - 256位随机密钥，使用SecureRandom生成
+  - 密钥Base64编码存储
+- **加密格式**: `AES-256-GCM$v1$<IV>$<密文+Tag>`
+  - IV: 12字节随机初始化向量（每个Token不同）
+  - 密文: 加密后的Token值
+  - Tag: 128位GCM认证标签
+- **数据迁移**:
+  - 应用启动时自动检测明文Token
+  - 自动加密并更新到数据库
+  - 支持渐进式迁移，向后兼容
+  - 迁移日志详细记录成功/失败情况
+- **遮掩显示**: 前端只显示Token前4位和后4位（如：`sk-1****abcd`）
+
+**安全特性**:
+- ✅ AES-256-GCM认证加密
+- ✅ 每个Token独立随机IV
+- ✅ 防篡改（GCM Tag验证）
+- ✅ 密钥环境变量隔离
+- ✅ 自动数据迁移
+- ✅ 前端遮掩显示
+- ✅ 日志脱敏（不记录明文Token）
+
+### 🔧 技术细节
+
+#### 前端变更
+- `i18n/locales/zh.json`:
+  - 更新`nav.providers`、`nav.tokens`、`nav.sessions`
+  - 更新`providers.title`、`tokens.title`、`sessions.title`
+
+- `i18n/locales/en.json`:
+  - 更新`nav.tokens`为"API Keys"
+  - 统一所有标题为简洁形式
+
+- `CommandPalette.tsx`:
+  - 更新导航命令标题，保持与菜单一致
+
+- `TokenManager.tsx`:
+  - 添加`useTranslation`支持
+  - 页面标题改用`t('tokens.title')`国际化
+
+- `App.tsx`:
+  - 添加全屏状态监听和自动退出逻辑
+  - 添加终端resize事件触发机制
+  - 优化全屏和非全屏模式下的间距设置
+  - `tabBarStyle.marginBottom: 8` 增加标签栏底部间距
+  - 终端容器 `top: 48px` (全屏) / `56px` (非全屏)
+
+#### 后端变更
+- `SessionMapper.xml`:
+  - 添加`deactivateAllActiveSessions`查询
+  - 批量更新所有ACTIVE会话为INACTIVE，并更新最后活动时间
+
+- `SessionMapper.java`:
+  - 添加`deactivateAllActiveSessions()`方法声明
+
+- `SessionServiceImpl.java`:
+  - 添加公共方法`deactivateAllActiveSessions()`
+  - 供REST API调用，将所有活跃会话设置为非活跃状态
+  - 记录日志显示受影响的会话数量
+
+- `SessionController.java`:
+  - 添加`POST /sessions/deactivate-all`端点
+  - Electron应用退出时调用此端点批量停用会话
+
+#### Electron主进程变更
+- `main.ts`:
+  - 导入axios库用于HTTP请求
+  - 修改`before-quit`事件处理器
+  - 退出前调用后端API停用所有活跃会话
+  - 3秒超时，避免阻塞应用退出
+  - 异常处理：后端未启动时跳过会话状态更新
+
+#### 渲染进程变更
+- `sessionAPI.ts`:
+  - 添加`deactivateAllActiveSessions`方法
+  - 保持API客户端完整性（虽然实际由主进程调用）
+
+#### Token加密后端实现
+- `TokenEncryptionService.java` (新增):
+  - AES-256-GCM加密服务实现
+  - 密钥管理（环境变量 → 配置文件 → 自动生成）
+  - `encrypt()`: 加密Token值
+  - `decrypt()`: 解密Token值，兼容明文
+  - `isEncrypted()`: 检查Token是否已加密
+  - 完整的异常处理和日志记录
+
+- `Token.java`:
+  - 添加`encryptionVersion`字段
+  - null/plaintext: 明文存储
+  - v1: AES-256-GCM加密
+
+- `TokenMapper.xml`:
+  - 更新ResultMap包含`encryption_version`
+  - 更新Base_Column_List包含`encryption_version`
+  - INSERT和UPDATE语句包含`encryption_version`
+  - 新增`findPlaintextTokens`查询
+
+- `TokenMapper.java`:
+  - 添加`findPlaintextTokens()`方法声明
+
+- `TokenServiceImpl.java`:
+  - 注入`TokenEncryptionService`
+  - 实现`encryptTokenValue()`：使用AES-256-GCM加密
+  - 实现`decryptTokenValue()`：使用AES-256-GCM解密
+  - 创建Token时设置`encryptionVersion = "v1"`
+  - 更新Token值时同步更新`encryptionVersion`
+  - 添加`maskTokenValue()`：遮掩Token显示（前4+后4）
+  - 修改`convertToDTO()`：解密并遮掩Token值
+
+- `TokenMigrationService.java` (新增):
+  - 应用启动时自动迁移明文Token
+  - `migrateTokensOnStartup()`: 监听ApplicationReadyEvent
+  - `migrateTokensManually()`: 手动触发迁移API
+  - 详细的迁移日志和统计
+  - 事务支持，确保数据一致性
+
+#### 数据库Schema变更
+- `schema.sql`:
+  - tokens表添加`encryption_version`列
+  - 添加`idx_encryption_version`索引
+
+- `migration_add_encryption.sql` (新增):
+  - 添加`encryption_version`列的迁移脚本
+  - 将现有Token标记为plaintext
+  - 验证迁移结果的SQL查询
+
+### 📖 文档更新
+
+- ✅ 更新CHANGELOG.md，添加v2.0.4版本记录
+- ✅ 更新README.md，添加安全特性和Token加密说明
+- ✅ **新增**：创建`docs/encryption-guide.md` - Jasypt与AES-256-GCM加密详细技术指南
+- ✅ 记录菜单项重命名的详细信息
+- ✅ 补充全屏相关bug修复说明
+- ✅ 添加非全屏终端间距优化说明
+- ✅ 添加应用启动会话状态初始化功能说明
+- ✅ 添加Token加密存储安全改进详细说明
+- ✅ 记录AES-256-GCM加密实现细节
+- ✅ 更新CLAUDE.md，完善项目文档
+
+### ⚠️ 重要提示
+
+#### 数据库迁移
+如果您是从旧版本升级，请执行以下数据库迁移步骤：
+
+```bash
+# 1. 备份现有数据库
+mysqldump -u llmctl -p llmctl > llmctl_backup_$(date +%Y%m%d).sql
+
+# 2. 执行迁移脚本
+mysql -u llmctl -p llmctl < src/main/resources/migration_add_encryption.sql
+
+# 3. 启动应用（自动加密现有明文Token）
+mvn spring-boot:run
+```
+
+#### 密钥管理
+**重要**: 妥善保管主密钥文件！
+
+- 密钥位置: `~/.llmctl/master.key`
+- 丢失密钥将无法解密已有Token
+- 推荐使用环境变量备份: `export LLMCTL_MASTER_KEY=<密钥内容>`
+- 多机器部署时，所有机器需使用相同密钥
+
+---
+
 ## [2.0.3] - 2025-10-04
 
 ### 🎉 新增功能

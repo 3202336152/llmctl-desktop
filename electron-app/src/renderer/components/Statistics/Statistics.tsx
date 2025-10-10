@@ -150,7 +150,7 @@ const Statistics: React.FC = () => {
       {/* 总体统计 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic
               title="总请求数"
               value={statistics?.totalRequests || 0}
@@ -159,7 +159,7 @@ const Statistics: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic
               title="成功率"
               value={statistics?.successRate || 0}
@@ -173,7 +173,7 @@ const Statistics: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic
               title="平均响应时间"
               value={statistics?.avgResponseTime || 0}
@@ -183,7 +183,7 @@ const Statistics: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic
               title="活跃Provider数"
               value={providers.filter(p => p.isActive).length}

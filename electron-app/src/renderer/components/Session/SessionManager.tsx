@@ -12,6 +12,7 @@ import {
   Tag,
   Tabs,
   Collapse,
+  App as AntApp,
 } from 'antd';
 import {
   PlusOutlined,
@@ -41,6 +42,7 @@ const { Option } = Select;
 
 const SessionManager: React.FC = () => {
   const dispatch = useAppDispatch();
+  const { modal } = AntApp.useApp();
   const { providers } = useAppSelector((state: RootState) => state.provider);
   const { sessions, loading, openTerminalSessions } = useAppSelector((state: RootState) => state.session);
   const [modalVisible, setModalVisible] = useState(false);
@@ -129,7 +131,7 @@ const SessionManager: React.FC = () => {
   };
 
   const handleTerminateSession = async (sessionId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '确定要终止这个会话吗？',
       content: '终止后当前对话将被清除，下次打开将是全新会话',
       okText: '确定',
@@ -161,7 +163,7 @@ const SessionManager: React.FC = () => {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '确定要清除这个会话记录吗？',
       content: '清除后将永久删除，无法恢复',
       okText: '确定',
@@ -247,7 +249,7 @@ const SessionManager: React.FC = () => {
       render: (text: string) => (
         <Space>
           <DesktopOutlined />
-          <code>{text.substring(0, 8)}...</code>
+          <code style={{ background: 'transparent', color: '#1890ff', padding: 0 }}>{text.substring(0, 8)}...</code>
         </Space>
       ),
     },
@@ -373,12 +375,13 @@ const SessionManager: React.FC = () => {
       {/* 紧凑型统计信息 */}
       <div style={{
         marginBottom: 16,
-        padding: '12px 16px',
+        padding: '20px 24px',
         background: '#f5f5f5',
         borderRadius: 8,
         display: 'flex',
         alignItems: 'center',
         gap: 24,
+        minHeight: '80px',
       }}>
         <Space size={24}>
           <Space size={8}>

@@ -131,4 +131,13 @@
         SELECT COUNT(*) FROM sessions WHERE provider_id = #{providerId}
     </select>
 
+    <!-- 应用启动时，将所有活跃会话设置为非活跃状态
+         原因：桌面应用重启后，Electron终端进程已全部终止 -->
+    <update id="deactivateAllActiveSessions">
+        UPDATE sessions
+        SET status = 'inactive',
+            last_activity = NOW()
+        WHERE status = 'active'
+    </update>
+
 </mapper>

@@ -13,6 +13,7 @@ import com.llmctl.mapper.SessionMapper;
 import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.ISessionService;
+import com.llmctl.service.ITokenEncryptionService;
 import com.llmctl.service.TokenService;
 import com.llmctl.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class SessionServiceImpl implements ISessionService {
     private final TokenMapper tokenMapper;
     private final TokenService tokenService;
     private final IGlobalConfigService globalConfigService;
+    private final ITokenEncryptionService encryptionService;
 
     @Override
     public List<SessionDTO> getActiveSessions() {
@@ -228,6 +230,21 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
+     * Electron应用退出时调用：将所有活跃会话设置为非活跃状态
+     * 原因：Electron应用关闭后，所有终端进程已全部终止
+     */
+    public int deactivateAllActiveSessions() {
+        log.info("Electron应用退出，开始批量更新活跃会话状态...");
+        int affectedRows = sessionMapper.deactivateAllActiveSessions();
+        if (affectedRows > 0) {
+            log.info("成功将 {} 个活跃会话设置为非活跃状态（Electron应用已退出）", affectedRows);
+        } else {
+            log.info("无需处理，当前没有活跃会话");
+        }
+        return affectedRows;
+    }
+
+    /**
      * 获取会话对应的环境变量（供Electron前端使用）
      *
      * @param sessionId 会话ID
@@ -263,8 +280,10 @@ public class SessionServiceImpl implements ISessionService {
     private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken) {
         Map<String, String> envVars = new HashMap<>();
 
-        // 根据Provider类型设置相应的环境变量
-        String tokenValue = selectedToken.getValue();
+        // 解密Token值
+        String tokenValue = encryptionService.decrypt(selectedToken.getValue());
+
+        log.debug("为Provider {} 构建环境变量，Token ID: {}", provider.getId(), selectedToken.getId());
 
         switch (provider.getType().toLowerCase()) {
             case "anthropic":

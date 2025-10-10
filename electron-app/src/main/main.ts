@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import axios from 'axios';
 import { createMenu, setMenuLanguage, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
 
@@ -304,8 +305,27 @@ ipcMain.handle('terminal-resize', (_event, data: { sessionId: string; cols: numb
 });
 
 // 清理所有会话
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   console.log('[App] 退出前清理终端会话');
+
+  // 通知后端：将所有活跃会话设置为非活跃状态
+  try {
+    const response = await axios.post('http://localhost:8080/llmctl/sessions/deactivate-all', null, {
+      timeout: 3000, // 3秒超时，避免阻塞退出
+    });
+
+    if (response.data?.code === 200) {
+      const count = response.data.data || 0;
+      console.log(`[App] 成功停用 ${count} 个活跃会话`);
+    } else {
+      console.warn('[App] 停用会话失败:', response.data?.message);
+    }
+  } catch (error) {
+    // 后端可能未启动或网络异常，不影响应用退出
+    console.warn('[App] 无法连接后端服务，跳过会话状态更新:', (error as Error).message);
+  }
+
+  // 清理所有终端进程
   terminalManager.cleanup();
 });
 

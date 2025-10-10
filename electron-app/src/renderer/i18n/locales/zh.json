@@ -31,9 +31,9 @@
     "settings": "系统设置"
   },
   "nav": {
-    "providers": "Provider管理",
-    "tokens": "Token管理",
-    "sessions": "会话管理",
+    "providers": "Providers",
+    "tokens": "API Keys",
+    "sessions": "Sessions",
     "statistics": "统计信息",
     "settings": "系统设置",
     "appTitle": "LLM控制系统"
@@ -101,7 +101,7 @@
     "exportFailed": "导出配置失败"
   },
   "providers": {
-    "title": "Provider管理",
+    "title": "Providers",
     "createProvider": "新建Provider",
     "editProvider": "编辑Provider",
     "deleteProvider": "删除Provider",
@@ -131,7 +131,7 @@
     "typeRequired": "请选择Provider类型"
   },
   "tokens": {
-    "title": "Token管理",
+    "title": "API Keys",
     "addToken": "添加Token",
     "editToken": "编辑Token",
     "deleteToken": "删除Token",
@@ -150,7 +150,7 @@
     "leastUsed": "最少使用 (Least Used)"
   },
   "sessions": {
-    "title": "会话管理",
+    "title": "Sessions",
     "startSession": "启动新会话",
     "allSessions": "总会话",
     "activeSessions": "活跃会话",

@@ -1,0 +1,449 @@
+/**
+ * LLMctl Desktop 应用样式 - 亮色主题
+ */
+
+/* ==================== 应用框架 ==================== */
+
+.ant-layout {
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+/* ==================== 侧边栏样式 ==================== */
+
+.ant-layout-sider {
+  background: #ffffff !important;
+  border-right: 1px solid #f0f0f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Logo区域 */
+.app-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* ==================== 菜单样式 ==================== */
+
+.ant-menu {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+.ant-menu-item {
+  margin: 4px 12px !important;
+  border-radius: 8px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+}
+
+.ant-menu-item-selected {
+  background-color: #e6f7ff !important;
+}
+
+.ant-menu-item .anticon {
+  font-size: 16px;
+}
+
+/* ==================== 顶部工具栏 ==================== */
+
+.ant-layout-header {
+  padding: 0 24px;
+  background: #ffffff !important;
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  height: 64px;
+  line-height: 64px;
+}
+
+.ant-layout-header h2 {
+  margin: 0;
+  color: #262626;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ==================== 按钮样式 ==================== */
+
+.ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* ==================== 卡片样式 ==================== */
+
+.ant-card {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+}
+
+/* ==================== 表格样式 ==================== */
+
+.ant-table-thead > tr > th {
+  background-color: #fafafa !important;
+  font-weight: 600;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: #f5f5f5 !important;
+}
+
+/* ==================== 表单样式 ==================== */
+
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-input-number {
+  border-radius: 8px;
+}
+
+/* ==================== 标签页样式 ==================== */
+
+.ant-tabs-nav {
+  background: #fafafa;
+  padding: 0 16px;
+}
+
+.ant-tabs-tab {
+  border-radius: 8px 8px 0 0 !important;
+}
+
+/* ==================== 模态框样式 ==================== */
+
+.ant-modal-content {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ==================== 标签样式 ==================== */
+
+.ant-tag {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ==================== 状态指示器 ==================== */
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.healthy {
+  background-color: #52c41a;
+}
+
+.status-dot.unhealthy {
+  background-color: #ff4d4f;
+}
+
+.status-dot.unknown {
+  background-color: #d9d9d9;
+}
+
+/* ==================== 统计卡片 ==================== */
+
+.stat-card {
+  text-align: center;
+  padding: 24px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1890ff;
+  line-height: 1.2;
+}
+
+.stat-label {
+  margin-top: 8px;
+  color: #595959;
+  font-size: 14px;
+}
+
+/* ==================== 滚动条样式 ==================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* ==================== 响应式布局 ==================== */
+
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 100;
+  }
+
+  .ant-layout-content {
+    margin-left: 200px;
+  }
+}
+
+/* ==================== 科技感视觉效果 ==================== */
+
+/* 玻璃毛玻璃效果 */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* 网格背景 */
+.grid-background {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* 渐变描边 */
+.gradient-border {
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(24, 144, 255, 0.5) 0%,
+    rgba(64, 169, 255, 0.5) 100%
+  );
+  border-radius: inherit;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* 发光效果 */
+.glow-effect {
+  box-shadow: 0 0 20px rgba(24, 144, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-effect:hover {
+  box-shadow: 0 0 30px rgba(24, 144, 255, 0.5), 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Logo 发光动画 */
+.app-logo {
+  animation: logo-pulse 3s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(24, 144, 255, 0.6);
+  }
+}
+
+/* 图标动画 */
+@keyframes icon-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.4));
+  }
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 8px rgba(24, 144, 255, 0.6));
+  }
+}
+
+.icon-animated {
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+/* 活跃图标动画 */
+.ant-menu-item-selected .anticon {
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+/* 按钮悬停动画 */
+.ant-btn-primary {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ant-btn-primary:hover::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* 卡片悬停效果 */
+.ant-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 微光效果 */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* 聚焦指示器 */
+*:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 输入框焦点效果 */
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-input-number:focus {
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+  border-color: #1890ff;
+}
+
+/* ==================== 全屏终端样式 ==================== */
+
+/* 全屏时移除所有多余间距 */
+.fullscreen-terminal-card {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fullscreen-terminal-card .ant-card-body {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.fullscreen-terminal-card .ant-tabs {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.fullscreen-terminal-card .ant-tabs-content-holder {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.fullscreen-terminal-card .ant-tabs-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+.fullscreen-terminal-card .ant-tabs-tabpane {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100% !important;
+}

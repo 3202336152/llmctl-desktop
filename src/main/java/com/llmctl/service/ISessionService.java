@@ -109,6 +109,14 @@ public interface ISessionService {
     Map<String, String> getSessionEnvironmentVariables(String sessionId);
 
     /**
+     * Electron应用退出时调用：将所有活跃会话设置为非活跃状态
+     * 原因：Electron应用关闭后，所有终端进程已全部终止
+     *
+     * @return 影响的行数
+     */
+    int deactivateAllActiveSessions();
+
+    /**
      * 会话统计信息
      */
     class SessionStatistics {

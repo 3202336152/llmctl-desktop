@@ -13,6 +13,7 @@ import {
   InputNumber,
   Tag,
   Tooltip,
+  App as AntApp,
 } from 'antd';
 import {
   PlusOutlined,
@@ -34,6 +35,7 @@ const { TextArea } = Input;
 const ProviderManager: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { modal } = AntApp.useApp();
   const { providers, loading, error } = useAppSelector((state: RootState) => state.provider);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
@@ -65,7 +67,7 @@ const ProviderManager: React.FC = () => {
   };
 
   const handleDeleteProvider = (id: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: t('providers.deleteConfirm'),
       content: t('providers.deleteDesc'),
       okText: t('common.confirm'),
@@ -200,7 +202,7 @@ const ProviderManager: React.FC = () => {
       key: 'action',
       align: 'center' as const,
       render: (_: any, record: Provider) => (
-        <Space size="middle">
+        <Space size="large">
           <Button
             type="link"
             icon={<EditOutlined />}

@@ -132,4 +132,12 @@ public interface TokenMapper {
      * @return 如果存在返回true，否则返回false
      */
     boolean existsByProviderIdAndAlias(@Param("providerId") String providerId, @Param("alias") String alias);
+
+    /**
+     * 查询需要迁移的明文Token（用于数据迁移）
+     * 查询条件：encryption_version 为 NULL 或 'plaintext'
+     *
+     * @return 明文Token列表
+     */
+    List<Token> findPlaintextTokens();
 }

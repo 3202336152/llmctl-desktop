@@ -15,6 +15,7 @@ import {
   Row,
   Col,
   Statistic,
+  App as AntApp,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,11 +31,14 @@ import { setTokens, addToken, updateToken, removeToken, setLoading, setError } f
 import { tokenAPI } from '../../services/api';
 import { Token, CreateTokenRequest, UpdateTokenRequest, TokenStrategy } from '../../types';
 import type { RootState } from '../../store';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 
 const TokenManager: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { modal } = AntApp.useApp();
   const { providers } = useAppSelector((state: RootState) => state.provider);
   const { tokens, loading } = useAppSelector((state: RootState) => state.token);
   const [selectedProviderId, setSelectedProviderId] = useState<string>('');
@@ -111,7 +115,7 @@ const TokenManager: React.FC = () => {
   const handleDeleteToken = (tokenId: string) => {
     if (!selectedProviderId) return;
 
-    Modal.confirm({
+    modal.confirm({
       title: '确定要删除这个Token吗？',
       content: '删除后将无法恢复',
       okText: '确定',
@@ -212,7 +216,7 @@ const TokenManager: React.FC = () => {
       dataIndex: 'maskedValue',
       key: 'maskedValue',
       align: 'center' as const,
-      render: (text: string) => <code>{text}</code>,
+      render: (text: string) => <code style={{ background: 'transparent', color: '#1890ff', padding: 0 }}>{text}</code>,
     },
     {
       title: '权重',
@@ -255,7 +259,7 @@ const TokenManager: React.FC = () => {
       key: 'action',
       align: 'center' as const,
       render: (_: any, record: Token) => (
-        <Space size="middle">
+        <Space size="large">
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -284,26 +288,26 @@ const TokenManager: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic title="总Token数" value={totalTokensCount} />
           </Card>
         </Col>
         <Col span={8}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic title="启用Token数" value={enabledTokensCount} />
           </Card>
         </Col>
         <Col span={8}>
-          <Card>
+          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
             <Statistic title="健康Token数" value={healthyTokensCount} valueStyle={{ color: '#3f8600' }} />
           </Card>
         </Col>
       </Row>
 
       <Card
-        title="Token管理"
+        title={t('tokens.title')}
         extra={
-          <Space>
+          <Space size="large">
             <Select
               placeholder="选择Provider"
               style={{ width: 200 }}

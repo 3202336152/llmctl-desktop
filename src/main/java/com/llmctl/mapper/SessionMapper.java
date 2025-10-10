@@ -158,4 +158,12 @@ public interface SessionMapper {
      * @return 指定Provider的Session数量
      */
     long countByProviderId(@Param("providerId") String providerId);
+
+    /**
+     * 应用启动时，将所有活跃会话设置为非活跃状态
+     * 原因：桌面应用重启后，Electron终端进程已全部终止
+     *
+     * @return 影响的行数
+     */
+    int deactivateAllActiveSessions();
 }

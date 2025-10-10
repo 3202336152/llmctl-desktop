@@ -1,0 +1,237 @@
+/**
+ * LLMctl Desktop 设计令牌（Design Tokens）
+ * 深色主题 + 科技感视觉语言
+ * 版本：1.0.0
+ */
+
+:root {
+  /* ==================== 颜色系统 ==================== */
+
+  /* 背景层级 */
+  --color-bg-base: #0a0a0a;
+  --color-bg-elevated: #121212;
+  --color-bg-overlay: #1a1a1a;
+  --color-bg-glass: rgba(18, 18, 18, 0.7);
+  --color-bg-hover: rgba(255, 255, 255, 0.05);
+  --color-bg-active: rgba(255, 255, 255, 0.08);
+  --color-bg-selected: rgba(59, 130, 246, 0.15);
+
+  /* 边框 */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-default: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-border-accent: rgba(59, 130, 246, 0.5);
+
+  /* 文本 */
+  --color-text-primary: rgba(255, 255, 255, 0.95);
+  --color-text-secondary: rgba(255, 255, 255, 0.65);
+  --color-text-tertiary: rgba(255, 255, 255, 0.45);
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+  --color-text-inverse: #0a0a0a;
+
+  /* 品牌色 */
+  --color-brand-primary: #3b82f6;
+  --color-brand-primary-hover: #60a5fa;
+  --color-brand-primary-active: #2563eb;
+  --color-brand-primary-glow: rgba(59, 130, 246, 0.4);
+
+  /* 强调色 */
+  --color-accent-cyan: #06b6d4;
+  --color-accent-purple: #a855f7;
+  --color-accent-pink: #ec4899;
+
+  /* 状态色 */
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* 焦点环 */
+  --color-focus: #3b82f6;
+  --color-focus-shadow: rgba(59, 130, 246, 0.3);
+
+  /* ==================== 间距系统（8px栅格）==================== */
+
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+
+  /* 语义化间距 */
+  --gap-component: var(--spacing-2);
+  --gap-section: var(--spacing-4);
+  --gap-module: var(--spacing-6);
+  --gap-page: var(--spacing-8);
+
+  /* ==================== 字体系统 ==================== */
+
+  /* 字体族 */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: "JetBrains Mono", "Fira Code", Consolas, Monaco, monospace;
+
+  /* 字号 */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 32px;
+
+  /* 行高 */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* 字重 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ==================== 圆角系统 ==================== */
+
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* ==================== 阴影系统 ==================== */
+
+  /* 常规阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+
+  /* 发光效果 */
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+  --shadow-glow-hover: 0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2);
+
+  /* 内阴影 */
+  --shadow-inset: inset 0 2px 4px 0 rgba(0, 0, 0, 0.3);
+
+  /* ==================== 渐变系统 ==================== */
+
+  /* 主色渐变 */
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+
+  /* 描边渐变 */
+  --gradient-border: linear-gradient(90deg, rgba(59,130,246,0.3) 0%, rgba(168,85,247,0.3) 100%);
+
+  /* 玻璃质感 */
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+
+  /* 微光效果 */
+  --gradient-glow: radial-gradient(circle at 50% 0%, rgba(59,130,246,0.1) 0%, transparent 50%);
+
+  /* ==================== 动画系统 ==================== */
+
+  /* 持续时间 */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+
+  /* 缓动函数 */
+  --easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+  --easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+
+  /* 通用过渡 */
+  --transition-base: all var(--duration-normal) var(--easing-standard);
+  --transition-fast: all var(--duration-fast) var(--easing-standard);
+  --transition-slow: all var(--duration-slow) var(--easing-standard);
+
+  /* ==================== 布局系统 ==================== */
+
+  /* Z-index层级 */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+
+  /* 侧边栏 */
+  --sidebar-width-collapsed: 56px;
+  --sidebar-width-default: 240px;
+  --sidebar-width-min: 200px;
+  --sidebar-width-max: 400px;
+
+  /* 顶栏 */
+  --topbar-height: 64px;
+
+  /* 底栏 */
+  --statusbar-height: 28px;
+
+  /* 表格密度 */
+  --table-row-height-compact: 32px;
+  --table-row-height-standard: 40px;
+  --table-row-height-comfortable: 48px;
+
+  /* ==================== 特效系统 ==================== */
+
+  /* 背景纹理 */
+  --bg-grid: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+             linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  --bg-grid-size: 20px 20px;
+
+  /* 噪点纹理（通过CSS生成） */
+  --bg-noise-opacity: 0.02;
+
+  /* 玻璃毛玻璃 */
+  --backdrop-blur: blur(12px) saturate(180%);
+
+  /* 发光强度 */
+  --glow-intensity-low: 0.2;
+  --glow-intensity-medium: 0.4;
+  --glow-intensity-high: 0.6;
+}
+
+/* ==================== 亮色主题（可选）==================== */
+
+:root[data-theme="light"] {
+  /* 背景层级 */
+  --color-bg-base: #ffffff;
+  --color-bg-elevated: #f9fafb;
+  --color-bg-overlay: #f3f4f6;
+  --color-bg-glass: rgba(249, 250, 251, 0.7);
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-active: rgba(0, 0, 0, 0.08);
+  --color-bg-selected: rgba(59, 130, 246, 0.1);
+
+  /* 边框 */
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-default: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+
+  /* 文本 */
+  --color-text-primary: rgba(0, 0, 0, 0.88);
+  --color-text-secondary: rgba(0, 0, 0, 0.65);
+  --color-text-tertiary: rgba(0, 0, 0, 0.45);
+  --color-text-disabled: rgba(0, 0, 0, 0.25);
+  --color-text-inverse: #ffffff;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
