@@ -1,0 +1,141 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'electron-app/**'
+      - '.github/workflows/build-electron.yml'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: electron-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: electron-app
+        run: npm install
+
+      - name: Configure API URL
+        working-directory: electron-app
+        run: |
+          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
+          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
+
+      - name: Build and package Windows
+        working-directory: electron-app
+        run: |
+          npm run build
+          npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLMctl-Windows-Installer
+          path: electron-app/release/LLMctl Setup *.exe
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Windows Portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLMctl-Windows-Portable
+          path: electron-app/release/win-unpacked/
+          retention-days: 30
+          if-no-files-found: warn
+
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: electron-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: electron-app
+        run: npm install
+
+      - name: Configure API URL
+        working-directory: electron-app
+        run: |
+          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
+          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
+
+      - name: Build and package macOS
+        working-directory: electron-app
+        run: |
+          npm run build
+          npm run dist:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLMctl-macOS-Installer
+          path: electron-app/release/LLMctl-*.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: electron-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: electron-app
+        run: npm install
+
+      - name: Configure API URL
+        working-directory: electron-app
+        run: |
+          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
+          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
+
+      - name: Build and package Linux
+        working-directory: electron-app
+        run: |
+          npm run build
+          npm run dist:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLMctl-Linux-Installer
+          path: electron-app/release/LLMctl-*.AppImage
+          retention-days: 30
+          if-no-files-found: error

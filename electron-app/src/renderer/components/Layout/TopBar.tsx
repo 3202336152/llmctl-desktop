@@ -16,7 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../utils/authStorage';
 import { sessionAPI } from '../../services/sessionAPI';
-import axios from 'axios';
+import apiClient from '../../services/httpClient';
 
 const { Search } = Input;
 
@@ -86,15 +86,7 @@ const TopBar: React.FC<TopBarProps> = ({
       await sessionAPI.deactivateCurrentUserSessions();
 
       // 2. 调用登出API
-      await axios.post(
-        'http://localhost:8080/llmctl/auth/logout',
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${authStorage.getAccessToken()}`,
-          },
-        }
-      );
+      await apiClient.post('/auth/logout', {});
     } catch (error) {
       console.error('退出登录失败:', error);
     } finally {

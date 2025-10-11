@@ -3,7 +3,7 @@
 # LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.0.4-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 

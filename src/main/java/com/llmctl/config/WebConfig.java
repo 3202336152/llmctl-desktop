@@ -44,6 +44,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")  // 拦截所有请求
                 .excludePathPatterns(
                     "/auth/**",                       // 排除所有认证相关接口
+                    "/health",                        // 健康检查接口（用于 Docker 健康检查）
+                    "/actuator/**",                   // Spring Boot Actuator 监控端点（如果启用）
                     "/sessions/deactivate-all",       // 应用退出时的清理接口（无需认证）
                     "/error",                         // 错误页面
                     "/favicon.ico",                   // 网站图标

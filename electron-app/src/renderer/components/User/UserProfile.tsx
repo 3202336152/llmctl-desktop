@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, message, Avatar, Divider, Space, Typography } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
 import { authStorage } from '../../utils/authStorage';
-import axios from 'axios';
+import apiClient from '../../services/httpClient';
 
 const { Title, Text } = Typography;
 
@@ -36,18 +36,10 @@ const UserProfile: React.FC = () => {
             setLoading(true);
             const values = await form.validateFields();
 
-            const response = await axios.put(
-                'http://localhost:8080/llmctl/auth/profile',
-                {
-                    displayName: values.displayName,
-                    email: values.email,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${authStorage.getAccessToken()}`,
-                    },
-                }
-            );
+            const response = await apiClient.put('/auth/profile', {
+                displayName: values.displayName,
+                email: values.email,
+            });
 
             if (response.data && response.data.code === 200) {
                 message.success('个人信息更新成功！');
@@ -56,7 +48,7 @@ const UserProfile: React.FC = () => {
             }
         } catch (error: any) {
             console.error('更新失败:', error);
-            message.error(error.response?.data?.message || '更新失败');
+            message.error(error.message || '更新失败');
         } finally {
             setLoading(false);
         }
@@ -68,18 +60,10 @@ const UserProfile: React.FC = () => {
             setLoading(true);
             const values = await passwordForm.validateFields();
 
-            const response = await axios.put(
-                'http://localhost:8080/llmctl/auth/change-password',
-                {
-                    oldPassword: values.oldPassword,
-                    newPassword: values.newPassword,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${authStorage.getAccessToken()}`,
-                    },
-                }
-            );
+            const response = await apiClient.put('/auth/change-password', {
+                oldPassword: values.oldPassword,
+                newPassword: values.newPassword,
+            });
 
             if (response.data && response.data.code === 200) {
                 message.success('密码修改成功！');
@@ -88,7 +72,7 @@ const UserProfile: React.FC = () => {
             }
         } catch (error: any) {
             console.error('修改密码失败:', error);
-            message.error(error.response?.data?.message || '修改密码失败');
+            message.error(error.message || '修改密码失败');
         } finally {
             setLoading(false);
         }

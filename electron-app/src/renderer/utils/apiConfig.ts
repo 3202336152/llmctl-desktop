@@ -52,7 +52,7 @@ export const apiConfig = {
    */
   async testConnection(url: string): Promise<boolean> {
     try {
-      const response = await fetch(`${url}/actuator/health`, {
+      const response = await fetch(`${url}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -43,6 +43,11 @@ const TOKEN_ERROR_PATTERNS = [
   /authorization.*failed/i,
 ];
 
+// 获取 API Base URL（支持环境变量配置）
+const getApiBaseUrl = (): string => {
+  return process.env.LLMCTL_API_BASE_URL || 'http://localhost:8080/llmctl';
+};
+
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
   private instanceCounter: number = 0; // 实例计数器
@@ -264,7 +269,8 @@ class TerminalManager {
 
     try {
       // 从后端获取会话信息，直接获取保存的 tokenId
-      const sessionUrl = `http://localhost:8080/llmctl/sessions/${sessionId}`;
+      const apiBaseUrl = getApiBaseUrl();
+      const sessionUrl = `${apiBaseUrl}/sessions/${sessionId}`;
       console.log('[TerminalManager] 正在请求会话信息:', sessionUrl);
 
       const sessionResponse = await fetch(sessionUrl);
@@ -294,7 +300,7 @@ class TerminalManager {
       }
 
       // 构建更新URL
-      const updateUrl = `http://localhost:8080/llmctl/providers/${providerId}/tokens/${tokenId}/health`;
+      const updateUrl = `${apiBaseUrl}/providers/${providerId}/tokens/${tokenId}/health`;
       const requestBody = { healthy: false };
 
       console.log('[TerminalManager] 准备发送PUT请求:');
@@ -318,7 +324,7 @@ class TerminalManager {
         console.log('[TerminalManager] 更新响应:', JSON.stringify(updateResult, null, 2));
 
         // 验证更新是否成功
-        const verifyUrl = `http://localhost:8080/llmctl/providers/${providerId}/tokens/${tokenId}`;
+        const verifyUrl = `${apiBaseUrl}/providers/${providerId}/tokens/${tokenId}`;
         console.log('[TerminalManager] 验证Token状态:', verifyUrl);
 
         const verifyResponse = await fetch(verifyUrl);

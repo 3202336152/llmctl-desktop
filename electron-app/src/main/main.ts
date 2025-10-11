@@ -12,6 +12,11 @@ let isQuitting = false; // 使用局部变量而不是 app.isQuitting
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// 获取 API Base URL（支持环境变量配置）
+const getApiBaseUrl = (): string => {
+  return process.env.LLMCTL_API_BASE_URL || 'http://localhost:8080/llmctl';
+};
+
 // 捕获未处理的异常
 process.on('uncaughtException', (error) => {
   console.error('未捕获的异常:', error);
@@ -318,7 +323,8 @@ app.on('before-quit', async (event) => {
 
   // 通知后端：将所有活跃会话设置为非活跃状态
   try {
-    const response = await axios.post('http://localhost:8080/llmctl/sessions/deactivate-all', null, {
+    const apiBaseUrl = getApiBaseUrl();
+    const response = await axios.post(`${apiBaseUrl}/sessions/deactivate-all`, null, {
       timeout: 3000, // 3秒超时，避免阻塞退出
     });
 

@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Tabs, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../utils/authStorage';
-import axios from 'axios';
+import apiClient from '../../services/httpClient';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
             setLoading(true);
             const values = await loginForm.validateFields();
 
-            const response = await axios.post('http://localhost:8080/llmctl/auth/login', {
+            const response = await apiClient.post('/auth/login', {
                 username: values.username,
                 password: values.password,
             });
@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
             }
         } catch (error: any) {
             console.error('登录失败:', error);
-            message.error(error.response?.data?.message || '登录失败，请检查用户名和密码');
+            message.error(error.message || '登录失败，请检查用户名和密码');
         } finally {
             setLoading(false);
         }
@@ -44,7 +44,7 @@ const LoginPage: React.FC = () => {
             setLoading(true);
             const values = await registerForm.validateFields();
 
-            await axios.post('http://localhost:8080/llmctl/auth/register', {
+            await apiClient.post('/auth/register', {
                 username: values.username,
                 password: values.password,
                 displayName: values.displayName,
@@ -56,7 +56,7 @@ const LoginPage: React.FC = () => {
             registerForm.resetFields();
         } catch (error: any) {
             console.error('注册失败:', error);
-            message.error(error.response?.data?.message || '注册失败');
+            message.error(error.message || '注册失败');
         } finally {
             setLoading(false);
         }
