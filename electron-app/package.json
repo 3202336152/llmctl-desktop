@@ -68,6 +68,7 @@
   "build": {
     "appId": "com.llmctl.desktop",
     "productName": "LLMctl",
+    "publish": null,
     "directories": {
       "output": "release"
     },
@@ -84,5 +85,9 @@
     "linux": {
       "target": "AppImage"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3202336152/llmctl-desktop.git"
   }
 }
