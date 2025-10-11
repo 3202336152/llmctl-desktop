@@ -17,6 +17,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python build tools
+        run: pip install setuptools
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -66,6 +74,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python build tools
+        run: pip install setuptools
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -106,6 +122,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python build tools
+        run: pip install setuptools
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
