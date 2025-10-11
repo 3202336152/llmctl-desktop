@@ -1,4 +1,6 @@
 const path = require('path');
+const webpack = require('webpack');
+require('dotenv').config();
 
 module.exports = {
   entry: './src/main/main.ts',
@@ -23,6 +25,11 @@ module.exports = {
       }
     ]
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env.LLMCTL_API_BASE_URL': JSON.stringify(process.env.LLMCTL_API_BASE_URL)
+    })
+  ],
   externals: {
     'node-pty': 'commonjs node-pty'
   },

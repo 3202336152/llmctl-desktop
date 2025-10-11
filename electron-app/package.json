@@ -30,6 +30,7 @@
     "@typescript-eslint/parser": "^6.7.4",
     "concurrently": "^8.2.1",
     "css-loader": "^6.8.1",
+    "dotenv": "^17.2.3",
     "electron": "^26.6.10",
     "electron-builder": "^24.6.4",
     "electron-rebuild": "^3.2.9",

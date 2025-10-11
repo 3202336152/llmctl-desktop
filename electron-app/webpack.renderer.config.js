@@ -2,6 +2,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const webpack = require('webpack');
 const path = require('path');
+require('dotenv').config();
 
 module.exports = {
   entry: './src/renderer/index.tsx',
@@ -55,7 +56,8 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'global': 'globalThis',
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.REACT_APP_API_BASE_URL': JSON.stringify(process.env.REACT_APP_API_BASE_URL)
     })
   ],
   devServer: {
