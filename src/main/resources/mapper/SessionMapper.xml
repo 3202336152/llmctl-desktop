@@ -6,6 +6,7 @@
     <!-- Session结果映射 -->
     <resultMap id="SessionResultMap" type="com.llmctl.entity.Session">
         <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
         <result column="provider_id" property="providerId"/>
         <result column="token_id" property="tokenId"/>
         <result column="pid" property="pid"/>
@@ -57,8 +58,8 @@
 
     <!-- 插入Session -->
     <insert id="insert" parameterType="com.llmctl.entity.Session">
-        INSERT INTO sessions (id, provider_id, token_id, pid, working_directory, command, status, start_time, last_activity, end_time)
-        VALUES (#{id}, #{providerId}, #{tokenId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
+        INSERT INTO sessions (id, user_id, provider_id, token_id, pid, working_directory, command, status, start_time, last_activity, end_time)
+        VALUES (#{id}, #{userId}, #{providerId}, #{tokenId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
     </insert>
 
     <!-- 更新Session -->
@@ -138,6 +139,15 @@
         SET status = 'inactive',
             last_activity = NOW()
         WHERE status = 'active'
+    </update>
+
+    <!-- 将指定用户的所有活跃会话设置为非活跃状态
+         用于用户登出场景 -->
+    <update id="deactivateUserActiveSessions">
+        UPDATE sessions
+        SET status = 'inactive',
+            last_activity = NOW()
+        WHERE user_id = #{userId} AND status = 'active'
     </update>
 
 </mapper>

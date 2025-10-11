@@ -92,7 +92,7 @@ function createTray() {
     {
       label: t('exit'),
       click: () => {
-        isQuitting = true;
+        // 不要在这里设置 isQuitting，让 before-quit 处理器统一处理
         app.quit();
       }
     }
@@ -305,7 +305,15 @@ ipcMain.handle('terminal-resize', (_event, data: { sessionId: string; cols: numb
 });
 
 // 清理所有会话
-app.on('before-quit', async () => {
+app.on('before-quit', async (event) => {
+  // 如果已经处理过了，直接返回（避免重复处理）
+  if (isQuitting) {
+    return;
+  }
+
+  // 阻止默认退出行为，等待异步操作完成
+  event.preventDefault();
+
   console.log('[App] 退出前清理终端会话');
 
   // 通知后端：将所有活跃会话设置为非活跃状态
@@ -327,6 +335,12 @@ app.on('before-quit', async () => {
 
   // 清理所有终端进程
   terminalManager.cleanup();
+
+  // 标记为已处理，允许退出
+  isQuitting = true;
+
+  // 手动退出应用
+  app.quit();
 });
 
 export { mainWindow };

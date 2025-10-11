@@ -1,4 +1,4 @@
-# LLMctl Desktop 前端开发指南
+# LLMctl 前端开发指南
 
 ## 项目结构
 

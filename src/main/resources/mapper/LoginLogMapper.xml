@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.LoginLogMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.LoginLog">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="username" property="username" jdbcType="VARCHAR"/>
+        <result column="login_result" property="loginResult" jdbcType="VARCHAR"/>
+        <result column="failure_reason" property="failureReason" jdbcType="VARCHAR"/>
+        <result column="ip_address" property="ipAddress" jdbcType="VARCHAR"/>
+        <result column="user_agent" property="userAgent" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, user_id, username, login_result, failure_reason, ip_address, user_agent, created_at
+    </sql>
+
+    <!-- 插入登录日志 -->
+    <insert id="insert" parameterType="com.llmctl.entity.LoginLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO login_logs (
+            user_id, username, login_result, failure_reason, ip_address, user_agent, created_at
+        )
+        VALUES (
+            #{userId}, #{username}, #{loginResult}, #{failureReason}, #{ipAddress}, #{userAgent}, NOW()
+        )
+    </insert>
+
+    <!-- 根据用户ID查询登录日志 -->
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM login_logs
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 根据用户名查询登录日志 -->
+    <select id="findByUsername" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM login_logs
+        WHERE username = #{username}
+        ORDER BY created_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 统计用户登录失败次数（最近N分钟） -->
+    <select id="countFailedAttempts" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM login_logs
+        WHERE username = #{username}
+          AND login_result = 'FAILED'
+          AND created_at >= DATE_SUB(NOW(), INTERVAL #{minutes} MINUTE)
+    </select>
+
+</mapper>

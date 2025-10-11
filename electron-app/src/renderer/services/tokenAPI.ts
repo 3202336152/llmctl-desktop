@@ -37,4 +37,9 @@ export const tokenAPI = {
   getTokenStatistics: (providerId: string): Promise<ApiResponse<any>> => {
     return httpClient.get(`/statistics/tokens/${providerId}`).then(response => response.data);
   },
+
+  // 批量恢复指定Provider下所有不健康Token的健康状态
+  recoverAllUnhealthyTokens: (providerId: string): Promise<ApiResponse<number>> => {
+    return httpClient.post(`/providers/${providerId}/tokens/recover-all`).then(response => response.data);
+  },
 };

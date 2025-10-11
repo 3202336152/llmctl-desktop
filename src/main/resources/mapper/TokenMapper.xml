@@ -7,6 +7,7 @@
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.llmctl.entity.Token">
         <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
         <result column="provider_id" property="providerId" jdbcType="VARCHAR"/>
         <result column="value" property="value" jdbcType="VARCHAR"/>
         <result column="alias" property="alias" jdbcType="VARCHAR"/>
@@ -21,7 +22,7 @@
 
     <!-- 基础列 -->
     <sql id="Base_Column_List">
-        id, provider_id, value, alias, weight, enabled, healthy, last_used,
+        id, user_id, provider_id, value, alias, weight, enabled, healthy, last_used,
         encryption_version, created_at, updated_at
     </sql>
 
@@ -39,7 +40,7 @@
         <include refid="Base_Column_List"/>
         FROM tokens
         WHERE provider_id = #{providerId}
-        ORDER BY weight DESC, created_at ASC
+        ORDER BY last_used IS NULL, last_used DESC, created_at DESC
     </select>
 
     <!-- 根据Provider ID查询可用的Token列表 -->
@@ -56,17 +57,17 @@
         SELECT
         <include refid="Base_Column_List"/>
         FROM tokens
-        ORDER BY provider_id, weight DESC, created_at ASC
+        ORDER BY provider_id, last_used IS NULL, last_used DESC, created_at DESC
     </select>
 
     <!-- 插入Token -->
     <insert id="insert" parameterType="com.llmctl.entity.Token">
         INSERT INTO tokens (
-            id, provider_id, value, alias, weight, enabled, healthy,
+            id, user_id, provider_id, value, alias, weight, enabled, healthy,
             last_used, encryption_version, created_at, updated_at
         )
         VALUES (
-            #{id}, #{providerId}, #{value}, #{alias}, #{weight}, #{enabled}, #{healthy},
+            #{id}, #{userId}, #{providerId}, #{value}, #{alias}, #{weight}, #{enabled}, #{healthy},
             #{lastUsed}, #{encryptionVersion}, #{createdAt}, #{updatedAt}
         )
     </insert>
@@ -147,5 +148,12 @@
         FROM tokens
         WHERE encryption_version IS NULL OR encryption_version = 'plaintext'
     </select>
+
+    <!-- 批量恢复指定Provider下所有不健康Token的健康状态 -->
+    <update id="recoverAllUnhealthyTokens" parameterType="java.lang.String">
+        UPDATE tokens
+        SET healthy = 1, updated_at = NOW()
+        WHERE provider_id = #{providerId} AND healthy = 0
+    </update>
 
 </mapper>

@@ -67,7 +67,7 @@
   },
   "build": {
     "appId": "com.llmctl.desktop",
-    "productName": "LLMctl Desktop",
+    "productName": "LLMctl",
     "directories": {
       "output": "release"
     },

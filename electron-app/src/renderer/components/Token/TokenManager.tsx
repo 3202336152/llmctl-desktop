@@ -24,6 +24,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   KeyOutlined,
+  MedicineBoxOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders } from '../../store/slices/providerSlice';
@@ -198,6 +199,42 @@ const TokenManager: React.FC = () => {
     }
   };
 
+  const handleRecoverAllUnhealthyTokens = async () => {
+    if (!selectedProviderId) return;
+
+    // 统计不健康的Token数量
+    const unhealthyCount = tokens.filter(token => !token.healthy).length;
+
+    if (unhealthyCount === 0) {
+      message.info('所有Token均为健康状态，无需恢复');
+      return;
+    }
+
+    modal.confirm({
+      title: '确定要恢复所有不健康Token的健康状态吗？',
+      content: `当前有 ${unhealthyCount} 个不健康的Token，将全部恢复为健康状态`,
+      okText: '确定恢复',
+      cancelText: '取消',
+      icon: <MedicineBoxOutlined style={{ color: '#52c41a' }} />,
+      onOk: async () => {
+        try {
+          const response = await tokenAPI.recoverAllUnhealthyTokens(selectedProviderId);
+          const recoveredCount = response.data || 0;
+
+          if (recoveredCount > 0) {
+            message.success(response.message || `成功恢复 ${recoveredCount} 个Token的健康状态`);
+            // 重新加载Token列表
+            await loadTokens();
+          } else {
+            message.info('所有Token均为健康状态，无需恢复');
+          }
+        } catch (error) {
+          message.error(`恢复失败: ${error}`);
+        }
+      },
+    });
+  };
+
   const columns = [
     {
       title: '别名',
@@ -329,6 +366,14 @@ const TokenManager: React.FC = () => {
               disabled={!selectedProviderId}
             >
               设置策略
+            </Button>
+            <Button
+              type="default"
+              icon={<MedicineBoxOutlined />}
+              onClick={handleRecoverAllUnhealthyTokens}
+              disabled={!selectedProviderId || tokens.filter(token => !token.healthy).length === 0}
+            >
+              恢复健康
             </Button>
             <Button
               type="primary"

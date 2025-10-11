@@ -1,6 +1,7 @@
 package com.llmctl.config;
 
 import com.llmctl.dto.ApiResponse;
+import com.llmctl.exception.AuthenticationException;
 import com.llmctl.exception.BusinessException;
 import com.llmctl.exception.ResourceNotFoundException;
 import com.llmctl.exception.ServiceException;
@@ -118,6 +119,17 @@ public class GlobalExceptionHandler {
         ApiResponse<Object> response = ApiResponse.error(ex.getCode(), ex.getMessage());
         HttpStatus status = getHttpStatusFromCode(ex.getCode());
         return ResponseEntity.status(status).body(response);
+    }
+
+    /**
+     * 处理认证异常
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAuthenticationException(AuthenticationException ex) {
+        log.warn("认证异常: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.error(ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     /**

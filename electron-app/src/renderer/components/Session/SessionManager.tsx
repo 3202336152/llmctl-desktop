@@ -47,6 +47,7 @@ const SessionManager: React.FC = () => {
   const { sessions, loading, openTerminalSessions } = useAppSelector((state: RootState) => state.session);
   const [modalVisible, setModalVisible] = useState(false);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -100,7 +101,13 @@ const SessionManager: React.FC = () => {
   };
 
   const handleModalOk = async () => {
+    // 防止重复提交
+    if (submitting) {
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const values = await form.validateFields();
       const request: StartSessionRequest = {
         providerId: values.providerId,
@@ -122,6 +129,8 @@ const SessionManager: React.FC = () => {
       form.resetFields();
     } catch (error) {
       message.error(`启动会话失败: ${error}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -199,10 +208,22 @@ const SessionManager: React.FC = () => {
     const session = sessions.find(s => s.id === sessionId);
     if (session?.status === 'inactive') {
       try {
-        // 调用后端 API 重新激活会话
+        // 1. 先销毁旧的终端实例（如果存在）
+        dispatch(destroyTerminal(sessionId));
+
+        // 2. 尝试终止终端进程（如果还在运行）
+        try {
+          await window.electronAPI.terminalKill(sessionId);
+        } catch (error) {
+          console.log('终端进程已终止或不存在:', error);
+        }
+
+        // 3. 调用后端 API 重新激活会话（更新数据库状态）
         await sessionAPI.reactivateSession(sessionId);
-        // 重新加载会话列表
+
+        // 4. 重新加载会话列表
         await loadSessions();
+
         message.success('会话已重新激活');
       } catch (error) {
         message.error(`重新激活会话失败: ${error}`);
@@ -210,7 +231,7 @@ const SessionManager: React.FC = () => {
       }
     }
 
-    // 打开终端
+    // 打开终端（会创建新的终端实例和进程）
     dispatch(openTerminal(sessionId));
   };
 
@@ -411,7 +432,7 @@ const SessionManager: React.FC = () => {
             label: (
               <Space>
                 <DesktopOutlined />
-                <span>会话列表</span>
+                <span>Sessions</span>
               </Space>
             ),
             extra: (
@@ -482,6 +503,7 @@ const SessionManager: React.FC = () => {
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
+        confirmLoading={submitting}
         width={500}
         destroyOnHidden
         afterClose={() => form.resetFields()}

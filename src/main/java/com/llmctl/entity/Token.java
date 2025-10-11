@@ -22,6 +22,11 @@ public class Token {
     private String id;
 
     /**
+     * 用户ID（所有者）
+     */
+    private Long userId;
+
+    /**
      * 关联的Provider ID
      */
     private String providerId;

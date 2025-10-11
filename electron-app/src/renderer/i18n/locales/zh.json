@@ -34,7 +34,7 @@
     "providers": "Providers",
     "tokens": "API Keys",
     "sessions": "Sessions",
-    "statistics": "统计信息",
+    "profile": "用户信息",
     "settings": "系统设置",
     "appTitle": "LLM控制系统"
   },
@@ -78,7 +78,7 @@
     "dataReset": "所有数据已重置",
     "aboutLlmctl": "关于 LLMctl",
     "appName": "应用名称",
-    "appNameValue": "LLMctl Desktop",
+    "appNameValue": "LLMctl",
     "version": "版本",
     "author": "作者",
     "authorName": "Liu Yifan",

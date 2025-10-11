@@ -51,4 +51,14 @@ export const sessionAPI = {
   deactivateAllActiveSessions: (): Promise<ApiResponse<number>> => {
     return httpClient.post('/sessions/deactivate-all').then(response => response.data);
   },
+
+  // 批量停用当前用户的所有活跃会话（用户登出时调用）
+  deactivateCurrentUserSessions: (): Promise<ApiResponse<number>> => {
+    return httpClient.post('/sessions/deactivate-current-user').then(response => response.data);
+  },
+
+  // 获取活跃会话列表
+  getActiveSessions: (): Promise<ApiResponse<Session[]>> => {
+    return httpClient.get('/sessions').then(response => response.data);
+  },
 };

@@ -7,6 +7,235 @@
 
 ---
 
+## [2.1.0] - 2025-10-10
+
+### 🎉 新功能
+
+#### 用户认证系统
+- ✅ **完整的登录认证系统** - 强制用户登录才能使用应用
+  - 用户名+密码登录/注册
+  - 默认管理员账户（用户名：`admin`，密码：`admin123`）
+  - 登录页面（Electron应用启动后优先显示）
+  - 注册新用户功能（用户名验证、密码强度校验）
+
+#### JWT Token认证
+- ✅ **双Token机制** - Access Token + Refresh Token
+  - Access Token：24小时有效期，用于API请求认证
+  - Refresh Token：7天有效期，用于刷新Access Token
+  - HS256签名算法，防篡改
+  - Token即将过期时自动刷新（无感知）
+
+#### 密码安全
+- ✅ **BCrypt加密** - 密码单向加密存储
+  - 自动盐值生成
+  - 不可逆加密，数据库永不存储明文密码
+  - 密码强度校验（最少6个字符）
+
+#### 防暴力破解
+- ✅ **失败次数限制** - 连续失败5次锁定账户
+  - 锁定时长：30分钟
+  - 自动解锁机制
+  - 失败次数计数器
+
+#### 登录审计
+- ✅ **完整的登录日志** - 记录所有登录尝试
+  - 登录成功/失败/锁定状态
+  - IP地址记录
+  - 失败原因记录
+  - 时间戳记录
+
+#### 多用户数据隔离
+- ✅ **用户级别数据隔离** - 每个用户只能访问自己的数据
+  - Provider表添加`user_id`外键
+  - Token表添加`user_id`外键
+  - Session表添加`user_id`外键
+  - 数据库级别的CASCADE删除
+  - Service层自动过滤用户数据
+
+#### 前端实现
+- ✅ **登录页面组件** - 完整的登录/注册界面
+  - 登录表单（用户名+密码）
+  - 注册表单（用户名、密码、确认密码、显示名称、邮箱）
+  - 表单验证（必填项、密码一致性、邮箱格式）
+  - 响应式设计，渐变背景
+- ✅ **Token存储管理** - AuthStorage类
+  - Electron Store加密存储Token
+  - 自动过期检测
+  - Token即将过期检测（剩余<10分钟）
+- ✅ **HTTP请求拦截器**
+  - 自动添加Authorization Header
+  - Token过期自动刷新
+  - 401错误自动处理（重试或跳转登录）
+  - 并发请求防重复刷新
+- ✅ **路由守卫** - App.tsx
+  - 未登录自动跳转登录页
+  - 已登录自动跳转主页
+  - 登录状态实时检测
+- ✅ **用户菜单组件** - 顶部用户信息显示
+  - 用户头像和显示名称
+  - 下拉菜单（个人资料、设置、退出登录）
+  - 登出确认对话框
+
+#### 后端实现
+- ✅ **JWT工具类** - JwtUtil
+  - 生成Access Token和Refresh Token
+  - Token验证和解析
+  - 用户信息提取（userId、username）
+  - Token过期检测
+- ✅ **认证服务** - AuthServiceImpl
+  - 用户登录（密码验证、Token生成）
+  - 用户注册（用户名唯一性检查、密码加密）
+  - Token刷新（Refresh Token验证）
+  - 登出（清除Refresh Token）
+- ✅ **认证控制器** - AuthController
+  - POST `/auth/login` - 用户登录
+  - POST `/auth/register` - 用户注册
+  - POST `/auth/refresh` - 刷新Token
+  - POST `/auth/logout` - 用户登出
+- ✅ **JWT拦截器** - JwtAuthInterceptor
+  - 验证Authorization Header
+  - 解析JWT Token
+  - 设置UserContext（ThreadLocal）
+  - 清除UserContext（请求结束）
+- ✅ **用户上下文** - UserContext
+  - ThreadLocal存储当前用户ID和用户名
+  - Service层自动获取当前用户
+  - 请求结束自动清除
+
+#### 数据库变更
+- ✅ **用户表** - `users`
+  - 用户名、密码哈希、显示名称、邮箱
+  - 账户状态（激活、锁定）
+  - 失败登录次数、锁定到期时间
+  - Refresh Token哈希和过期时间
+  - 最后登录时间和IP
+- ✅ **登录日志表** - `login_logs`
+  - 用户ID、用户名
+  - 登录结果（成功/失败/锁定）
+  - 失败原因、IP地址、User Agent
+- ✅ **数据迁移脚本** - `migration_add_authentication.sql`
+  - 创建用户表和登录日志表
+  - 为现有表添加`user_id`外键
+  - 创建默认管理员账户
+
+#### 配置变更
+- ✅ **application.yml** - JWT配置
+  - `jwt.secret` - JWT签名密钥（支持环境变量）
+  - `jwt.expiration` - Access Token过期时间（24小时）
+  - `jwt.refresh-expiration` - Refresh Token过期时间（7天）
+- ✅ **pom.xml** - 新增依赖
+  - `jjwt-api`, `jjwt-impl`, `jjwt-jackson` - JWT支持
+  - `spring-security-crypto` - BCrypt密码加密
+- ✅ **WebConfig** - 拦截器配置
+  - 拦截所有业务接口（`/llmctl/**`）
+  - 排除登录、注册、刷新Token接口
+  - 排除应用退出清理接口（`/sessions/deactivate-all`）
+
+### 🐛 Bug修复
+
+#### 会话生命周期管理完善
+- ✅ **用户登出时会话清理** (#015) - 修复登出后会话未正确终止的问题
+  - 问题：用户点击退出登录后，活跃会话仍保持active状态
+  - 解决：登出前调用`/sessions/deactivate-current-user` API批量停用当前用户的会话
+  - 添加确认对话框，显示活跃会话数量（如："登出将终止所有活跃会话（当前有 3 个活跃会话）"）
+  - 提示用户会话历史记录将被保留，可随时重启
+
+- ✅ **重启终端界面显示异常** (#016) - 修复重启inactive会话时界面显示错误
+  - 问题：重启inactive会话后，终端显示原始CLI样式而非xterm.js界面
+  - 原因：handleOpenTerminal只更新数据库状态，未重新创建终端实例和进程
+  - 解决：重启前先销毁旧终端实例和进程，然后创建新的终端
+  - SessionManager.tsx:197-227 修改handleOpenTerminal逻辑
+
+- ✅ **应用退出时会话状态未更新** (#017) - 修复应用退出后会话仍为active状态
+  - 问题：关闭应用后，数据库中的会话仍显示active状态
+  - 原因1：`/sessions/deactivate-all`端点被JWT拦截器拦截（401 Unauthorized）
+  - 原因2：托盘菜单退出时提前设置`isQuitting = true`，导致before-quit处理器跳过清理逻辑
+  - 解决：
+    - WebConfig中将`/sessions/deactivate-all`添加到认证白名单（无需JWT认证）
+    - 移除托盘菜单中的`isQuitting = true`设置，让before-quit统一处理
+    - before-quit事件使用`event.preventDefault()`阻止默认退出，等待异步操作完成
+  - 效果：应用退出时正确调用API，所有会话状态变为inactive
+
+#### 技术细节
+- `SessionController.java`:
+  - 添加`POST /sessions/deactivate-current-user`端点
+  - 用户登出时调用，批量停用当前用户的活跃会话
+
+- `SessionMapper.xml`:
+  - 添加`deactivateUserActiveSessions`查询
+  - 批量更新指定用户的ACTIVE会话为INACTIVE
+
+- `WebConfig.java`:
+  - 添加`/sessions/deactivate-all`到认证白名单
+  - 允许无JWT认证访问（应用退出是系统级操作）
+
+- `main.ts` (Electron主进程):
+  - 修改托盘菜单退出逻辑，移除提前设置`isQuitting = true`
+  - before-quit事件使用`event.preventDefault()`和手动`app.quit()`
+  - 确保异步API调用完成后才退出应用
+
+- `TopBar.tsx`:
+  - 重写登出逻辑，添加确认对话框
+  - 调用`getActiveSessions()`检查活跃会话数量
+  - 调用`deactivateCurrentUserSessions()`停用会话
+
+### 📖 文档更新
+
+- ✅ **新增**：创建`docs/user-authentication-system.md` - 完整的用户认证系统设计文档
+  - 系统概述和设计目标
+  - 数据库设计（用户表、登录日志表）
+  - 后端实现（JWT工具、认证服务、控制器、拦截器）
+  - 前端实现（登录页面、Token存储、HTTP拦截器、路由守卫）
+  - 安全特性（密码安全、防暴力破解、Token安全、传输安全）
+  - 测试用例和实施步骤
+- ✅ **更新**：README.md - 添加用户认证系统说明
+  - 核心功能列表添加"用户认证系统"
+  - 新增"用户认证系统"详细说明章节
+  - 安全特性部分添加认证相关特性
+  - 快速开始部分添加首次登录说明
+  - 文档列表添加认证系统设计文档链接
+  - 最新更新部分添加v2.1.0版本说明
+- ✅ **更新**：CHANGELOG.md - 记录v2.1.0版本更新
+
+### 🔐 安全增强
+
+- ✅ **密码加密** - BCrypt单向加密，永不明文存储
+- ✅ **JWT签名** - HS256算法签名，防止Token篡改
+- ✅ **本地加密存储** - Electron Store加密存储Token
+- ✅ **防暴力破解** - 连续失败5次锁定30分钟
+- ✅ **登录审计** - 记录所有登录尝试（成功/失败/IP地址）
+- ✅ **自动刷新** - Token即将过期时自动刷新，无感知续期
+- ✅ **用户隔离** - 数据库级别的用户数据隔离
+
+### ⚠️ 破坏性变更
+
+- ⚠️ **强制登录** - 应用启动必须登录才能使用任何功能
+- ⚠️ **数据库迁移** - 需要执行`migration_add_authentication.sql`迁移脚本
+- ⚠️ **现有数据** - 现有Provider、Token、Session需要关联到用户（建议关联到默认admin用户）
+
+### 🚀 实施步骤
+
+1. **数据库迁移**（必须）
+   ```bash
+   mysql -u llmctl -p llmctl < src/main/resources/migration_add_authentication.sql
+   ```
+
+2. **后端部署**（自动）
+   - 后端启动时自动加载新配置
+   - JWT密钥可通过环境变量`JWT_SECRET`配置
+
+3. **前端部署**（自动）
+   - 前端启动时自动显示登录页面
+   - 未登录自动跳转登录页
+
+4. **首次登录**
+   - 使用默认管理员账户登录：
+     - 用户名：`admin`
+     - 密码：`admin123`
+   - 或注册新账户
+
+---
+
 ## [2.0.4] - 2025-10-9
 
 ### 🎨 UI改进

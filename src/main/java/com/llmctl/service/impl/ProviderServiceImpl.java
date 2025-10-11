@@ -1,5 +1,6 @@
 package com.llmctl.service.impl;
 
+import com.llmctl.context.UserContext;
 import com.llmctl.dto.*;
 import com.llmctl.entity.Provider;
 import com.llmctl.entity.Token;
@@ -83,6 +84,7 @@ public class ProviderServiceImpl implements ProviderService {
         // 创建Provider实体
         Provider provider = new Provider();
         provider.setId(generateProviderId());
+        provider.setUserId(UserContext.getUserId());
         provider.setName(request.getName());
         provider.setDescription(request.getDescription());
         provider.setType(request.getType());

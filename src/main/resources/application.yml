@@ -42,7 +42,7 @@ info:
   app:
     name: LLMctl
     description: LLM Control System
-    version: 2.0.4
+    version: 2.1.0
     author: Liu Yifan
 
 # Jasypt加密配置
@@ -51,3 +51,9 @@ jasypt:
     password: ${JASYPT_PASSWORD}
     algorithm: PBEWithMD5AndDES
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000  # 24小时（毫秒）
+  refresh-expiration: 604800000  # 7天（毫秒）

@@ -1,5 +1,6 @@
 package com.llmctl.service.impl;
 
+import com.llmctl.context.UserContext;
 import com.llmctl.dto.SessionDTO;
 import com.llmctl.dto.StartSessionRequest;
 import com.llmctl.entity.Provider;
@@ -103,6 +104,7 @@ public class SessionServiceImpl implements ISessionService {
         // 创建Session实体（仅记录元数据，进程由Electron管理）
         Session session = new Session();
         session.setId(IdGenerator.generateSessionId());
+        session.setUserId(UserContext.getUserId());
         session.setProviderId(request.getProviderId());
         session.setTokenId(selectedToken.getId()); // 保存选中的Token ID
         session.setWorkingDirectory(request.getWorkingDirectory());
@@ -240,6 +242,22 @@ public class SessionServiceImpl implements ISessionService {
             log.info("成功将 {} 个活跃会话设置为非活跃状态（Electron应用已退出）", affectedRows);
         } else {
             log.info("无需处理，当前没有活跃会话");
+        }
+        return affectedRows;
+    }
+
+    /**
+     * 用户登出时调用：将指定用户的所有活跃会话设置为非活跃状态
+     * 原因：用户登出后，其会话应被清理，避免资源泄漏和状态混乱
+     */
+    @Override
+    public int deactivateUserActiveSessions(Long userId) {
+        log.info("用户登出，开始批量更新用户活跃会话状态，用户ID: {}", userId);
+        int affectedRows = sessionMapper.deactivateUserActiveSessions(userId);
+        if (affectedRows > 0) {
+            log.info("成功将用户 {} 的 {} 个活跃会话设置为非活跃状态（用户已登出）", userId, affectedRows);
+        } else {
+            log.info("用户 {} 无活跃会话需要处理", userId);
         }
         return affectedRows;
     }

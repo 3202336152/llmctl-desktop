@@ -1,5 +1,6 @@
 package com.llmctl.controller;
 
+import com.llmctl.context.UserContext;
 import com.llmctl.dto.*;
 import com.llmctl.service.ISessionService;
 import jakarta.validation.Valid;
@@ -229,6 +230,26 @@ public class SessionController {
         String message = count > 0
                 ? String.format("已将 %d 个活跃会话设置为非活跃状态", count)
                 : "无需处理，当前没有活跃会话";
+        ApiResponse<Integer> response = ApiResponse.success(count, message);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 批量停用当前用户的所有活跃会话（用户登出时调用）
+     * 原因：用户登出后，其会话应被清理，避免资源泄漏和状态混乱
+     *
+     * @return 影响的行数
+     */
+    @PostMapping("/deactivate-current-user")
+    public ResponseEntity<ApiResponse<Integer>> deactivateCurrentUserSessions() {
+        Long userId = UserContext.getUserId();
+        log.info("用户登出，批量停用用户活跃会话，用户ID: {}", userId);
+
+        int count = sessionService.deactivateUserActiveSessions(userId);
+        String message = count > 0
+                ? String.format("已终止 %d 个活跃会话", count)
+                : "当前没有活跃会话";
         ApiResponse<Integer> response = ApiResponse.success(count, message);
 
         return ResponseEntity.ok(response);

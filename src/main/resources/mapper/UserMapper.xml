@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.UserMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.User">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="username" property="username" jdbcType="VARCHAR"/>
+        <result column="password_hash" property="passwordHash" jdbcType="VARCHAR"/>
+        <result column="display_name" property="displayName" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="avatar_url" property="avatarUrl" jdbcType="VARCHAR"/>
+        <result column="is_active" property="isActive" jdbcType="BOOLEAN"/>
+        <result column="is_locked" property="isLocked" jdbcType="BOOLEAN"/>
+        <result column="failed_login_attempts" property="failedLoginAttempts" jdbcType="INTEGER"/>
+        <result column="locked_until" property="lockedUntil" jdbcType="TIMESTAMP"/>
+        <result column="refresh_token_hash" property="refreshTokenHash" jdbcType="VARCHAR"/>
+        <result column="refresh_token_expires_at" property="refreshTokenExpiresAt" jdbcType="TIMESTAMP"/>
+        <result column="last_login_at" property="lastLoginAt" jdbcType="TIMESTAMP"/>
+        <result column="last_login_ip" property="lastLoginIp" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, username, password_hash, display_name, email, avatar_url,
+        is_active, is_locked, failed_login_attempts, locked_until,
+        refresh_token_hash, refresh_token_expires_at, last_login_at, last_login_ip,
+        created_at, updated_at
+    </sql>
+
+    <!-- 根据ID查询用户 -->
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据用户名查询用户 -->
+    <select id="findByUsername" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <!-- 根据邮箱查询用户 -->
+    <select id="findByEmail" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <!-- 插入用户 -->
+    <insert id="insert" parameterType="com.llmctl.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+            username, password_hash, display_name, email, avatar_url,
+            is_active, is_locked, failed_login_attempts,
+            created_at, updated_at
+        )
+        VALUES (
+            #{username}, #{passwordHash}, #{displayName}, #{email}, #{avatarUrl},
+            #{isActive}, #{isLocked}, #{failedLoginAttempts},
+            NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 更新用户信息 -->
+    <update id="update" parameterType="com.llmctl.entity.User">
+        UPDATE users
+        SET
+            display_name = #{displayName},
+            email = #{email},
+            avatar_url = #{avatarUrl},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 增加失败登录次数 -->
+    <update id="incrementFailedAttempts">
+        UPDATE users
+        SET
+            failed_login_attempts = failed_login_attempts + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 重置失败登录次数 -->
+    <update id="resetFailedAttempts">
+        UPDATE users
+        SET
+            failed_login_attempts = 0,
+            is_locked = FALSE,
+            locked_until = NULL,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 锁定用户 -->
+    <update id="lockUser">
+        UPDATE users
+        SET
+            is_locked = TRUE,
+            locked_until = #{lockedUntil},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 解锁用户 -->
+    <update id="unlockUser">
+        UPDATE users
+        SET
+            is_locked = FALSE,
+            locked_until = NULL,
+            failed_login_attempts = 0,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 更新最后登录时间和IP -->
+    <update id="updateLastLogin">
+        UPDATE users
+        SET
+            last_login_at = NOW(),
+            last_login_ip = #{ipAddress},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 更新Refresh Token -->
+    <update id="updateRefreshToken">
+        UPDATE users
+        SET
+            refresh_token_hash = #{refreshTokenHash},
+            refresh_token_expires_at = #{expiresAt},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 清除Refresh Token -->
+    <update id="clearRefreshToken">
+        UPDATE users
+        SET
+            refresh_token_hash = NULL,
+            refresh_token_expires_at = NULL,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+</mapper>

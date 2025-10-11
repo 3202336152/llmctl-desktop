@@ -171,6 +171,29 @@ public class TokenController {
     }
 
     /**
+     * 批量恢复指定Provider下所有不健康Token的健康状态
+     *
+     * @param providerId Provider ID
+     * @return 恢复的Token数量
+     */
+    @PostMapping("/recover-all")
+    public ResponseEntity<ApiResponse<Integer>> recoverAllUnhealthyTokens(
+            @PathVariable @NotBlank(message = "Provider ID不能为空") String providerId) {
+        log.info("🔧 [API] 收到批量恢复Token健康状态请求 - Provider: {}", providerId);
+
+        int recoveredCount = tokenService.recoverAllUnhealthyTokens(providerId);
+
+        String message = recoveredCount > 0
+                ? String.format("成功恢复 %d 个Token的健康状态", recoveredCount)
+                : "所有Token均为健康状态，无需恢复";
+
+        log.info("✅ [API] 批量恢复Token健康状态完成 - Provider: {} | 恢复数量: {}", providerId, recoveredCount);
+        ApiResponse<Integer> response = ApiResponse.success(recoveredCount, message);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Token健康状态更新请求DTO
      */
     public static class TokenHealthRequest {

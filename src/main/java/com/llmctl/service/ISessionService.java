@@ -117,6 +117,15 @@ public interface ISessionService {
     int deactivateAllActiveSessions();
 
     /**
+     * 用户登出时调用：将指定用户的所有活跃会话设置为非活跃状态
+     * 原因：用户登出后，其会话应被清理，避免资源泄漏和状态混乱
+     *
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int deactivateUserActiveSessions(Long userId);
+
+    /**
      * 会话统计信息
      */
     class SessionStatistics {

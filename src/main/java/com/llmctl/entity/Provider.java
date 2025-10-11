@@ -24,6 +24,11 @@ public class Provider {
     private String id;
 
     /**
+     * 用户ID（所有者）
+     */
+    private Long userId;
+
+    /**
      * Provider名称
      */
     private String name;

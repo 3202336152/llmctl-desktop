@@ -166,4 +166,13 @@ public interface SessionMapper {
      * @return 影响的行数
      */
     int deactivateAllActiveSessions();
+
+    /**
+     * 将指定用户的所有活跃会话设置为非活跃状态
+     * 用于用户登出场景
+     *
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int deactivateUserActiveSessions(@Param("userId") Long userId);
 }

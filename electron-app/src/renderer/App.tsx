@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag, message, Modal, ConfigProvider, App as AntApp } from 'antd';
 import {
   DatabaseOutlined,
   KeyOutlined,
   DesktopOutlined,
   SettingOutlined,
-  BarChartOutlined,
+  UserOutlined,
   FolderOutlined,
   ExpandOutlined,
   CompressOutlined,
@@ -19,7 +19,8 @@ import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
 import Settings from './components/Settings/Settings';
-import Statistics from './components/Statistics/Statistics';
+import UserProfile from './components/User/UserProfile';
+import LoginPage from './components/Auth/LoginPage';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
@@ -27,6 +28,7 @@ import TerminalComponent from './components/Terminal/TerminalComponent';
 import { ResizableSider, StatusBar, TopBar } from './components/Layout';
 import { configAPI, sessionAPI } from './services/api';
 import { ConfigImportRequest, StartSessionRequest } from './types';
+import { authStorage } from './utils/authStorage';
 import './i18n'; // 引入 i18n 配置
 import './styles/global.css'; // 引入全局样式
 import './styles/App.css'; // 引入应用样式
@@ -34,6 +36,19 @@ import { useTranslation } from 'react-i18next';
 import { lightTheme } from './theme'; // 引入亮色主题配置
 
 const { Content } = Layout;
+
+/**
+ * 受保护的路由组件 - 需要登录才能访问
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isAuthenticated = authStorage.isLoggedIn();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const AppContent: React.FC = () => {
   const navigate = useNavigate();
@@ -49,9 +64,15 @@ const AppContent: React.FC = () => {
     token: { colorBgContainer },
   } = theme.useToken();
 
-  // 加载初始设置（语言和托盘）
+  // 加载初始设置（语言和托盘） - 仅在登录后执行
   useEffect(() => {
     const loadInitialSettings = async () => {
+      // 检查是否已登录，未登录则跳过
+      if (!authStorage.isLoggedIn()) {
+        console.log('[App] 用户未登录，跳过加载初始设置');
+        return;
+      }
+
       try {
         const response = await configAPI.getGlobalConfigs();
         const configs = response.data || [];
@@ -274,6 +295,9 @@ const AppContent: React.FC = () => {
   // 是否在会话管理页面
   const isSessionPage = location.pathname === '/sessions';
 
+  // 是否在登录页面
+  const isLoginPage = location.pathname === '/login';
+
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -385,9 +409,9 @@ const AppContent: React.FC = () => {
       label: t('nav.sessions'),
     },
     {
-      key: '/statistics',
-      icon: <BarChartOutlined />,
-      label: t('nav.statistics'),
+      key: '/profile',
+      icon: <UserOutlined />,
+      label: t('nav.profile'),
     },
     {
       key: '/settings',
@@ -408,8 +432,8 @@ const AppContent: React.FC = () => {
         onClose={() => setCommandPaletteVisible(false)}
       />
       <Layout style={{ height: '100vh' }}>
-      {/* 全屏时隐藏侧边栏 */}
-      {!isTerminalFullscreen && (
+      {/* 登录页面和全屏时隐藏侧边栏 */}
+      {!isTerminalFullscreen && !isLoginPage && (
         <ResizableSider
           theme="light"
           collapsed={collapsed}
@@ -425,7 +449,7 @@ const AppContent: React.FC = () => {
               whiteSpace: 'nowrap',
             }}
           >
-            {collapsed ? 'LLM' : 'LLMctl Desktop'}
+            {collapsed ? 'CTL' : 'LLMctl'}
           </div>
           <Menu
             mode="inline"
@@ -438,8 +462,8 @@ const AppContent: React.FC = () => {
       )}
 
       <Layout>
-        {/* 全屏时隐藏顶部导航栏 */}
-        {!isTerminalFullscreen && (
+        {/* 登录页面和全屏时隐藏顶部导航栏 */}
+        {!isTerminalFullscreen && !isLoginPage && (
           <TopBar
             collapsed={collapsed}
             onToggleCollapse={() => setCollapsed(!collapsed)}
@@ -454,23 +478,27 @@ const AppContent: React.FC = () => {
         <Content
           style={{
             margin: 0,
-            padding: isTerminalFullscreen ? 0 : 24,
-            background: colorBgContainer,
+            padding: isTerminalFullscreen ? 0 : (isLoginPage ? 0 : 24),
+            background: isLoginPage ? '#f5f5f5' : colorBgContainer,
             overflow: 'auto',
-            height: isTerminalFullscreen ? '100vh' : 'calc(100vh - 92px)', // 64px TopBar + 28px StatusBar
-            paddingBottom: isSessionPage && openTerminalSessions.length > 0 && !isTerminalFullscreen ? 0 : 24,
+            height: isTerminalFullscreen ? '100vh' : (isLoginPage ? '100vh' : 'calc(100vh - 92px)'), // 登录页面全屏显示
+            paddingBottom: isSessionPage && openTerminalSessions.length > 0 && !isTerminalFullscreen ? 0 : (isLoginPage ? 0 : 24),
           }}
         >
           {/* 全屏时隐藏路由内容（会话列表等） */}
           {!isTerminalFullscreen && (
             <ErrorBoundary>
               <Routes>
-                <Route path="/providers" element={<ProviderManager />} />
-                <Route path="/tokens" element={<TokenManager />} />
-                <Route path="/sessions" element={<SessionManager />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/" element={<ProviderManager />} />
+                {/* 公开路由 - 登录页面 */}
+                <Route path="/login" element={<LoginPage />} />
+
+                {/* 受保护的路由 - 需要登录 */}
+                <Route path="/providers" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
+                <Route path="/tokens" element={<ProtectedRoute><TokenManager /></ProtectedRoute>} />
+                <Route path="/sessions" element={<ProtectedRoute><SessionManager /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
               </Routes>
             </ErrorBoundary>
           )}
@@ -551,8 +579,8 @@ const AppContent: React.FC = () => {
           </div>
         </Content>
 
-        {/* 底部状态栏 */}
-        {!isTerminalFullscreen && (
+        {/* 底部状态栏 - 登录页面和全屏时隐藏 */}
+        {!isTerminalFullscreen && !isLoginPage && (
           <StatusBar
             activeSessions={sessions.filter(s => s.status === 'active').length}
             totalProviders={providers.length}

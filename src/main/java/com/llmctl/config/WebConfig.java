@@ -1,5 +1,7 @@
 package com.llmctl.config;
 
+import com.llmctl.interceptor.JwtAuthInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -9,11 +11,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Web MVC配置类
  *
  * @author Liu Yifan
- * @version 2.0.0
+ * @version 2.1.0
  * @since 2025-09-28
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final JwtAuthInterceptor jwtAuthInterceptor;
 
     /**
      * 配置跨域请求
@@ -21,9 +26,10 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000", "http://127.0.0.1:3000") // Electron前端
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*") // 允许所有本地端口
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
+                .exposedHeaders("Authorization", "Content-Type")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
@@ -33,7 +39,20 @@ public class WebConfig implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 可以在这里添加日志拦截器、认证拦截器等
-        // registry.addInterceptor(new LoggingInterceptor()).addPathPatterns("/**");
+        // JWT认证拦截器
+        registry.addInterceptor(jwtAuthInterceptor)
+                .addPathPatterns("/**")  // 拦截所有请求
+                .excludePathPatterns(
+                    "/auth/**",                       // 排除所有认证相关接口
+                    "/sessions/deactivate-all",       // 应用退出时的清理接口（无需认证）
+                    "/error",                         // 错误页面
+                    "/favicon.ico",                   // 网站图标
+                    "/static/**",                     // 静态资源
+                    "/public/**",                     // 公共资源
+                    "/*.html",                        // HTML文件
+                    "/*.js",                          // JS文件
+                    "/*.css",                         // CSS文件
+                    "/*.map"                          // Source map文件
+                );
     }
 }

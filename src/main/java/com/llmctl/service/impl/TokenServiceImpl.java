@@ -1,5 +1,6 @@
 package com.llmctl.service.impl;
 
+import com.llmctl.context.UserContext;
 import com.llmctl.dto.CreateTokenRequest;
 import com.llmctl.dto.UpdateTokenRequest;
 import com.llmctl.dto.TokenDTO;
@@ -94,6 +95,7 @@ public class TokenServiceImpl implements TokenService {
         // 创建Token实体
         Token token = new Token();
         token.setId(generateTokenId());
+        token.setUserId(UserContext.getUserId());
         token.setProviderId(providerId);
         token.setValue(encryptTokenValue(request.getValue())); // AES-256-GCM加密存储
         token.setAlias(StringUtils.hasText(request.getAlias()) ? request.getAlias() : "Token-" + System.currentTimeMillis());
@@ -293,6 +295,30 @@ public class TokenServiceImpl implements TokenService {
         } else {
             log.error("❌ [更新Token健康状态失败] Token: {} | 影响行数: 0", token.getAlias());
         }
+    }
+
+    @Override
+    @Transactional
+    public int recoverAllUnhealthyTokens(String providerId) {
+        log.info("🔧 [批量恢复Token健康状态] Provider ID: {}", providerId);
+
+        // 检查Provider是否存在
+        Provider provider = providerMapper.findById(providerId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider不存在: " + providerId);
+        }
+
+        // 批量恢复不健康的Token
+        int affectedRows = tokenMapper.recoverAllUnhealthyTokens(providerId);
+
+        if (affectedRows > 0) {
+            log.info("✅ [批量恢复成功] Provider: {} | 已恢复 {} 个Token的健康状态",
+                    provider.getName(), affectedRows);
+        } else {
+            log.info("ℹ️ [无需恢复] Provider: {} | 所有Token均为健康状态", provider.getName());
+        }
+
+        return affectedRows;
     }
 
     @Override

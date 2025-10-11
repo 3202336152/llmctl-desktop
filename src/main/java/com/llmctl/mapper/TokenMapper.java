@@ -140,4 +140,12 @@ public interface TokenMapper {
      * @return 明文Token列表
      */
     List<Token> findPlaintextTokens();
+
+    /**
+     * 批量恢复指定Provider下所有不健康Token的健康状态
+     *
+     * @param providerId Provider ID
+     * @return 影响的行数
+     */
+    int recoverAllUnhealthyTokens(@Param("providerId") String providerId);
 }

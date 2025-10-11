@@ -88,6 +88,14 @@ public interface TokenService {
     void updateTokenHealth(String tokenId, boolean healthy);
 
     /**
+     * 批量恢复指定Provider下所有不健康Token的健康状态
+     *
+     * @param providerId Provider ID
+     * @return 恢复的Token数量
+     */
+    int recoverAllUnhealthyTokens(String providerId);
+
+    /**
      * 将Token实体转换为DTO
      *
      * @param token Token实体
