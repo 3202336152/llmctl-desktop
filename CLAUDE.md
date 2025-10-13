@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构，当前版本为 **v2.0.4**。
+LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构，当前版本为 **v2.1.0**。
 
 ## 开发环境要求
 
@@ -47,12 +47,17 @@ src/main/java/com/llmctl/
 │   ├── TokenController.java
 │   ├── SessionController.java
 │   ├── ConfigController.java
-│   └── StatisticsController.java
+│   ├── NotificationController.java  # 通知管理API
+│   └── SseController.java              # SSE实时推送API
 ├── service/                  # 业务服务层
 │   ├── impl/                # 服务实现
+│   │   ├── NotificationServiceImpl.java  # 通知服务实现
+│   │   └── SseConnectionManager.java     # SSE连接管理
 │   └── interfaces/          # 服务接口
 ├── mapper/                   # MyBatis数据访问层
+│   └── NotificationMapper.java          # 通知数据映射
 ├── entity/                   # 数据库实体类
+│   └── Notification.java                # 通知实体
 ├── dto/                      # 数据传输对象
 ├── config/                   # 配置类
 └── utils/                    # 工具类
@@ -78,6 +83,13 @@ electron-app/
 │       │   │   ├── ContextMenu.tsx       # 右键菜单
 │       │   │   ├── ErrorBoundary.tsx     # 错误边界
 │       │   │   └── NotificationManager.tsx
+│       │   ├── Notifications/ # 通知系统组件
+│       │   │   ├── NotificationCenter.tsx  # 通知中心页面
+│       │   │   ├── NotificationIcon.tsx    # 通知图标组件
+│       │   │   ├── NotificationItem.tsx    # 通知项组件
+│       │   │   ├── types.ts               # 通知类型定义
+│       │   │   ├── notificationAPI.ts     # 通知API封装
+│       │   │   └── *.css                  # 通知样式文件
 │       │   ├── Layout/     # 布局组件
 │       │   │   ├── ResizableSider.tsx    # 可调整侧边栏
 │       │   │   ├── TopBar.tsx            # 顶部导航栏
@@ -98,11 +110,16 @@ electron-app/
 │       │   ├── slices/     # Redux切片
 │       │   │   ├── providerSlice.ts
 │       │   │   ├── tokenSlice.ts
-│       │   │   └── sessionSlice.ts
+│       │   │   ├── sessionSlice.ts
+│       │   │   └── notificationSlice.ts     # 通知状态管理
 │       │   └── index.ts
 │       ├── services/       # API服务
 │       │   ├── api.ts      # HTTP请求封装
 │       │   └── terminalManager.ts  # 终端管理器
+│       ├── hooks/          # React Hooks
+│       │   └── useNotifications.ts      # 通知Hook
+│       ├── utils/          # 工具类
+│       │   └── notificationHelper.ts   # 通知辅助工具
 │       ├── i18n/           # 国际化
 │       │   ├── index.ts
 │       │   └── locales/
@@ -215,7 +232,17 @@ FLUSH PRIVILEGES;
 - 配置验证和备份恢复
 - 菜单栏快捷导入导出 (Ctrl+O / Ctrl+S)
 
-### 6. 系统设置
+### 6. 通知系统 (Notifications) 🎉
+- **实时推送**: 基于 SSE (Server-Sent Events) 的实时通知推送
+- **通知管理中心**: 完整的通知列表界面，支持分页、过滤、搜索
+- **智能通知图标**: 顶部导航栏实时显示未读数量和连接状态
+- **通知类型支持**: 系统通知、会话提醒、统计报告、警告、成功、错误消息
+- **优先级管理**: 4个优先级（低、普通、高、紧急）和相应的视觉样式
+- **批量操作**: 支持批量标记已读、批量删除、全选/取消选择
+- **通知设置**: 桌面通知、声音提醒、实时推送、自动刷新等配置选项
+- **业务场景集成**: 自动触发会话、Token、Provider等状态变更通知
+
+### 7. 系统设置
 - **国际化**: 中英文双语切换
 - **主题**: 亮色主题
 - **系统托盘**: 最小化到托盘
@@ -237,6 +264,7 @@ FLUSH PRIVILEGES;
   - `token_strategies` - Token轮询策略表
   - `statistics` - 统计数据表
   - `global_configs` - 全局配置表
+  - `notifications` - 通知表 (新增)
 
 ## API接口规范
 
@@ -247,6 +275,8 @@ FLUSH PRIVILEGES;
   - `/tokens` - Token管理 (CRUD + 健康状态更新)
   - `/sessions` - 会话管理 (启动、终止、重启、清除)
   - `/config` - 配置管理 (导入、导出、全局配置)
+  - `/notifications` - 通知管理 (CRUD、标记已读、批量操作)
+  - `/sse/notifications` - SSE实时推送接口
   - `/statistics` - 统计信息查询
 
 详细API文档请参考 `docs/api-documentation.md`
@@ -331,6 +361,7 @@ FLUSH PRIVILEGES;
 - 后端 Spring Boot 服务完整实现
 - 前端 Electron 应用完整实现
 - Provider、Token、Session 核心功能
+- **完整通知系统** - 企业级实时通知功能
 - 终端全屏模式和字体缩放
 - 国际化支持（中英文）
 - 系统托盘功能
@@ -354,21 +385,41 @@ FLUSH PRIVILEGES;
 - `README.md` - 项目主页文档
 - `CHANGELOG.md` - 版本更新记录
 
-## 最新版本特性 (v2.0.4)
+## 最新版本特性 (v2.1.0)
 
-### 🎨 UI改进
-- 菜单项重命名为开发者友好格式
-- 优化终端标签页与终端黑框间距
+### 🎉 通知系统完整实现
+- **实时推送机制**：基于 SSE (Server-Sent Events) 的实时通知推送
+- **通知管理中心**：完整的通知列表界面，支持分页、过滤、搜索
+- **智能通知图标**：顶部导航栏实时显示未读数量和连接状态
+- **通知类型支持**：系统通知、会话提醒、统计报告、警告、成功、错误消息
+- **优先级管理**：4个优先级（低、普通、高、紧急）和相应的视觉样式
+- **批量操作**：支持批量标记已读、批量删除、全选/取消选择
+- **通知设置**：桌面通知、声音提醒、实时推送、自动刷新等配置选项
 
-### 🐛 Bug修复
-- 修复全屏终端关闭后界面空白
-- 修复全屏模式下终端底部空白
-- 修复全屏和非全屏模式下间距问题
+### 🏗️ 技术架构升级
+- **后端组件**：NotificationController、NotificationService、SseConnectionManager、NotificationPublisher
+- **前端组件**：NotificationCenter、NotificationIcon、NotificationItem、useNotifications Hook
+- **数据库设计**：完整的 notifications 表结构，支持用户隔离、类型分类、优先级管理
+- **状态管理**：Redux Toolkit notificationSlice，支持实时状态更新
+- **类型安全**：完整的 TypeScript 类型定义和类型检查
 
-### 🔧 技术细节
-- Tabs组件 `tabBarStyle.marginBottom: 8`
-- 终端容器 `top: 48px` (全屏) / `56px` (非全屏)
-- 全屏状态自动监听和退出逻辑
+### 🌐 用户体验优化
+- **国际化支持**：完整的中英文翻译
+- **响应式设计**：支持不同屏幕尺寸的设备
+- **实时状态显示**：SSE 连接状态、未读数量实时更新
+- **优雅的动画效果**：通知进入、删除、状态变更动画
+- **无障碍访问**：符合 WCAG 标准的可访问性设计
+
+### 🔧 集成功能
+- **业务场景集成**：自动触发会话、Token、Provider等状态变更通知
+- **通知辅助工具**：NotificationHelper 工具类和预定义通知模板
+- **错误处理**：完善的异常处理和用户友好的错误提示
+- **性能优化**：SSE 连接复用、通知缓存、分页加载
+
+### 🛠️ 开发体验
+- **TypeScript 类型安全**：完整的类型定义和类型检查
+- **代码质量**：符合 ESLint 和 Prettier 规范
+- **构建优化**：成功修复所有 TypeScript 编译错误，构建无警告
 
 ---
 

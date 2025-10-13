@@ -16,6 +16,7 @@
 ### 核心功能
 
 - 🔐 **用户认证系统** - 用户名+密码登录，JWT Token认证，数据隔离（🆕 v2.1.0）
+- 🔔 **实时通知系统** - 基于SSE的实时推送，通知中心管理，优先级分类（🆕 v2.1.0）
 - 🌐 **多Provider支持** - 支持Claude、OpenAI、Qwen、Gemini等主流LLM Provider
 - 🔑 **智能Token管理** - 多Token轮询、健康检查、自动切换
 - 🔒 **企业级加密** - AES-256-GCM加密存储Token，NSA绝密信息级安全（🆕 v2.0.4）
@@ -24,6 +25,7 @@
 - 🌍 **国际化支持** - 支持中英文切换，语言配置持久化（🆕 v2.0.3）
 - 📊 **统计分析** - 详细的使用统计和数据可视化
 - ⚙️ **配置管理** - 支持导入导出配置，方便迁移和备份
+- 📖 **帮助中心** - 完整的使用文档和常见问题解答（🆕 v2.1.0）
 
 ### 终端功能
 
@@ -109,6 +111,17 @@
    - 选择Provider和工作目录
    - 系统自动选择Token并启动终端
 
+3. **查看通知** 🆕
+   - 点击顶部导航栏的通知图标（🔔）查看未读通知
+   - 进入"Notifications"页面管理所有通知
+   - 支持按类型、优先级过滤，支持搜索
+   - 可批量标记已读或删除
+
+4. **获取帮助** 🆕
+   - 点击顶部导航栏的"Help"按钮
+   - 查看完整的使用指南和常见问题
+   - 支持中英文切换
+
 详细使用说明请参考 [用户手册](docs/USER_GUIDE.md)
 
 ---
@@ -140,6 +153,62 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 - ✅ **登录审计** - 完整的登录日志记录
 
 详细设计请参考 [用户认证系统设计文档](docs/user-authentication-system.md)
+
+### 实时通知系统 🆕
+
+企业级实时通知系统，让您不错过任何重要信息：
+
+```
+系统事件 → 后端生成通知 → SSE实时推送 → 前端实时显示
+   ↓
+通知中心管理 → 已读/未读 → 优先级分类 → 批量操作
+```
+
+**核心特性**：
+- 🔔 **实时推送** - 基于SSE (Server-Sent Events) 的长连接推送
+- 📱 **通知中心** - 完整的通知列表界面，支持分页、过滤、搜索
+- 🎯 **智能分类** - 系统通知、会话提醒、统计报告、警告、错误等类型
+- ⚡ **优先级管理** - 低、普通、高、紧急四个优先级，差异化显示
+- 🔢 **未读提示** - 导航栏实时显示未读数量，一目了然
+- ✅ **批量操作** - 支持批量标记已读、批量删除、全选/取消
+- 🔗 **快捷跳转** - 通知可带跳转链接，直达相关页面
+- 🌐 **多语言** - 完整的中英文翻译支持
+
+**通知类型支持**：
+- 💬 **系统通知** - 应用更新、系统维护等
+- 🖥️ **会话提醒** - 会话启动、终止、状态变更
+- 📊 **统计报告** - 定期使用统计、Token消耗报告
+- ⚠️ **警告信息** - Token即将耗尽、配额预警
+- ❌ **错误提醒** - API调用失败、连接异常
+
+**技术亮点**：
+- JWT Token认证的SSE连接，安全可靠
+- 自动断线重连，连接状态实时显示
+- 通知持久化存储，不会丢失
+- 优雅的进入/删除动画效果
+
+### 帮助中心 🆕
+
+完整的应用内帮助文档，随时随地获取帮助：
+
+**功能特性**：
+- 📖 **使用指南** - 详细的功能介绍和操作步骤
+- ❓ **常见问题** - 涵盖使用中的常见疑问
+- 🔧 **故障排查** - 快速定位和解决问题
+- 🎯 **快速入门** - 新手友好的上手教程
+- 🔍 **搜索功能** - 快速查找所需内容
+- 🌐 **多语言** - 中英文文档同步更新
+
+**主要内容**：
+- Provider配置教程
+- Token轮询策略说明
+- 会话管理最佳实践
+- 终端使用技巧
+- 快捷键一览表
+- 安全配置建议
+- 错误代码对照表
+
+通过顶部导航栏的"Help"按钮即可访问帮助中心。
 
 ### 智能Token切换 🆕
 
@@ -277,6 +346,19 @@ LLMctl/
 │   ├── src/
 │   │   ├── main/          # Electron主进程
 │   │   ├── renderer/      # React渲染进程
+│   │   │   ├── components/
+│   │   │   │   ├── Notifications/  # 通知系统组件 🆕
+│   │   │   │   ├── Provider/
+│   │   │   │   ├── Token/
+│   │   │   │   ├── Session/
+│   │   │   │   └── ...
+│   │   │   ├── store/
+│   │   │   │   └── slices/
+│   │   │   │       └── notificationSlice.ts  # 通知状态管理 🆕
+│   │   │   ├── hooks/
+│   │   │   │   └── useNotifications.ts       # 通知Hook 🆕
+│   │   │   └── utils/
+│   │   │       └── notificationHelper.ts     # 通知辅助工具 🆕
 │   │   └── preload/       # 预加载脚本
 │   └── package.json
 ├── src/                   # Spring Boot后端
@@ -284,17 +366,28 @@ LLMctl/
 │   │   ├── java/
 │   │   │   └── com/llmctl/
 │   │   │       ├── controller/
+│   │   │       │   ├── NotificationController.java  # 通知API 🆕
+│   │   │       │   └── SseController.java           # SSE推送 🆕
 │   │   │       ├── service/
+│   │   │       │   ├── NotificationService.java           🆕
+│   │   │       │   ├── NotificationPublisher.java         🆕
+│   │   │       │   └── SseConnectionManager.java          🆕
 │   │   │       ├── mapper/
+│   │   │       │   └── NotificationMapper.java            🆕
 │   │   │       ├── entity/
+│   │   │       │   └── Notification.java                  🆕
 │   │   │       └── dto/
+│   │   │           ├── NotificationRequest.java           🆕
+│   │   │           └── NotificationResponse.java          🆕
 │   │   └── resources/
 │   │       └── mapper/    # MyBatis XML
+│   │           └── NotificationMapper.xml                  🆕
 │   └── test/
 ├── docs/                  # 文档
 │   ├── USER_GUIDE.md
 │   ├── DEVELOPMENT.md
-│   └── API_DOCUMENTATION.md
+│   ├── API_DOCUMENTATION.md
+│   └── user-authentication-system.md  # 认证系统设计 🆕
 └── README.md
 ```
 
@@ -325,6 +418,22 @@ LLMctl/
   - 防暴力破解（连续失败5次锁定30分钟）
   - Token自动刷新机制
   - 登录审计日志
+- ✅ **实时通知系统** - 企业级实时通知功能 🎉
+  - **实时推送机制**：基于 SSE (Server-Sent Events) 的实时通知推送
+  - **通知管理中心**：完整的通知列表界面，支持分页、过滤、搜索
+  - **智能通知图标**：顶部导航栏实时显示未读数量和连接状态
+  - **通知类型支持**：系统通知、会话提醒、统计报告、警告、成功、错误消息
+  - **优先级管理**：4个优先级（低、普通、高、紧急）和相应的视觉样式
+  - **批量操作**：支持批量标记已读、批量删除、全选/取消选择
+  - **通知设置**：桌面通知、声音提醒、实时推送、自动刷新等配置选项
+  - **业务场景集成**：自动触发会话、Token、Provider等状态变更通知
+- ✅ **帮助中心** - 完整的应用内帮助文档
+  - 详细的功能介绍和操作步骤
+  - 常见问题解答（FAQ）
+  - 故障排查指南
+  - 快速入门教程
+  - 快捷键一览表
+  - 中英文双语支持
 - ✅ **多用户数据隔离** - 每个用户只能访问自己的数据
   - Provider、Token、Session按用户隔离
   - 数据库级别的用户关联
@@ -334,16 +443,45 @@ LLMctl/
   - 路由守卫保护所有页面
   - 未登录自动跳转
 
+#### 🏗️ 技术架构升级
+- ✅ **通知系统后端组件**
+  - NotificationController - RESTful API 控制器
+  - NotificationService & NotificationServiceImpl - 业务逻辑层
+  - SseConnectionManager - SSE 连接管理器
+  - NotificationPublisher - 通知发布器
+  - NotificationMapper (XML) - MyBatis 数据访问层
+- ✅ **通知系统前端组件**
+  - NotificationCenter - 通知中心页面
+  - NotificationIcon - 导航栏通知图标
+  - NotificationItem - 通知列表项组件
+  - useNotifications Hook - 通知状态管理钩子
+  - notificationSlice - Redux 状态管理
+  - NotificationHelper - 通知辅助工具类
+- ✅ **数据库设计**
+  - notifications 表 - 完整的通知数据存储
+  - 支持用户隔离、类型分类、优先级管理
+  - JSON 数据字段支持扩展属性
+
 #### 📖 文档更新
 - ✅ 创建完整的认证系统设计文档（`docs/user-authentication-system.md`）
-- ✅ 更新README.md添加认证系统说明
-- ✅ 更新CHANGELOG.md记录版本更新
+- ✅ 更新 README.md 添加通知系统和帮助中心说明
+- ✅ 更新 CHANGELOG.md 记录版本更新
+- ✅ 更新 CLAUDE.md 项目文档
 
 #### 🔐 安全增强
 - ✅ 数据库密码BCrypt加密（不可逆）
 - ✅ JWT签名防篡改（HS256算法）
 - ✅ 本地Token加密存储（Electron Store）
 - ✅ 登录IP记录和追踪
+- ✅ SSE连接JWT Token认证
+- ✅ 通知数据用户隔离
+
+#### 🌐 用户体验优化
+- ✅ 国际化支持 - 通知和帮助中心的完整中英文翻译
+- ✅ 响应式设计 - 支持不同屏幕尺寸的设备
+- ✅ 实时状态显示 - SSE 连接状态、未读数量实时更新
+- ✅ 优雅的动画效果 - 通知进入、删除、状态变更动画
+- ✅ 无障碍访问 - 符合 WCAG 标准的可访问性设计
 
 ### v2.0.4 (2025-10-09)
 

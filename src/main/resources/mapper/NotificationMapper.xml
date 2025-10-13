@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.NotificationMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.Notification">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="type" property="type" jdbcType="VARCHAR"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="data" property="data" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonTypeHandler"/>
+        <result column="is_read" property="isRead" jdbcType="BOOLEAN"/>
+        <result column="priority" property="priority" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="expires_at" property="expiresAt" jdbcType="TIMESTAMP"/>
+        <result column="action_url" property="actionUrl" jdbcType="VARCHAR"/>
+        <result column="action_text" property="actionText" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, user_id, type, title, content, data, is_read, priority, created_at, updated_at,
+        expires_at, action_url, action_text
+    </sql>
+
+    <!-- 插入通知 -->
+    <insert id="insert" parameterType="com.llmctl.entity.Notification" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notifications (
+            user_id, type, title, content, data, is_read, priority,
+            expires_at, action_url, action_text
+        )
+        VALUES (
+            #{userId}, #{type}, #{title}, #{content},
+            #{data, typeHandler=com.llmctl.config.JsonTypeHandler},
+            #{isRead}, #{priority}, #{expiresAt}, #{actionUrl}, #{actionText}
+        )
+    </insert>
+
+    <!-- 批量插入通知 -->
+    <insert id="batchInsert">
+        INSERT INTO notifications (
+            user_id, type, title, content, data, is_read, priority,
+            expires_at, action_url, action_text
+        )
+        VALUES
+        <foreach collection="notifications" item="n" separator=",">
+            (
+                #{n.userId}, #{n.type}, #{n.title}, #{n.content},
+                #{n.data, typeHandler=com.llmctl.config.JsonTypeHandler},
+                #{n.isRead}, #{n.priority}, #{n.expiresAt}, #{n.actionUrl}, #{n.actionText}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据ID查询通知 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM notifications
+        WHERE id = #{id}
+    </select>
+
+    <!-- 分页查询用户通知 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM notifications
+        WHERE user_id = #{userId}
+        AND (expires_at IS NULL OR expires_at &gt; NOW())
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="unreadOnly != null and unreadOnly">
+            AND is_read = false
+        </if>
+        <choose>
+            <when test="sortColumn == 'created_at' and sortOrder == 'DESC'">
+                ORDER BY created_at DESC
+            </when>
+            <when test="sortColumn == 'created_at' and sortOrder == 'ASC'">
+                ORDER BY created_at ASC
+            </when>
+            <when test="sortColumn == 'priority' and sortOrder == 'DESC'">
+                ORDER BY priority DESC
+            </when>
+            <when test="sortColumn == 'priority' and sortOrder == 'ASC'">
+                ORDER BY priority ASC
+            </when>
+            <otherwise>
+                ORDER BY created_at DESC
+            </otherwise>
+        </choose>
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户通知总数 -->
+    <select id="countByUserId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE user_id = #{userId}
+        AND (expires_at IS NULL OR expires_at &gt; NOW())
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="unreadOnly != null and unreadOnly">
+            AND is_read = false
+        </if>
+    </select>
+
+    <!-- 统计用户未读通知数量 -->
+    <select id="countUnreadByUserId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE user_id = #{userId}
+        AND is_read = false
+        AND (expires_at IS NULL OR expires_at &gt; NOW())
+    </select>
+
+    <!-- 标记通知为已读 -->
+    <update id="markAsRead">
+        UPDATE notifications
+        SET is_read = true, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 批量标记为已读 -->
+    <update id="batchMarkAsRead">
+        UPDATE notifications
+        SET is_read = true, updated_at = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 标记用户所有通知为已读 -->
+    <update id="markAllAsReadByUserId">
+        UPDATE notifications
+        SET is_read = true, updated_at = NOW()
+        WHERE user_id = #{userId}
+        AND is_read = false
+    </update>
+
+    <!-- 删除通知 -->
+    <delete id="deleteById">
+        DELETE FROM notifications
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除通知 -->
+    <delete id="batchDelete">
+        DELETE FROM notifications
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 删除用户所有已读通知 -->
+    <delete id="deleteReadByUserId">
+        DELETE FROM notifications
+        WHERE user_id = #{userId}
+        AND is_read = true
+    </delete>
+
+    <!-- 删除过期通知 -->
+    <delete id="deleteExpired">
+        DELETE FROM notifications
+        WHERE expires_at IS NOT NULL
+        AND expires_at &lt; NOW()
+    </delete>
+
+    <!-- 查询最近的通知（用于SSE推送） -->
+    <select id="selectRecentByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM notifications
+        WHERE user_id = #{userId}
+        AND created_at &gt; #{since}
+        ORDER BY created_at DESC
+        LIMIT 50
+    </select>
+
+</mapper>

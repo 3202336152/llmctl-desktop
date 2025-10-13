@@ -131,7 +131,8 @@ public interface TokenMapper {
      * @param alias Token别名
      * @return 如果存在返回true，否则返回false
      */
-    boolean existsByProviderIdAndAlias(@Param("providerId") String providerId, @Param("alias") String alias);
+    boolean existsByProviderIdAndAlias(@Param("providerId") String providerId,
+                                       @Param("alias") String alias);
 
     /**
      * 查询需要迁移的明文Token（用于数据迁移）
@@ -148,4 +149,42 @@ public interface TokenMapper {
      * @return 影响的行数
      */
     int recoverAllUnhealthyTokens(@Param("providerId") String providerId);
+
+    /**
+     * 检查指定用户下是否存在相同的Token值（基于Hash）
+     *
+     * @param userId 用户ID
+     * @param tokenValueHash Token值的SHA-256 Hash
+     * @return 如果存在返回true，否则返回false
+     */
+    boolean existsByUserIdAndValueHash(@Param("userId") Long userId, @Param("tokenValueHash") String tokenValueHash);
+
+    /**
+     * 检查指定用户下是否存在相同的Token值（排除指定Token）
+     * 用于更新时检查（基于Hash）
+     *
+     * @param userId 用户ID
+     * @param tokenValueHash Token值的SHA-256 Hash
+     * @param excludeId 排除的Token ID
+     * @return 如果存在返回true，否则返回false
+     */
+    boolean existsByUserIdAndValueHashAndIdNot(@Param("userId") Long userId,
+                                             @Param("tokenValueHash") String tokenValueHash,
+                                             @Param("excludeId") String excludeId);
+
+    /**
+     * 查询所有缺少Hash值的Token（用于数据迁移）
+     *
+     * @return 缺少Hash值的Token列表
+     */
+    List<Token> findTokensWithoutHash();
+
+    /**
+     * 更新Token的Hash值
+     *
+     * @param tokenId Token ID
+     * @param tokenHash Hash值
+     * @return 影响的行数
+     */
+    int updateTokenHash(@Param("id") String id, @Param("tokenHash") String tokenHash);
 }

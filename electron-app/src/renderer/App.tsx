@@ -10,16 +10,19 @@ import {
   FolderOutlined,
   ExpandOutlined,
   CompressOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from './store';
 import type { RootState } from './store';
 import { closeTerminal, setActiveTab, addSession, removeSession, openTerminal, destroyTerminal, toggleTerminalFullscreen } from './store/slices/sessionSlice';
+import { useNotifications } from './hooks/useNotifications';
 import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
 import Settings from './components/Settings/Settings';
 import Help from './components/Help/Help';
+import NotificationCenter from './components/Notifications/NotificationCenter';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -61,6 +64,9 @@ const AppContent: React.FC = () => {
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false);
   const { sessions, createdTerminalSessions, openTerminalSessions, activeTabKey, terminalSessionData, isTerminalFullscreen } = useAppSelector((state: RootState) => state.session);
   const { providers } = useAppSelector((state: RootState) => state.provider);
+
+  // 初始化通知系统
+  useNotifications();
   const {
     token: { colorBgContainer },
   } = theme.useToken();
@@ -416,6 +422,11 @@ const AppContent: React.FC = () => {
       label: t('nav.sessions'),
     },
     {
+      key: '/notifications',
+      icon: <BellOutlined />,
+      label: t('nav.notifications'),
+    },
+    {
       key: '/profile',
       icon: <UserOutlined />,
       label: t('nav.profile'),
@@ -505,6 +516,7 @@ const AppContent: React.FC = () => {
                 <Route path="/sessions" element={<ProtectedRoute><SessionManager /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><NotificationCenter /></ProtectedRoute>} />
                 <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
                 <Route path="/" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
               </Routes>

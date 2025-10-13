@@ -186,9 +186,15 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     @Transactional
     public void logout(Long userId) {
-        // 清除Refresh Token
-        userMapper.clearRefreshToken(userId);
-        log.info("用户登出: userId={}", userId);
+        if (userId != null) {
+            // 清除指定用户的Refresh Token
+            userMapper.clearRefreshToken(userId);
+            log.info("用户登出: userId={}", userId);
+        } else {
+            // 如果没有用户ID，执行全局清理操作
+            log.info("执行全局登出清理操作");
+            // 这里可以添加其他全局清理逻辑，比如清理过期token等
+        }
     }
 
     /**

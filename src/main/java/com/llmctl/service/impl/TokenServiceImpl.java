@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -114,12 +116,19 @@ public class TokenServiceImpl implements TokenService {
             throw new IllegalArgumentException("Token别名已存在: " + request.getAlias());
         }
 
+        // 检查Token值是否重复（同一用户下不能有相同的Token值）
+        String tokenValueHash = generateTokenHash(request.getValue());
+        if (tokenMapper.existsByUserIdAndValueHash(userId, tokenValueHash)) {
+            throw new IllegalArgumentException("该Token已存在，同一用户不能添加重复的Token");
+        }
+
         // 创建Token实体
         Token token = new Token();
         token.setId(generateTokenId());
         token.setUserId(userId);
         token.setProviderId(providerId);
         token.setValue(encryptTokenValue(request.getValue())); // AES-256-GCM加密存储
+        token.setValueHash(tokenValueHash); // 存储Hash用于唯一性检查
         token.setAlias(StringUtils.hasText(request.getAlias()) ? request.getAlias() : "Token-" + System.currentTimeMillis());
         token.setWeight(request.getWeight() != null ? request.getWeight() : 1);
         token.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
@@ -166,9 +175,22 @@ public class TokenServiceImpl implements TokenService {
             throw new IllegalArgumentException("Token别名已存在: " + request.getAlias());
         }
 
+        // 检查Token值是否重复（只有在提供了新Token值时才检查）
+        if (StringUtils.hasText(request.getValue())) {
+            String tokenValueHash = generateTokenHash(request.getValue());
+            // 检查Hash是否与现有值不同
+            if (!tokenValueHash.equals(existingToken.getValueHash()) &&
+                tokenMapper.existsByUserIdAndValueHashAndIdNot(userId, tokenValueHash, tokenId)) {
+                throw new IllegalArgumentException("该Token已存在，同一用户不能添加重复的Token");
+            }
+        }
+
         // 只更新提供的字段
         if (StringUtils.hasText(request.getValue())) {
-            existingToken.setValue(encryptTokenValue(request.getValue()));
+            String encryptedTokenValue = encryptTokenValue(request.getValue());
+            String tokenValueHash = generateTokenHash(request.getValue());
+            existingToken.setValue(encryptedTokenValue);
+            existingToken.setValueHash(tokenValueHash);
             existingToken.setEncryptionVersion("v1"); // 更新加密版本
         }
         if (StringUtils.hasText(request.getAlias())) {
@@ -466,6 +488,34 @@ public class TokenServiceImpl implements TokenService {
      */
     private String generateTokenId() {
         return "token_" + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /**
+     * 生成Token值的SHA-256 Hash
+     * 用于唯一性检查，确保相同的Token值产生相同的Hash
+     *
+     * @param tokenValue Token明文值
+     * @return SHA-256 Hex字符串
+     */
+    private String generateTokenHash(String tokenValue) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(tokenValue.getBytes(StandardCharsets.UTF_8));
+
+            // 转换为十六进制字符串
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            log.error("生成Token Hash失败", e);
+            throw new ServiceException("Token Hash生成", "Hash生成失败: " + e.getMessage());
+        }
     }
 
     /**

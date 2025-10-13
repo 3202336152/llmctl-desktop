@@ -79,6 +79,12 @@ public class Token {
     private String encryptionVersion;
 
     /**
+     * Token明文值的SHA-256 Hash
+     * 用于唯一性检查，确保同一用户不能添加重复的Token
+     */
+    private String valueHash;
+
+    /**
      * 关联的Provider对象 (多对一关系)
      */
     private Provider provider;

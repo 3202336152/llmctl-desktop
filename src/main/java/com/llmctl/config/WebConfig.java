@@ -44,6 +44,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")  // 拦截所有请求
                 .excludePathPatterns(
                     "/auth/**",                       // 排除所有认证相关接口
+                    "/sse/**",                        // SSE端点（token在URL参数中验证）
                     "/health",                        // 健康检查接口（用于 Docker 健康检查）
                     "/actuator/**",                   // Spring Boot Actuator 监控端点（如果启用）
                     "/sessions/deactivate-all",       // 应用退出时的清理接口（无需认证）
@@ -54,6 +55,7 @@ public class WebConfig implements WebMvcConfigurer {
                     "/*.html",                        // HTML文件
                     "/*.js",                          // JS文件
                     "/*.css",                         // CSS文件
+                        "/migration/**",
                     "/*.map"                          // Source map文件
                 );
     }

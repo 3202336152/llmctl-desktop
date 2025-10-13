@@ -1,0 +1,364 @@
+.notification-item {
+  margin-bottom: 12px;
+  margin-top: 0;
+  transition: all 0.3s;
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 第一个通知卡片的样式 */
+.notification-item:first-child {
+  margin-top: 8px;
+}
+
+.notification-item.unread {
+  border-left-color: #1890ff;
+  background: linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.notification-item.expired {
+  opacity: 0.7;
+  background-color: #fafafa;
+  border-left-color: #d9d9d9;
+}
+
+.notification-item:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.notification-item-header {
+  width: 100%;
+}
+
+.notification-item-icon {
+  font-size: 18px;
+  color: #1890ff;
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  background: #f0f9ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.notification-item-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.notification-item-title {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.notification-item-title .ant-typography {
+  margin-bottom: 0;
+}
+
+.notification-item-description {
+  margin-bottom: 12px !important;
+  line-height: 1.5;
+  color: #595959;
+  font-size: 14px;
+}
+
+.notification-item-description .ant-typography {
+  margin-bottom: 0;
+}
+
+.notification-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.notification-item-meta .ant-typography {
+  font-size: 12px;
+  color: #8c8c8c;
+  font-weight: 500;
+}
+
+/* 通知类型标签样式 */
+.notification-item .ant-tag {
+  margin: 0 2px 0 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  height: 20px;
+  border-radius: 10px;
+  font-weight: 500;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.notification-item-title {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.notification-item-title .ant-typography {
+  margin-bottom: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* 操作按钮样式 */
+.notification-item .ant-card-actions {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 8px 12px;
+  margin: 0;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-height: 44px;
+  align-items: center;
+}
+
+.notification-item .ant-card-actions li {
+  padding: 0;
+  margin: 0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.notification-item .ant-card-actions .ant-btn-link {
+  padding: 6px 12px;
+  height: 32px;
+  font-size: 13px;
+  line-height: 1.2;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 标记已读按钮样式 */
+.notification-item .ant-card-actions .ant-btn-link:not(.ant-btn-dangerous) {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+.notification-item .ant-card-actions .ant-btn-link:not(.ant-btn-dangerous):hover {
+  background: #1890ff;
+  color: white;
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+/* 删除按钮样式 */
+.notification-item .ant-card-actions .ant-btn-link.ant-btn-dangerous {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border-color: #ffccc7;
+}
+
+.notification-item .ant-card-actions .ant-btn-link.ant-btn-dangerous:hover {
+  background: #ff4d4f;
+  color: white;
+  border-color: #ff4d4f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+}
+
+/* 查看操作按钮样式 */
+.notification-item .ant-card-actions .action-btn-primary {
+  background: #f6ffed;
+  color: #52c41a;
+  border-color: #b7eb8f;
+}
+
+.notification-item .ant-card-actions .action-btn-primary:hover {
+  background: #52c41a;
+  color: white;
+  border-color: #52c41a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(82, 196, 26, 0.3);
+}
+
+/* 标记已读按钮样式 */
+.notification-item .ant-card-actions .action-btn-read {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+  font-weight: 600;
+}
+
+.notification-item .ant-card-actions .action-btn-read:hover {
+  background: #1890ff;
+  color: white;
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+/* 删除按钮样式 */
+.notification-item .ant-card-actions .action-btn-delete {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border-color: #ffccc7;
+  font-weight: 600;
+}
+
+.notification-item .ant-card-actions .action-btn-delete:hover {
+  background: #ff4d4f;
+  color: white;
+  border-color: #ff4d4f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .notification-item {
+    margin-bottom: 10px;
+    border-radius: 6px;
+  }
+
+  .notification-item-icon {
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    margin-right: 6px;
+  }
+
+  .notification-item-title .ant-typography {
+    font-size: 14px;
+  }
+
+  .notification-item-description {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .notification-item .ant-tag {
+    font-size: 10px;
+    padding: 1px 4px;
+    height: 18px;
+    line-height: 16px;
+    border-radius: 8px;
+  }
+
+  .notification-item .ant-card-actions {
+    padding: 6px 8px;
+    min-height: 40px;
+    gap: 6px;
+  }
+
+  .notification-item .ant-card-actions .ant-btn-link {
+    padding: 4px 8px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .notification-item-meta {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .notification-item-meta .ant-typography {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-item {
+    margin-bottom: 8px;
+  }
+
+  .notification-item-icon {
+    font-size: 14px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .notification-item-title .ant-typography {
+    font-size: 13px;
+  }
+
+  .notification-item-description {
+    font-size: 12px;
+  }
+
+  .notification-item .ant-card-actions .ant-btn-link {
+    padding: 3px 6px;
+    height: 26px;
+    font-size: 11px;
+  }
+}
+
+/* 动画效果 */
+.notification-item.unread {
+  animation: pulse-unread 2s ease-in-out;
+}
+
+@keyframes pulse-unread {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(24, 144, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+/* 新通知进入动画 */
+.notification-item.new-notification {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 删除动画 */
+.notification-item.removing {
+  animation: slide-out-right 0.3s ease-in forwards;
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+    max-height: 200px;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}

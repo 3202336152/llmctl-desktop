@@ -100,10 +100,15 @@ public class TokenController {
             @Valid @RequestBody CreateTokenRequest request) {
         log.info("为Provider创建Token: {} (Provider: {})", request.getAlias(), providerId);
 
-        TokenDTO token = tokenService.createToken(providerId, request);
-        ApiResponse<TokenDTO> response = ApiResponse.success(token, "Token创建成功");
-
-        return ResponseEntity.ok(response);
+        try {
+            TokenDTO token = tokenService.createToken(providerId, request);
+            ApiResponse<TokenDTO> response = ApiResponse.success(token, "Token创建成功");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.warn("Token创建失败: {}", e.getMessage());
+            ApiResponse<TokenDTO> response = ApiResponse.error(400, e.getMessage());
+            return ResponseEntity.ok(response);
+        }
     }
 
     /**

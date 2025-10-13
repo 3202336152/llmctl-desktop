@@ -161,7 +161,36 @@ CREATE TABLE `tokens` (
                           `encryption_version` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '加密版本：null/plaintext=明文，v1=AES-256-GCM',
                           `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                           `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                          `value_hash` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Token明文值的SHA-256 Hash，用于唯一性检查',
+                          UNIQUE KEY `uk_user_token_value` (`user_id`,`value`),
                           KEY `idx_encryption_version` (`encryption_version`) COMMENT '加密版本索引',
                           KEY `idx_user_id` (`user_id`),
                           CONSTRAINT `fk_token_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Token管理表';
+
+
+-- llmctl.notifications definition
+
+CREATE TABLE `notifications` (
+                                     `id` bigint NOT NULL AUTO_INCREMENT,
+                                     `user_id` bigint NOT NULL COMMENT '用户ID',
+                                     `type` enum('SYSTEM','SESSION','STATISTICS','WARNING','SUCCESS','ERROR') COLLATE utf8mb4_general_ci NOT NULL COMMENT '通知类型',
+                                     `title` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '通知标题',
+                                     `content` text COLLATE utf8mb4_general_ci COMMENT '通知内容（支持Markdown）',
+                                     `data` json DEFAULT NULL COMMENT '额外数据（如会话ID、Provider ID等）',
+                                     `is_read` tinyint(1) DEFAULT '0' COMMENT '是否已读',
+                                     `priority` enum('LOW','NORMAL','HIGH','URGENT') COLLATE utf8mb4_general_ci DEFAULT 'NORMAL' COMMENT '优先级',
+                                     `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                     `expires_at` timestamp NULL DEFAULT NULL COMMENT '过期时间',
+                                     `action_url` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '点击后跳转的URL',
+                                     `action_text` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '按钮文字',
+                                     PRIMARY KEY (`id`),
+                                     KEY `idx_user_id` (`user_id`),
+                                     KEY `idx_type` (`type`),
+                                     KEY `idx_is_read` (`is_read`),
+                                     KEY `idx_created_at` (`created_at`),
+                                     KEY `idx_user_read` (`user_id`, `is_read`),
+                                     KEY `idx_expires_at` (`expires_at`),
+                                     CONSTRAINT `fk_notification_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='通知消息表';

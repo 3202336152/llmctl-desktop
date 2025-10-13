@@ -100,14 +100,18 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         log.info("用户登出请求");
 
-        // 从Token中提取用户ID
-        String token = authHeader.substring(7); // 去掉"Bearer "
-        Long userId = jwtUtil.getUserIdFromToken(token);
-
-        authService.logout(userId);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            // 从Token中提取用户ID
+            String token = authHeader.substring(7); // 去掉"Bearer "
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            authService.logout(userId);
+        } else {
+            // 如果没有token，执行清理操作（比如清理所有会话）
+            authService.logout(null);
+        }
 
         return ResponseEntity.ok(ApiResponse.success(null, "登出成功"));
     }

@@ -1,0 +1,301 @@
+.notification-center {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  min-height: calc(100vh - 120px);
+}
+
+.notification-center-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.notification-center-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.notification-center-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notification-center-batch-actions {
+  background: #f5f5f5;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border-left: 3px solid #1890ff;
+}
+
+.notification-center-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 12px;
+  padding: 16px 20px 20px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  min-height: 500px;
+  border: 1px solid #f0f0f0;
+}
+
+/* 列表项样式调整 */
+.notification-center-content .ant-list-item {
+  padding: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.notification-center-content .ant-list-item:last-child {
+  border-bottom: none;
+}
+
+.notification-center-content .ant-list {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-center-content .ant-list-item-content {
+  background: transparent;
+}
+
+/* 通知列表第一个元素的样式调整 */
+.notification-center-content .ant-list:first-child .notification-item:first-child {
+  margin-top: 4px;
+}
+
+/* 空状态样式 */
+.notification-center-content .ant-empty {
+  margin: 80px 0;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%);
+  border-radius: 12px;
+  border: 2px dashed #d9d9d9;
+}
+
+.notification-center-content .ant-empty-description {
+  color: #8c8c8c;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.notification-center-content .ant-empty-image {
+  margin-bottom: 20px;
+}
+
+/* 分页样式 */
+.notification-center-content .ant-pagination {
+  margin-top: 32px;
+  text-align: center;
+  padding: 20px 0;
+  background: transparent;
+}
+
+.notification-center-content .ant-pagination-item {
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.notification-center-content .ant-pagination-item:hover {
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.notification-center-content .ant-pagination-item-active {
+  background: #1890ff;
+  border-color: #1890ff;
+  border-radius: 6px;
+}
+
+.notification-center-content .ant-pagination-item-active a {
+  color: white;
+  font-weight: 600;
+}
+
+.notification-center-content .ant-pagination-prev,
+.notification-center-content .ant-pagination-next {
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.notification-center-content .ant-pagination-prev:hover,
+.notification-center-content .ant-pagination-next:hover {
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+/* 设置弹窗样式 */
+.notification-center .ant-modal-body {
+  padding: 24px;
+}
+
+.notification-center .ant-modal-body > .ant-space > .ant-space-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .notification-center {
+    padding: 16px;
+  }
+
+  .notification-center-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-center-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .notification-center-actions .ant-btn {
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+
+  .notification-center-batch-actions {
+    padding: 12px;
+  }
+
+  .notification-center-content {
+    padding: 12px 12px 16px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-center-title .ant-typography {
+    font-size: 20px;
+  }
+
+  .notification-center-actions {
+    gap: 4px;
+  }
+
+  .notification-center-actions .ant-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+/* 动画效果 */
+.notification-center .ant-list-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 批量操作栏动画 */
+.notification-center-batch-actions {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 加载状态样式 */
+.notification-center .ant-spin-container {
+  padding: 0;
+}
+
+/* 当没有通知时的空状态容器样式 */
+.notification-center .ant-spin-container:has(.ant-empty) {
+  padding: 20px 0;
+}
+
+/* 错误状态样式 */
+.notification-center .ant-typography-danger {
+  color: #ff4d4f;
+}
+
+/* 过滤器样式 */
+.notification-center .ant-select {
+  min-width: 120px;
+}
+
+.notification-center .ant-switch {
+  margin-left: 8px;
+}
+
+/* 按钮组样式 */
+.notification-center .ant-btn {
+  border-radius: 6px;
+}
+
+.notification-center .ant-dropdown .ant-btn {
+  border-radius: 6px;
+}
+
+/* 徽章样式 */
+.notification-center .ant-tag {
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* 分隔线样式 */
+.notification-center .ant-divider {
+  margin: 16px 0;
+}
+
+/* Modal内容间距优化 */
+.notification-center .ant-modal-body .ant-space-item {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+}
+
+.notification-center .ant-modal-body .ant-space-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* 优化下拉菜单样式 */
+.notification-center .ant-dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notification-center .ant-dropdown-menu-item {
+  border-radius: 4px;
+  margin: 2px 4px;
+}
+
+.notification-center .ant-dropdown-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-center .ant-dropdown-menu-item-danger:hover {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+}

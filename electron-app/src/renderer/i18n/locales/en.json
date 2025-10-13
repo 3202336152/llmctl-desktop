@@ -34,6 +34,7 @@
     "providers": "Providers",
     "tokens": "API Keys",
     "sessions": "Sessions",
+    "notifications": "Notifications",
     "statistics": "Statistics",
     "settings": "Settings",
     "appTitle": "LLM Control System"
@@ -275,6 +276,68 @@
       "frontend": "Frontend: ",
       "backend": "Backend: ",
       "build": "Build: "
+    }
+  },
+  "notifications": {
+    "title": "Notification Center",
+    "loading": "Loading notifications...",
+    "noNotifications": "No notifications",
+    "markAllAsRead": "Mark All as Read",
+    "markAsRead": "Mark as Read",
+    "markAsUnread": "Mark as Unread",
+    "delete": "Delete",
+    "deleteSelected": "Delete Selected",
+    "deleteAll": "Clear All",
+    "batchDelete": "Batch Delete",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "moreActions": "More Actions",
+    "selectedCount": "Selected {{count}} items",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "unreadCount": "{{count}} unread",
+    "filterByType": "Notification Type",
+    "filterByStatus": "Unread Only",
+    "all": "All",
+    "system": "System",
+    "session": "Session Reminder",
+    "statistics": "Statistics Report",
+    "warning": "Warning",
+    "success": "Success",
+    "error": "Error",
+    "high": "High Priority",
+    "normal": "Normal Priority",
+    "low": "Low Priority",
+    "justNow": "Just now",
+    "minutesAgo": "{{minutes}} minutes ago",
+    "hoursAgo": "{{hours}} hours ago",
+    "daysAgo": "{{days}} days ago",
+    "confirmDelete": "Confirm Delete",
+    "confirmDeleteMessage": "Are you sure you want to delete the selected {{count}} notifications?",
+    "confirmClearAll": "Confirm Clear All",
+    "confirmClearAllMessage": "Are you sure you want to clear all notifications? This action cannot be undone.",
+    "confirmMarkAllRead": "Confirm Action",
+    "confirmMarkAllReadMessage": "Are you sure you want to mark all notifications as read?",
+    "notificationSettings": "Notification Settings",
+    "desktopNotifications": "Desktop Notifications",
+    "soundAlerts": "Sound Alerts",
+    "realTimePush": "Real-time Push",
+    "autoRefresh": "Auto Refresh",
+    "refreshInterval": "Refresh interval: {{seconds}} seconds",
+    "enableSSE": "Enable SSE Connection",
+    "sseConnected": "SSE Connected",
+    "sseDisconnected": "SSE Disconnected",
+    "pagination": {
+      "total": "Total {{total}} items",
+      "range": "Items {{start}}-{{end}} of {{total}}"
+    },
+    "actions": {
+      "view": "View",
+      "ignore": "Ignore"
+    },
+    "errors": {
+      "loadFailed": "Load failed: {{error}}",
+      "retry": "Retry"
     }
   }
 }

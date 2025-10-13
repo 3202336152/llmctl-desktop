@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../utils/authStorage';
 import { sessionAPI } from '../../services/sessionAPI';
 import apiClient from '../../services/httpClient';
+import NotificationIcon from '../Notifications/NotificationIcon';
 
 const { Search } = Input;
 
@@ -177,16 +178,7 @@ const TopBar: React.FC<TopBarProps> = ({
 
       {/* 右侧：操作按钮 */}
       <Space size={8}>
-        <Tooltip title="通知">
-          <Button
-            type="text"
-            icon={<BellOutlined />}
-            onClick={() => {
-              message.info('通知中心功能开发中，敬请期待！');
-            }}
-            style={{ fontSize: 16, width: 36, height: 36 }}
-          />
-        </Tooltip>
+        <NotificationIcon />
 
         <Tooltip title="帮助">
           <Button
