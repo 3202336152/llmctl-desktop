@@ -186,5 +186,95 @@
   },
   "statistics": {
     "title": "统计信息"
+  },
+  "help": {
+    "title": "帮助中心",
+    "description": "找到您需要的答案，快速了解和使用 LLMctl 的各项功能",
+    "searchPlaceholder": "搜索帮助内容...",
+    "noResults": "没有找到相关内容",
+    "noResultsDesc": "请尝试其他关键词或浏览全部内容",
+    "categories": {
+      "all": "全部",
+      "gettingStarted": "快速开始",
+      "features": "功能介绍",
+      "reference": "参考资料",
+      "about": "关于"
+    },
+    "quickLinks": {
+      "title": "快速链接",
+      "github": "GitHub 项目",
+      "feedback": "问题反馈"
+    },
+    "gettingStarted": {
+      "title": "快速开始",
+      "welcome": "欢迎使用 LLMctl 🚀",
+      "welcomeDesc": "LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。本指南将帮助您快速上手。",
+      "step1Title": "第一步：添加 Provider",
+      "step2Title": "第二步：添加 API Keys",
+      "step3Title": "第三步：创建会话"
+    },
+    "providers": {
+      "title": "Provider 管理",
+      "supportedProviders": "支持的 Provider",
+      "configSteps": "配置步骤",
+      "selectProvider": "选择服务商：",
+      "fillConfig": "填写配置：",
+      "testConnection": "测试连接：",
+      "enableDisable": "启用/禁用：",
+      "faq": "常见问题",
+      "faq1": "Q: 测试连接失败怎么办？",
+      "faq1Answer": "A: 请检查 API 密钥是否正确，网络是否正常，端点地址是否正确。",
+      "faq2": "Q: 如何添加自定义 Provider？",
+      "faq2Answer": "A: 选择 \"Custom\" 选项，手动填写 API 端点和参数格式。"
+    },
+    "tokens": {
+      "title": "Token 管理",
+      "strategiesDesc": "轮询策略说明",
+      "healthCheck": "健康检查",
+      "healthDesc": "系统会自动监控 Token 的健康状态：",
+      "bestPractices": "最佳实践",
+      "practice1": "建议为每个 Provider 配置多个 Token",
+      "practice2": "根据使用量选择合适的轮询策略",
+      "practice3": "定期检查 Token 状态和余额",
+      "practice4": "及时更新失效的 Token"
+    },
+    "sessions": {
+      "title": "会话管理",
+      "createSession": "创建会话",
+      "sessionStatus": "会话状态",
+      "terminalFeatures": "终端功能",
+      "feature1": "多终端并发：同时打开多个终端窗口",
+      "feature2": "标签页管理：便捷的终端标签页切换",
+      "feature3": "全屏模式：F11/ESC 快捷键切换全屏",
+      "feature4": "字体缩放：Ctrl+滚轮动态调整字体大小",
+      "feature5": "智能切换：Token 失效时自动切换到新 Token",
+      "shortcuts": "快捷键"
+    },
+    "shortcuts": {
+      "title": "快捷键",
+      "globalShortcuts": "全局快捷键",
+      "terminalShortcuts": "终端快捷键",
+      "interfaceShortcuts": "界面快捷键"
+    },
+    "troubleshooting": {
+      "title": "故障排查",
+      "connectionIssues": "连接问题",
+      "tokenIssues": "Token 问题",
+      "terminalIssues": "终端问题",
+      "performanceIssues": "性能问题",
+      "configIssues": "配置问题"
+    },
+    "about": {
+      "title": "关于 LLMctl",
+      "versionInfo": "版本信息",
+      "currentVersion": "当前版本：v2.0.4",
+      "updateDate": "更新日期：2024年10月",
+      "team": "开发团队：LLMctl Team",
+      "features": "功能特性",
+      "techStack": "技术栈",
+      "frontend": "前端：",
+      "backend": "后端：",
+      "build": "构建："
+    }
   }
 }

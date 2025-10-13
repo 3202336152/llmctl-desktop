@@ -171,6 +171,25 @@ public class ProviderController {
     }
 
     /**
+     * 更新Provider的Token轮询策略
+     *
+     * @param id Provider ID
+     * @param request 更新Token策略请求
+     * @return 更新后的Provider
+     */
+    @PutMapping("/{id}/token-strategy")
+    public ResponseEntity<ApiResponse<ProviderDTO>> updateTokenStrategy(
+            @PathVariable @NotBlank(message = "Provider ID不能为空") String id,
+            @Valid @RequestBody UpdateTokenStrategyRequest request) {
+        log.info("更新Provider Token策略: ID={}, 策略={}", id, request.getType());
+
+        ProviderDTO provider = providerService.updateTokenStrategy(id, request);
+        ApiResponse<ProviderDTO> response = ApiResponse.success(provider, "Token策略更新成功");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Provider统计信息DTO
      */
     public static class ProviderStatistics {

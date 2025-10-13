@@ -16,10 +16,18 @@ const isDev = process.env.NODE_ENV === 'development';
 const getIconPath = (): string => {
   if (isDev) {
     // 开发环境：相对于 dist/main
-    return path.join(__dirname, '../../assets/icon.png');
+    const devPath = path.join(__dirname, '../../assets/icon.png');
+    console.log('[Icon] 开发环境图标路径:', devPath);
+    return devPath;
   } else {
-    // 生产环境：使用 process.resourcesPath 或 app.getAppPath()
-    return path.join(process.resourcesPath, 'assets/icon.png');
+    // 生产环境：输出调试信息
+    console.log('[Icon] process.resourcesPath:', process.resourcesPath);
+    console.log('[Icon] __dirname:', __dirname);
+    console.log('[Icon] app.getAppPath():', app.getAppPath());
+
+    const prodPath = path.join(process.resourcesPath, 'assets/icon.png');
+    console.log('[Icon] 生产环境图标路径:', prodPath);
+    return prodPath;
   }
 };
 

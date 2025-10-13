@@ -69,13 +69,14 @@ const SessionManager: React.FC = () => {
   };
 
   const handleStartSession = () => {
-    // 从 localStorage 读取上次选择的 Provider ID
+    // 从 localStorage 读取上次选择的 Provider ID 和工作目录
     const lastSelectedProviderId = localStorage.getItem('lastSelectedSessionProviderId');
+    const lastWorkingDirectory = localStorage.getItem('lastSessionWorkingDirectory');
 
     // 重置表单
     form.resetFields();
 
-    // 如果有上次选择的Provider且该Provider仍然存在且激活，则设置为默认值
+    // 设置默认的 Provider
     if (lastSelectedProviderId && providers.some(p => p.id === lastSelectedProviderId && p.isActive)) {
       form.setFieldsValue({ providerId: lastSelectedProviderId });
     } else if (providers.length > 0) {
@@ -84,6 +85,11 @@ const SessionManager: React.FC = () => {
       if (firstActiveProvider) {
         form.setFieldsValue({ providerId: firstActiveProvider.id });
       }
+    }
+
+    // 设置默认的工作目录
+    if (lastWorkingDirectory) {
+      form.setFieldsValue({ workingDirectory: lastWorkingDirectory });
     }
 
     setModalVisible(true);
@@ -115,8 +121,9 @@ const SessionManager: React.FC = () => {
         command: values.command || 'claude',
       };
 
-      // 保存当前选择的 Provider ID 到 localStorage
+      // 保存当前选择的 Provider ID 和工作目录到 localStorage
       localStorage.setItem('lastSelectedSessionProviderId', values.providerId);
+      localStorage.setItem('lastSessionWorkingDirectory', values.workingDirectory);
 
       const response = await sessionAPI.startSession(request);
       if (response.data) {
@@ -513,7 +520,6 @@ const SessionManager: React.FC = () => {
           layout="vertical"
           initialValues={{
             command: 'claude',
-            workingDirectory: 'D:\\code\\program\\LLMctl',
           }}
           preserve={false}
         >

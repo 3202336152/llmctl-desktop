@@ -246,6 +246,35 @@ public class ProviderServiceImpl implements ProviderService {
         return providerMapper.countByType(type, userId);
     }
 
+    @Override
+    @Transactional
+    public ProviderDTO updateTokenStrategy(String id, UpdateTokenStrategyRequest request) {
+        Long userId = UserContext.getUserId();
+        log.info("更新Provider的Token策略: ID={}, 策略类型={}, 故障切换={}",
+                 id, request.getType(), request.getFallbackOnError());
+
+        // 检查Provider是否存在且属于当前用户
+        Provider existingProvider = providerMapper.findById(id, userId);
+        if (existingProvider == null) {
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + id);
+        }
+
+        // 更新Token策略
+        existingProvider.setTokenStrategyType(Provider.TokenStrategyType.fromValue(request.getType()));
+        existingProvider.setTokenFallbackOnError(request.getFallbackOnError());
+        existingProvider.setUpdatedAt(LocalDateTime.now());
+
+        // 保存更新
+        int result = providerMapper.update(existingProvider);
+        if (result <= 0) {
+            throw new ServiceException("更新Token策略", "数据库更新失败");
+        }
+
+        log.info("成功更新Provider的Token策略: {} (ID: {}), 策略={}, 故障切换={}",
+                 existingProvider.getName(), id, request.getType(), request.getFallbackOnError());
+        return convertToDTO(existingProvider);
+    }
+
     /**
      * 将Provider实体转换为DTO
      *

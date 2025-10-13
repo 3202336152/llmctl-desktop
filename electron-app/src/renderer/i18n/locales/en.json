@@ -186,5 +186,95 @@
   },
   "statistics": {
     "title": "Statistics"
+  },
+  "help": {
+    "title": "Help Center",
+    "description": "Find the answers you need and quickly understand and use all features of LLMctl",
+    "searchPlaceholder": "Search help content...",
+    "noResults": "No relevant content found",
+    "noResultsDesc": "Please try other keywords or browse all content",
+    "categories": {
+      "all": "All",
+      "gettingStarted": "Getting Started",
+      "features": "Features",
+      "reference": "Reference",
+      "about": "About"
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "github": "GitHub Project",
+      "feedback": "Issue Feedback"
+    },
+    "gettingStarted": {
+      "title": "Getting Started",
+      "welcome": "Welcome to LLMctl 🚀",
+      "welcomeDesc": "LLMctl is a powerful desktop application for LLM Provider, Token and Session management. This guide will help you get started quickly.",
+      "step1Title": "Step 1: Add Provider",
+      "step2Title": "Step 2: Add API Keys",
+      "step3Title": "Step 3: Create Session"
+    },
+    "providers": {
+      "title": "Provider Management",
+      "supportedProviders": "Supported Providers",
+      "configSteps": "Configuration Steps",
+      "selectProvider": "Select Provider:",
+      "fillConfig": "Fill Configuration:",
+      "testConnection": "Test Connection:",
+      "enableDisable": "Enable/Disable:",
+      "faq": "Frequently Asked Questions",
+      "faq1": "Q: What to do if test connection fails?",
+      "faq1Answer": "A: Please check if the API key is correct, network is normal, and endpoint address is correct.",
+      "faq2": "Q: How to add custom Provider?",
+      "faq2Answer": "A: Select \"Custom\" option and manually fill in API endpoint and parameter format."
+    },
+    "tokens": {
+      "title": "Token Management",
+      "strategiesDesc": "Polling Strategy Description",
+      "healthCheck": "Health Check",
+      "healthDesc": "The system automatically monitors the health status of Tokens:",
+      "bestPractices": "Best Practices",
+      "practice1": "Recommend configuring multiple Tokens for each Provider",
+      "practice2": "Choose appropriate polling strategy based on usage",
+      "practice3": "Regularly check Token status and balance",
+      "practice4": "Update expired Tokens promptly"
+    },
+    "sessions": {
+      "title": "Session Management",
+      "createSession": "Create Session",
+      "sessionStatus": "Session Status",
+      "terminalFeatures": "Terminal Features",
+      "feature1": "Multi-terminal: Open multiple terminal windows simultaneously",
+      "feature2": "Tab Management: Convenient terminal tab switching",
+      "feature3": "Fullscreen Mode: F11/ESC shortcut to toggle fullscreen",
+      "feature4": "Font Scaling: Ctrl+scroll wheel to dynamically adjust font size",
+      "feature5": "Smart Switching: Automatically switch to new Token when Token expires",
+      "shortcuts": "Shortcuts"
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "globalShortcuts": "Global Shortcuts",
+      "terminalShortcuts": "Terminal Shortcuts",
+      "interfaceShortcuts": "Interface Shortcuts"
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting",
+      "connectionIssues": "Connection Issues",
+      "tokenIssues": "Token Issues",
+      "terminalIssues": "Terminal Issues",
+      "performanceIssues": "Performance Issues",
+      "configIssues": "Configuration Issues"
+    },
+    "about": {
+      "title": "About LLMctl",
+      "versionInfo": "Version Information",
+      "currentVersion": "Current Version: v2.0.4",
+      "updateDate": "Update Date: October 2024",
+      "team": "Development Team: LLMctl Team",
+      "features": "Features",
+      "techStack": "Technology Stack",
+      "frontend": "Frontend: ",
+      "backend": "Backend: ",
+      "build": "Build: "
+    }
   }
 }

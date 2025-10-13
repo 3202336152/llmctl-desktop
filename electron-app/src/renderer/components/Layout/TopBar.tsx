@@ -181,6 +181,9 @@ const TopBar: React.FC<TopBarProps> = ({
           <Button
             type="text"
             icon={<BellOutlined />}
+            onClick={() => {
+              message.info('通知中心功能开发中，敬请期待！');
+            }}
             style={{ fontSize: 16, width: 36, height: 36 }}
           />
         </Tooltip>

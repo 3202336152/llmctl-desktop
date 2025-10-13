@@ -19,6 +19,7 @@ import ProviderManager from './components/Provider/ProviderManager';
 import TokenManager from './components/Token/TokenManager';
 import SessionManager from './components/Session/SessionManager';
 import Settings from './components/Settings/Settings';
+import Help from './components/Help/Help';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -504,6 +505,7 @@ const AppContent: React.FC = () => {
                 <Route path="/sessions" element={<ProtectedRoute><SessionManager /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
                 <Route path="/" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
               </Routes>
             </ErrorBoundary>

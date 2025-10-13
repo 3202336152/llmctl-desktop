@@ -3,6 +3,7 @@ package com.llmctl.service;
 import com.llmctl.dto.CreateProviderRequest;
 import com.llmctl.dto.ProviderDTO;
 import com.llmctl.dto.UpdateProviderRequest;
+import com.llmctl.dto.UpdateTokenStrategyRequest;
 
 import java.util.List;
 
@@ -89,4 +90,14 @@ public interface ProviderService {
      * @return 指定类型的Provider数量
      */
     long countProvidersByType(String type);
+
+    /**
+     * 更新Provider的Token轮询策略
+     *
+     * @param id Provider ID
+     * @param request 更新Token策略请求
+     * @return 更新后的Provider DTO
+     * @throws IllegalArgumentException 如果Provider不存在
+     */
+    ProviderDTO updateTokenStrategy(String id, UpdateTokenStrategyRequest request);
 }
