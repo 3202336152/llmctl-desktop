@@ -92,12 +92,6 @@ public interface ISessionService {
      */
     void updateLastActivity(String sessionId);
 
-    /**
-     * 获取会话统计信息
-     *
-     * @return 会话统计信息
-     */
-    SessionStatistics getSessionStatistics();
 
     /**
      * 获取会话的环境变量（用于Electron终端）

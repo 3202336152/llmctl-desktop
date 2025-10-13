@@ -41,9 +41,10 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Override
     public List<ProviderDTO> getAllProviders() {
-        log.debug("获取所有Provider列表");
+        Long userId = UserContext.getUserId();
+        log.debug("获取所有Provider列表, 用户ID: {}", userId);
 
-        List<Provider> providers = providerMapper.findAll();
+        List<Provider> providers = providerMapper.findAll(userId);
         return providers.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -51,11 +52,12 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Override
     public ProviderDTO getProviderById(String id) {
-        log.debug("根据ID获取Provider详情: {}", id);
+        Long userId = UserContext.getUserId();
+        log.debug("根据ID获取Provider详情: {}, 用户ID: {}", id, userId);
 
-        Provider provider = providerMapper.findById(id);
+        Provider provider = providerMapper.findById(id, userId);
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + id);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + id);
         }
 
         return convertToDTO(provider);
@@ -63,9 +65,10 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Override
     public List<ProviderDTO> getProvidersByType(String type) {
-        log.debug("根据类型获取Provider列表: {}", type);
+        Long userId = UserContext.getUserId();
+        log.debug("根据类型获取Provider列表: {}, 用户ID: {}", type, userId);
 
-        List<Provider> providers = providerMapper.findByType(type);
+        List<Provider> providers = providerMapper.findByType(type, userId);
         return providers.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -74,17 +77,18 @@ public class ProviderServiceImpl implements ProviderService {
     @Override
     @Transactional
     public ProviderDTO createProvider(CreateProviderRequest request) {
-        log.info("创建新的Provider: {}", request.getName());
+        Long userId = UserContext.getUserId();
+        log.info("创建新的Provider: {}, 用户ID: {}", request.getName(), userId);
 
-        // 检查名称是否已存在
-        if (providerMapper.existsByName(request.getName())) {
+        // 检查名称是否已存在（同一用户下）
+        if (providerMapper.existsByName(request.getName(), userId)) {
             throw new IllegalArgumentException("Provider名称已存在: " + request.getName());
         }
 
         // 创建Provider实体
         Provider provider = new Provider();
         provider.setId(generateProviderId());
-        provider.setUserId(UserContext.getUserId());
+        provider.setUserId(userId);
         provider.setName(request.getName());
         provider.setDescription(request.getDescription());
         provider.setType(request.getType());
@@ -135,18 +139,19 @@ public class ProviderServiceImpl implements ProviderService {
     @Override
     @Transactional
     public ProviderDTO updateProvider(String id, UpdateProviderRequest request) {
-        log.info("更新Provider: {} (ID: {})", request.getName(), id);
+        Long userId = UserContext.getUserId();
+        log.info("更新Provider: {} (ID: {}), 用户ID: {}", request.getName(), id, userId);
 
-        // 检查Provider是否存在
-        Provider existingProvider = providerMapper.findById(id);
+        // 检查Provider是否存在且属于当前用户
+        Provider existingProvider = providerMapper.findById(id, userId);
         if (existingProvider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + id);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + id);
         }
 
-        // 检查名称是否冲突
+        // 检查名称是否冲突（同一用户下）
         if (StringUtils.hasText(request.getName()) &&
             !request.getName().equals(existingProvider.getName()) &&
-            providerMapper.existsByNameAndIdNot(request.getName(), id)) {
+            providerMapper.existsByNameAndIdNot(request.getName(), id, userId)) {
             throw new IllegalArgumentException("Provider名称已存在: " + request.getName());
         }
 
@@ -200,17 +205,18 @@ public class ProviderServiceImpl implements ProviderService {
     @Override
     @Transactional
     public void deleteProvider(String id) {
-        log.info("删除Provider: {}", id);
+        Long userId = UserContext.getUserId();
+        log.info("删除Provider: {}, 用户ID: {}", id, userId);
 
-        // 检查Provider是否存在
-        Provider provider = providerMapper.findById(id);
+        // 检查Provider是否存在且属于当前用户
+        Provider provider = providerMapper.findById(id, userId);
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + id);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + id);
         }
 
         // 删除关联的Token（通过外键约束自动删除）
         // 删除Provider
-        int result = providerMapper.deleteById(id);
+        int result = providerMapper.deleteById(id, userId);
         if (result <= 0) {
             throw new ServiceException("删除Provider", "数据库删除失败");
         }
@@ -220,21 +226,24 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Override
     public boolean isProviderNameAvailable(String name, String excludeId) {
+        Long userId = UserContext.getUserId();
         if (excludeId != null) {
-            return !providerMapper.existsByNameAndIdNot(name, excludeId);
+            return !providerMapper.existsByNameAndIdNot(name, excludeId, userId);
         } else {
-            return !providerMapper.existsByName(name);
+            return !providerMapper.existsByName(name, userId);
         }
     }
 
     @Override
     public long countProviders() {
-        return providerMapper.count();
+        Long userId = UserContext.getUserId();
+        return providerMapper.count(userId);
     }
 
     @Override
     public long countProvidersByType(String type) {
-        return providerMapper.countByType(type);
+        Long userId = UserContext.getUserId();
+        return providerMapper.countByType(type, userId);
     }
 
     /**

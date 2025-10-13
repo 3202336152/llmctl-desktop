@@ -64,12 +64,13 @@ public class ConfigServiceImpl implements IConfigService {
     @Override
     @Transactional
     public void setActiveProvider(String providerId) {
-        log.info("设置活跃Provider: {}", providerId);
+        Long userId = com.llmctl.context.UserContext.getUserId();
+        log.info("设置活跃Provider: {}, 用户ID: {}", providerId, userId);
 
-        // 验证Provider是否存在
-        Provider provider = providerMapper.findById(providerId);
+        // 验证Provider是否存在且属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + providerId);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
         }
 
         // 验证Provider是否有可用Token
@@ -185,6 +186,7 @@ public class ConfigServiceImpl implements IConfigService {
      * 导出为Bash格式
      */
     private String exportToBash() {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         StringBuilder sb = new StringBuilder();
         sb.append("#!/bin/bash\n");
         sb.append("# LLMctl Configuration Export\n");
@@ -192,7 +194,7 @@ public class ConfigServiceImpl implements IConfigService {
 
         String activeProviderId = globalConfigService.getActiveProviderId();
         if (activeProviderId != null) {
-            Provider provider = providerMapper.findById(activeProviderId);
+            Provider provider = providerMapper.findById(activeProviderId, userId);
             if (provider != null) {
                 List<Token> tokens = tokenMapper.findAvailableByProviderId(activeProviderId);
                 if (!tokens.isEmpty()) {
@@ -214,13 +216,14 @@ public class ConfigServiceImpl implements IConfigService {
      * 导出为PowerShell格式
      */
     private String exportToPowerShell() {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         StringBuilder sb = new StringBuilder();
         sb.append("# LLMctl Configuration Export\n");
         sb.append("# Generated at: ").append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)).append("\n\n");
 
         String activeProviderId = globalConfigService.getActiveProviderId();
         if (activeProviderId != null) {
-            Provider provider = providerMapper.findById(activeProviderId);
+            Provider provider = providerMapper.findById(activeProviderId, userId);
             if (provider != null) {
                 List<Token> tokens = tokenMapper.findAvailableByProviderId(activeProviderId);
                 if (!tokens.isEmpty()) {
@@ -242,6 +245,7 @@ public class ConfigServiceImpl implements IConfigService {
      * 导出为CMD格式
      */
     private String exportToCmd() {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         StringBuilder sb = new StringBuilder();
         sb.append("@echo off\n");
         sb.append("REM LLMctl Configuration Export\n");
@@ -249,7 +253,7 @@ public class ConfigServiceImpl implements IConfigService {
 
         String activeProviderId = globalConfigService.getActiveProviderId();
         if (activeProviderId != null) {
-            Provider provider = providerMapper.findById(activeProviderId);
+            Provider provider = providerMapper.findById(activeProviderId, userId);
             if (provider != null) {
                 List<Token> tokens = tokenMapper.findAvailableByProviderId(activeProviderId);
                 if (!tokens.isEmpty()) {
@@ -271,6 +275,7 @@ public class ConfigServiceImpl implements IConfigService {
      * 导出为JSON格式
      */
     private String exportToJson() {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         Map<String, Object> config = new HashMap<>();
 
         // 导出基本信息
@@ -278,8 +283,8 @@ public class ConfigServiceImpl implements IConfigService {
         config.put("version", globalConfigService.getAppVersion());
         config.put("activeProviderId", globalConfigService.getActiveProviderId());
 
-        // 导出所有Provider
-        List<Provider> providers = providerMapper.findAll();
+        // 导出所有Provider（仅属于当前用户的）
+        List<Provider> providers = providerMapper.findAll(userId);
         List<Map<String, Object>> providerConfigs = new ArrayList<>();
 
         for (Provider provider : providers) {
@@ -342,15 +347,16 @@ public class ConfigServiceImpl implements IConfigService {
 
             // 导入活跃Provider设置
             if (config.containsKey("activeProviderId")) {
+                Long userId = com.llmctl.context.UserContext.getUserId();
                 String activeProviderId = (String) config.get("activeProviderId");
                 if (activeProviderId != null) {
-                    Provider provider = providerMapper.findById(activeProviderId);
+                    Provider provider = providerMapper.findById(activeProviderId, userId);
                     if (provider != null) {
                         globalConfigService.setActiveProviderId(activeProviderId);
                         result.setImportedCount(result.getImportedCount() + 1);
                         log.info("成功设置活跃Provider: {}", activeProviderId);
                     } else {
-                        result.getErrors().add("活跃Provider不存在: " + activeProviderId);
+                        result.getErrors().add("活跃Provider不存在或无权访问: " + activeProviderId);
                     }
                 }
             }
@@ -365,6 +371,7 @@ public class ConfigServiceImpl implements IConfigService {
      * 从配置导入单个Provider
      */
     private void importProviderFromConfig(Map<String, Object> providerConfig, Boolean overwrite, ConfigImportResult result) {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         String providerId = (String) providerConfig.get("id");
         String name = (String) providerConfig.get("name");
         String type = (String) providerConfig.get("type");
@@ -375,7 +382,7 @@ public class ConfigServiceImpl implements IConfigService {
             return;
         }
 
-        Provider existingProvider = providerMapper.findById(providerId);
+        Provider existingProvider = providerMapper.findById(providerId, userId);
 
         // 如果Provider已存在
         if (existingProvider != null) {
@@ -549,7 +556,8 @@ public class ConfigServiceImpl implements IConfigService {
         // 示例实现，实际需要根据业务需求完善
 
         if ("LLMCTL_ACTIVE_PROVIDER".equals(key)) {
-            if (providerMapper.findById(value) != null) {
+            Long userId = com.llmctl.context.UserContext.getUserId();
+            if (providerMapper.findById(value, userId) != null) {
                 globalConfigService.setActiveProviderId(value);
                 return true;
             }
@@ -562,9 +570,10 @@ public class ConfigServiceImpl implements IConfigService {
      * 验证单个Provider
      */
     private void validateSingleProvider(String providerId, ConfigValidationResponse response) {
-        Provider provider = providerMapper.findById(providerId);
+        Long userId = com.llmctl.context.UserContext.getUserId();
+        Provider provider = providerMapper.findById(providerId, userId);
         if (provider == null) {
-            response.getErrors().add("Provider不存在: " + providerId);
+            response.getErrors().add("Provider不存在或无权访问: " + providerId);
             return;
         }
 
@@ -597,7 +606,8 @@ public class ConfigServiceImpl implements IConfigService {
      * 验证所有Provider
      */
     private void validateAllProviders(ConfigValidationResponse response) {
-        List<Provider> providers = providerMapper.findAll();
+        Long userId = com.llmctl.context.UserContext.getUserId();
+        List<Provider> providers = providerMapper.findAll(userId);
 
         if (providers.isEmpty()) {
             response.getWarnings().add("没有配置任何Provider");
@@ -612,11 +622,12 @@ public class ConfigServiceImpl implements IConfigService {
      * 验证全局配置
      */
     private void validateGlobalConfig(ConfigValidationResponse response) {
+        Long userId = com.llmctl.context.UserContext.getUserId();
         String activeProviderId = globalConfigService.getActiveProviderId();
         if (activeProviderId == null) {
             response.getWarnings().add("没有设置活跃Provider");
-        } else if (providerMapper.findById(activeProviderId) == null) {
-            response.getErrors().add("活跃Provider不存在: " + activeProviderId);
+        } else if (providerMapper.findById(activeProviderId, userId) == null) {
+            response.getErrors().add("活跃Provider不存在或无权访问: " + activeProviderId);
         }
     }
 

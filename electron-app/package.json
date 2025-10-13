@@ -7,6 +7,7 @@
   "author": "Liu Yifan",
   "license": "MIT",
   "scripts": {
+    "postinstall": "electron-rebuild -f -w node-pty",
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
     "dev:main": "webpack --config webpack.main.config.js --mode development --watch",
     "dev:renderer": "webpack serve --config webpack.renderer.config.js --mode development",
@@ -20,7 +21,8 @@
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist:linux": "npm run build && electron-builder --linux",
+    "rebuild": "electron-rebuild -f -w node-pty"
   },
   "devDependencies": {
     "@types/node": "^20.8.0",
@@ -75,16 +77,20 @@
     },
     "files": [
       "dist/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "assets/**/*"
     ],
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.png"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/icon.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "assets/icon.png"
     }
   },
   "repository": {

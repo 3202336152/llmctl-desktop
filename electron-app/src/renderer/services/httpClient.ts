@@ -35,8 +35,20 @@ const apiClient: AxiosInstance = axios.create({
 // 请求拦截器 - 添加JWT Token
 apiClient.interceptors.request.use(
   (config) => {
-    // 添加请求日志
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data);
+    // 开发环境下打印请求日志（生产环境不打印）
+    if (process.env.NODE_ENV === 'development') {
+      // 安全日志：敏感数据脱敏
+      const isAuthEndpoint = config.url?.startsWith('/auth/');
+      if (isAuthEndpoint && config.data) {
+        // 登录/注册请求：脱敏密码字段
+        const safeData = { ...config.data };
+        if (safeData.password) safeData.password = '***';
+        if (safeData.confirmPassword) safeData.confirmPassword = '***';
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, safeData);
+      } else {
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+      }
+    }
 
     // 为所有请求添加JWT Token (排除认证接口)
     const isAuthEndpoint = config.url?.startsWith('/auth/');
@@ -50,7 +62,9 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('[API Request Error]', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[API Request Error]', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -58,8 +72,10 @@ apiClient.interceptors.request.use(
 // 响应拦截器 - 处理业务错误和401认证失败
 apiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
-    // 添加响应日志
-    console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+    // 开发环境下打印响应日志（生产环境不打印）
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.data.code}`);
+    }
 
     // 检查业务逻辑错误
     if (response.data.code !== 200) {
@@ -70,7 +86,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError<ApiResponse>) => {
-    console.error('[API Response Error]', error);
+    // 只在开发环境打印详细错误
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[API Response Error]', error);
+    }
 
     let errorMessage = 'Network error';
 

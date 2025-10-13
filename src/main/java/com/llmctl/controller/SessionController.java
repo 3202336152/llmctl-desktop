@@ -185,21 +185,6 @@ public class SessionController {
     }
 
     /**
-     * 获取会话统计信息
-     *
-     * @return 会话统计信息
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<ApiResponse<ISessionService.SessionStatistics>> getSessionStatistics() {
-        log.info("获取会话统计信息");
-
-        ISessionService.SessionStatistics statistics = sessionService.getSessionStatistics();
-        ApiResponse<ISessionService.SessionStatistics> response = ApiResponse.success(statistics);
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
      * 获取会话环境变量（供Electron前端使用）
      *
      * @param sessionId 会话ID

@@ -2,7 +2,7 @@ import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage, dialog } f
 import * as path from 'path';
 import * as fs from 'fs';
 import axios from 'axios';
-import { createMenu, setMenuLanguage, translate as t } from './menu';
+import { createMenu, setMenuLanguage, setAuthenticationStatus, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
 
 let mainWindow: BrowserWindow | null = null;
@@ -11,6 +11,17 @@ let minimizeToTray = false;
 let isQuitting = false; // 使用局部变量而不是 app.isQuitting
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// 获取图标路径（兼容开发和生产环境）
+const getIconPath = (): string => {
+  if (isDev) {
+    // 开发环境：相对于 dist/main
+    return path.join(__dirname, '../../assets/icon.png');
+  } else {
+    // 生产环境：使用 process.resourcesPath 或 app.getAppPath()
+    return path.join(process.resourcesPath, 'assets/icon.png');
+  }
+};
 
 // 获取 API Base URL（支持环境变量配置）
 const getApiBaseUrl = (): string => {
@@ -38,7 +49,7 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       preload: path.join(__dirname, '../preload/preload.js')
     },
-    icon: path.join(__dirname, '../../assets/icon.png'),
+    icon: getIconPath(),
     titleBarStyle: 'default',
     show: false
   });
@@ -76,7 +87,7 @@ function createTray() {
   if (tray) return;
 
   // 创建托盘图标
-  const iconPath = path.join(__dirname, '../../assets/icon.png');
+  const iconPath = getIconPath();
   const trayIcon = nativeImage.createFromPath(iconPath);
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
 
@@ -208,6 +219,15 @@ ipcMain.on('set-menu-language', (_event, language: 'zh' | 'en') => {
     destroyTray();
     createTray();
   }
+});
+
+/**
+ * 设置登录状态
+ */
+ipcMain.on('set-auth-status', (_event, authenticated: boolean) => {
+  console.log('[IPC] set-auth-status:', authenticated);
+  setAuthenticationStatus(authenticated);
+  Menu.setApplicationMenu(createMenu());
 });
 
 // ==================== 文件操作 IPC Handlers ====================

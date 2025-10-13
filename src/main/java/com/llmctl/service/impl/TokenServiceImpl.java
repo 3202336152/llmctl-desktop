@@ -45,7 +45,14 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public List<TokenDTO> getTokensByProviderId(String providerId) {
-        log.debug("根据Provider ID获取Token列表: {}", providerId);
+        Long userId = UserContext.getUserId();
+        log.debug("根据Provider ID获取Token列表: {}, 用户ID: {}", providerId, userId);
+
+        // 验证Provider是否属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+        }
 
         List<Token> tokens = tokenMapper.findByProviderId(providerId);
         return tokens.stream()
@@ -55,7 +62,14 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public List<TokenDTO> getAvailableTokensByProviderId(String providerId) {
-        log.debug("根据Provider ID获取可用Token列表: {}", providerId);
+        Long userId = UserContext.getUserId();
+        log.debug("根据Provider ID获取可用Token列表: {}, 用户ID: {}", providerId, userId);
+
+        // 验证Provider是否属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+        }
 
         List<Token> tokens = tokenMapper.findAvailableByProviderId(providerId);
         return tokens.stream()
@@ -65,11 +79,18 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public TokenDTO getTokenById(String id) {
-        log.debug("根据ID获取Token详情: {}", id);
+        Long userId = UserContext.getUserId();
+        log.debug("根据ID获取Token详情: {}, 用户ID: {}", id, userId);
 
         Token token = tokenMapper.findById(id);
         if (token == null) {
             throw new IllegalArgumentException("Token不存在: " + id);
+        }
+
+        // 验证Token关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(token.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该Token");
         }
 
         return convertToDTO(token);
@@ -78,12 +99,13 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public TokenDTO createToken(String providerId, CreateTokenRequest request) {
-        log.info("为Provider创建新Token: {} (Provider ID: {})", request.getAlias(), providerId);
+        Long userId = UserContext.getUserId();
+        log.info("为Provider创建新Token: {} (Provider ID: {}), 用户ID: {}", request.getAlias(), providerId, userId);
 
-        // 检查Provider是否存在
-        Provider provider = providerMapper.findById(providerId);
+        // 检查Provider是否存在且属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + providerId);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
         }
 
         // 检查Token别名是否冲突（如果提供了别名）
@@ -95,7 +117,7 @@ public class TokenServiceImpl implements TokenService {
         // 创建Token实体
         Token token = new Token();
         token.setId(generateTokenId());
-        token.setUserId(UserContext.getUserId());
+        token.setUserId(userId);
         token.setProviderId(providerId);
         token.setValue(encryptTokenValue(request.getValue())); // AES-256-GCM加密存储
         token.setAlias(StringUtils.hasText(request.getAlias()) ? request.getAlias() : "Token-" + System.currentTimeMillis());
@@ -122,7 +144,14 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public TokenDTO updateToken(String providerId, String tokenId, UpdateTokenRequest request) {
-        log.info("更新Token: {} (ID: {})", request.getAlias(), tokenId);
+        Long userId = UserContext.getUserId();
+        log.info("更新Token: {} (ID: {}), 用户ID: {}", request.getAlias(), tokenId, userId);
+
+        // 验证Provider是否属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+        }
 
         // 检查Token是否存在且属于指定Provider
         Token existingToken = tokenMapper.findById(tokenId);
@@ -170,7 +199,14 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public void deleteToken(String providerId, String tokenId) {
-        log.info("删除Token: {} (Provider ID: {})", tokenId, providerId);
+        Long userId = UserContext.getUserId();
+        log.info("删除Token: {} (Provider ID: {}), 用户ID: {}", tokenId, providerId, userId);
+
+        // 验证Provider是否属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+        }
 
         // 检查Token是否存在且属于指定Provider
         Token token = tokenMapper.findById(tokenId);
@@ -189,12 +225,14 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public Token selectToken(String providerId) {
+        // 注意：这个方法可能在Session启动时被调用，此时需要验证Provider权限
+        // 但由于调用方已经验证过Provider，这里可以保持现状或添加额外验证
         log.debug("为Provider选择Token: {}", providerId);
 
-        // 获取Provider信息
-        Provider provider = providerMapper.findById(providerId);
+        // 获取Provider信息（不需要userId，因为此方法通常在内部被已验证过的方法调用）
+        Provider provider = providerMapper.findById(providerId, UserContext.getUserId());
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + providerId);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
         }
 
         // 获取可用的Token列表
@@ -268,13 +306,20 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public void updateTokenHealth(String tokenId, boolean healthy) {
-        log.info("📝 [更新Token健康状态] Token ID: {} | 健康状态: {} -> {}", tokenId, "?", healthy);
+        Long userId = UserContext.getUserId();
+        log.info("📝 [更新Token健康状态] Token ID: {} | 健康状态: {} -> {}, 用户ID: {}", tokenId, "?", healthy, userId);
 
         // 查询当前状态
         Token token = tokenMapper.findById(tokenId);
         if (token == null) {
             log.error("❌ [更新Token健康状态失败] Token不存在: {}", tokenId);
             throw new ResourceNotFoundException("Token", tokenId);
+        }
+
+        // 验证Token关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(token.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该Token");
         }
 
         log.info("📝 [更新前状态] Token: {} | 当前健康: {} | 目标健康: {}",
@@ -300,12 +345,13 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public int recoverAllUnhealthyTokens(String providerId) {
-        log.info("🔧 [批量恢复Token健康状态] Provider ID: {}", providerId);
+        Long userId = UserContext.getUserId();
+        log.info("🔧 [批量恢复Token健康状态] Provider ID: {}, 用户ID: {}", providerId, userId);
 
-        // 检查Provider是否存在
-        Provider provider = providerMapper.findById(providerId);
+        // 检查Provider是否存在且属于当前用户
+        Provider provider = providerMapper.findById(providerId, userId);
         if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在: " + providerId);
+            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
         }
 
         // 批量恢复不健康的Token

@@ -5,7 +5,6 @@ import {
   KeyOutlined,
   DesktopOutlined,
   SettingOutlined,
-  BarChartOutlined,
   SearchOutlined,
   ThunderboltOutlined,
   FileTextOutlined,
@@ -76,18 +75,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ visible, onClose }) => 
         onClose();
       },
       keywords: ['session', '会话', '终端'],
-    },
-    {
-      id: 'nav-statistics',
-      title: '统计信息',
-      description: '查看使用统计',
-      icon: <BarChartOutlined />,
-      category: '导航',
-      action: () => {
-        navigate('/statistics');
-        onClose();
-      },
-      keywords: ['statistics', '统计', '数据'],
     },
     {
       id: 'nav-settings',

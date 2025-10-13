@@ -67,8 +67,14 @@ const AppContent: React.FC = () => {
   // 加载初始设置（语言和托盘） - 仅在登录后执行
   useEffect(() => {
     const loadInitialSettings = async () => {
+      // 检查当前登录状态并通知主进程
+      const isAuthenticated = authStorage.isLoggedIn();
+      if (window.electronAPI) {
+        window.electronAPI.send('set-auth-status', isAuthenticated);
+      }
+
       // 检查是否已登录，未登录则跳过
-      if (!authStorage.isLoggedIn()) {
+      if (!isAuthenticated) {
         console.log('[App] 用户未登录，跳过加载初始设置');
         return;
       }

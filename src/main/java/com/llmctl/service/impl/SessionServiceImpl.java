@@ -51,31 +51,50 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public List<SessionDTO> getActiveSessions() {
-        log.debug("获取所有活跃会话");
+        Long userId = UserContext.getUserId();
+        log.debug("获取所有活跃会话, 用户ID: {}", userId);
 
         List<Session> sessions = sessionMapper.findActiveSessions();
+        // 过滤属于当前用户的会话
         return sessions.stream()
+                .filter(session -> {
+                    Provider provider = providerMapper.findById(session.getProviderId(), userId);
+                    return provider != null;
+                })
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<SessionDTO> getAllSessions() {
-        log.debug("获取所有会话");
+        Long userId = UserContext.getUserId();
+        log.debug("获取所有会话, 用户ID: {}", userId);
 
         List<Session> sessions = sessionMapper.findAll();
+        // 过滤属于当前用户的会话
         return sessions.stream()
+                .filter(session -> {
+                    Provider provider = providerMapper.findById(session.getProviderId(), userId);
+                    return provider != null;
+                })
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public SessionDTO getSessionById(String sessionId) {
-        log.debug("根据ID获取会话详情: {}", sessionId);
+        Long userId = UserContext.getUserId();
+        log.debug("根据ID获取会话详情: {}, 用户ID: {}", sessionId, userId);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         return convertToDTO(session);
@@ -83,12 +102,13 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public SessionDTO startSession(StartSessionRequest request) {
-        log.info("创建新的会话记录: Provider: {}, WorkingDir: {}", request.getProviderId(), request.getWorkingDirectory());
+        Long userId = UserContext.getUserId();
+        log.info("创建新的会话记录: Provider: {}, WorkingDir: {}, 用户ID: {}", request.getProviderId(), request.getWorkingDirectory(), userId);
 
-        // 检查Provider是否存在
-        Provider provider = providerMapper.findById(request.getProviderId());
+        // 检查Provider是否存在且属于当前用户
+        Provider provider = providerMapper.findById(request.getProviderId(), userId);
         if (provider == null) {
-            throw new ResourceNotFoundException("Provider", request.getProviderId());
+            throw new ResourceNotFoundException("Provider不存在或无权访问", request.getProviderId());
         }
 
         // 选择可用的Token并保存Token ID
@@ -104,7 +124,7 @@ public class SessionServiceImpl implements ISessionService {
         // 创建Session实体（仅记录元数据，进程由Electron管理）
         Session session = new Session();
         session.setId(IdGenerator.generateSessionId());
-        session.setUserId(UserContext.getUserId());
+        session.setUserId(userId);
         session.setProviderId(request.getProviderId());
         session.setTokenId(selectedToken.getId()); // 保存选中的Token ID
         session.setWorkingDirectory(request.getWorkingDirectory());
@@ -127,11 +147,18 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public SessionDTO updateSessionStatus(String sessionId, String status) {
-        log.info("更新会话状态: {} -> {}", sessionId, status);
+        Long userId = UserContext.getUserId();
+        log.info("更新会话状态: {} -> {}, 用户ID: {}", sessionId, status, userId);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         Session.SessionStatus newStatus = Session.SessionStatus.fromValue(status);
@@ -154,11 +181,18 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public void terminateSession(String sessionId) {
-        log.info("终止会话: {}", sessionId);
+        Long userId = UserContext.getUserId();
+        log.info("终止会话: {}, 用户ID: {}", sessionId, userId);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         // 更新数据库状态为inactive（进程由Electron管理和终止）
@@ -172,11 +206,18 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public SessionDTO reactivateSession(String sessionId) {
-        log.info("重新激活会话: {}", sessionId);
+        Long userId = UserContext.getUserId();
+        log.info("重新激活会话: {}, 用户ID: {}", sessionId, userId);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         if (session.getStatus() != Session.SessionStatus.INACTIVE) {
@@ -198,11 +239,18 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public void deleteSession(String sessionId) {
-        log.info("删除会话记录: {}", sessionId);
+        Long userId = UserContext.getUserId();
+        log.info("删除会话记录: {}, 用户ID: {}", sessionId, userId);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         // 从数据库中永久删除会话记录
@@ -216,19 +264,21 @@ public class SessionServiceImpl implements ISessionService {
 
     @Override
     public void updateLastActivity(String sessionId) {
-        log.debug("更新会话最后活动时间: {}", sessionId);
+        Long userId = UserContext.getUserId();
+        log.debug("更新会话最后活动时间: {}, 用户ID: {}", sessionId, userId);
+
+        // 验证会话是否属于当前用户
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
+        }
+
         sessionMapper.updateLastActivity(sessionId);
-    }
-
-    @Override
-    public SessionStatistics getSessionStatistics() {
-        SessionStatistics statistics = new SessionStatistics();
-        statistics.setActiveCount(sessionMapper.countByStatus("active"));
-        statistics.setInactiveCount(sessionMapper.countByStatus("inactive"));
-        statistics.setTerminatedCount(sessionMapper.countByStatus("terminated"));
-        statistics.setTotalCount(sessionMapper.count());
-
-        return statistics;
     }
 
     /**
@@ -269,14 +319,17 @@ public class SessionServiceImpl implements ISessionService {
      * @return 环境变量Map
      */
     public Map<String, String> getSessionEnvironmentVariables(String sessionId) {
+        Long userId = UserContext.getUserId();
+
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
             throw new ResourceNotFoundException("会话", sessionId);
         }
 
-        Provider provider = providerMapper.findById(session.getProviderId());
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findById(session.getProviderId(), userId);
         if (provider == null) {
-            throw new ResourceNotFoundException("Provider", session.getProviderId());
+            throw new IllegalArgumentException("无权访问该会话");
         }
 
         // 直接使用保存的Token ID，避免重复选择
@@ -402,7 +455,8 @@ public class SessionServiceImpl implements ISessionService {
 
         // 获取Provider名称
         try {
-            Provider provider = providerMapper.findById(session.getProviderId());
+            Long userId = UserContext.getUserId();
+            Provider provider = providerMapper.findById(session.getProviderId(), userId);
             if (provider != null) {
                 dto.setProviderName(provider.getName());
             }

@@ -31,10 +31,19 @@ mybatis:
   type-handlers-package: com.llmctl.config
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 已禁用详细SQL日志以提升性能
     cache-enabled: true
     lazy-loading-enabled: true
     aggressive-lazy-loading: false
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.llmctl: INFO
+    com.llmctl.mapper: WARN  # Mapper层只输出警告和错误，不输出SQL详情
+    org.springframework: WARN
+    org.mybatis: WARN
 
 
 # 应用信息

@@ -105,6 +105,7 @@ const menuTranslations = {
 };
 
 let currentLanguage: 'zh' | 'en' = 'zh';
+let isAuthenticated: boolean = false; // 登录状态
 
 // 获取翻译文本
 function t(key: string): string {
@@ -123,6 +124,11 @@ export function setMenuLanguage(language: 'zh' | 'en') {
   currentLanguage = language;
 }
 
+// 设置登录状态
+export function setAuthenticationStatus(authenticated: boolean) {
+  isAuthenticated = authenticated;
+}
+
 // 导出翻译函数供其他模块使用
 export function translate(key: string): string {
   return t(key);
@@ -136,6 +142,7 @@ export function createMenu(): Menu {
         {
           label: t('importConfig'),
           accelerator: 'CmdOrCtrl+O',
+          enabled: isAuthenticated, // 需要登录
           click: async () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -157,6 +164,7 @@ export function createMenu(): Menu {
         {
           label: t('exportConfig'),
           accelerator: 'CmdOrCtrl+S',
+          enabled: isAuthenticated, // 需要登录
           click: async () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -191,6 +199,7 @@ export function createMenu(): Menu {
         {
           label: t('startNewSession'),
           accelerator: 'CmdOrCtrl+N',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -200,6 +209,7 @@ export function createMenu(): Menu {
         {
           label: t('viewAllSessions'),
           accelerator: 'CmdOrCtrl+Shift+S',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -211,6 +221,7 @@ export function createMenu(): Menu {
         { type: 'separator' },
         {
           label: t('terminateAllSessions'),
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -238,6 +249,7 @@ export function createMenu(): Menu {
         {
           label: t('providerManagement'),
           accelerator: 'CmdOrCtrl+1',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -249,6 +261,7 @@ export function createMenu(): Menu {
         {
           label: t('tokenManagement'),
           accelerator: 'CmdOrCtrl+2',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -260,6 +273,7 @@ export function createMenu(): Menu {
         {
           label: t('sessionManagement'),
           accelerator: 'CmdOrCtrl+3',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
@@ -268,21 +282,11 @@ export function createMenu(): Menu {
             `);
           }
         },
-        {
-          label: t('statistics'),
-          accelerator: 'CmdOrCtrl+4',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (!win) return;
-            win.webContents.executeJavaScript(`
-              window.location.hash = '#/statistics';
-            `);
-          }
-        },
         { type: 'separator' },
         {
           label: t('systemSettings'),
           accelerator: 'CmdOrCtrl+,',
+          enabled: isAuthenticated, // 需要登录
           click: () => {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;

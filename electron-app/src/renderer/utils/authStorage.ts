@@ -19,6 +19,11 @@ export class AuthStorage {
             localStorage.setItem('expiresAt', String(expiresAt));
 
             console.log('[AuthStorage] 登录信息已保存');
+
+            // 通知主进程登录状态已更新
+            if (window.electronAPI) {
+                window.electronAPI.send('set-auth-status', true);
+            }
         } catch (error) {
             console.error('[AuthStorage] 保存登录信息失败:', error);
         }
@@ -139,6 +144,11 @@ export class AuthStorage {
             localStorage.removeItem('expiresAt');
 
             console.log('[AuthStorage] 登录信息已清除');
+
+            // 通知主进程登录状态已更新
+            if (window.electronAPI) {
+                window.electronAPI.send('set-auth-status', false);
+            }
         } catch (error) {
             console.error('[AuthStorage] 清除登录信息失败:', error);
         }

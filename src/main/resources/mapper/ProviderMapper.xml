@@ -32,37 +32,38 @@
         created_at, updated_at
     </sql>
 
-    <!-- 根据ID查询Provider -->
-    <select id="findById" parameterType="java.lang.String" resultMap="BaseResultMap">
+    <!-- 根据ID和用户ID查询Provider -->
+    <select id="findById" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM providers
-        WHERE id = #{id}
+        WHERE id = #{id} AND user_id = #{userId}
     </select>
 
-    <!-- 查询所有Provider -->
+    <!-- 查询指定用户的所有Provider -->
     <select id="findAll" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM providers
+        WHERE user_id = #{userId}
         ORDER BY created_at DESC
     </select>
 
-    <!-- 根据类型查询Provider列表 -->
-    <select id="findByType" parameterType="java.lang.String" resultMap="BaseResultMap">
+    <!-- 根据类型和用户ID查询Provider列表 -->
+    <select id="findByType" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM providers
-        WHERE type = #{type}
+        WHERE type = #{type} AND user_id = #{userId}
         ORDER BY created_at DESC
     </select>
 
-    <!-- 根据名称查询Provider -->
-    <select id="findByName" parameterType="java.lang.String" resultMap="BaseResultMap">
+    <!-- 根据名称和用户ID查询Provider -->
+    <select id="findByName" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM providers
-        WHERE name = #{name}
+        WHERE name = #{name} AND user_id = #{userId}
     </select>
 
     <!-- 插入Provider -->
@@ -96,40 +97,41 @@
             token_fallback_on_error = #{tokenFallbackOnError},
             is_active = #{isActive},
             updated_at = #{updatedAt}
-        WHERE id = #{id}
+        WHERE id = #{id} AND user_id = #{userId}
     </update>
 
-    <!-- 根据ID删除Provider -->
-    <delete id="deleteById" parameterType="java.lang.String">
+    <!-- 根据ID和用户ID删除Provider -->
+    <delete id="deleteById">
         DELETE FROM providers
-        WHERE id = #{id}
+        WHERE id = #{id} AND user_id = #{userId}
     </delete>
 
-    <!-- 检查Provider名称是否已存在（排除指定ID） -->
-    <select id="existsByNameAndIdNot" parameterType="map" resultType="java.lang.Boolean">
+    <!-- 检查Provider名称是否已存在（排除指定ID，同一用户下） -->
+    <select id="existsByNameAndIdNot" resultType="java.lang.Boolean">
         SELECT COUNT(*) > 0
         FROM providers
-        WHERE name = #{name} AND id != #{excludeId}
+        WHERE name = #{name} AND id != #{excludeId} AND user_id = #{userId}
     </select>
 
-    <!-- 检查Provider名称是否已存在 -->
-    <select id="existsByName" parameterType="java.lang.String" resultType="java.lang.Boolean">
+    <!-- 检查Provider名称是否已存在（同一用户下） -->
+    <select id="existsByName" resultType="java.lang.Boolean">
         SELECT COUNT(*) > 0
         FROM providers
-        WHERE name = #{name}
+        WHERE name = #{name} AND user_id = #{userId}
     </select>
 
-    <!-- 统计Provider总数 -->
+    <!-- 统计指定用户的Provider总数 -->
     <select id="count" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM providers
+        WHERE user_id = #{userId}
     </select>
 
-    <!-- 根据类型统计Provider数量 -->
-    <select id="countByType" parameterType="java.lang.String" resultType="java.lang.Long">
+    <!-- 根据类型统计指定用户的Provider数量 -->
+    <select id="countByType" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM providers
-        WHERE type = #{type}
+        WHERE type = #{type} AND user_id = #{userId}
     </select>
 
 </mapper>
