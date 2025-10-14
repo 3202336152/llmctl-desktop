@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.llmctl.mapper.EmailVerificationCodeMapper">
+
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.EmailVerificationCode">
+        <id property="id" column="id"/>
+        <result property="email" column="email"/>
+        <result property="code" column="code"/>
+        <result property="purpose" column="purpose" typeHandler="com.llmctl.config.PurposeTypeHandler"/>
+        <result property="used" column="used"/>
+        <result property="expireTime" column="expire_time"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO email_verification_codes (id, email, code, purpose, used, expire_time, created_at)
+        VALUES (#{id}, #{email}, #{code}, #{purpose,typeHandler=com.llmctl.config.PurposeTypeHandler}, #{used}, #{expireTime}, #{createdAt})
+    </insert>
+
+    <select id="findValidCode" resultMap="BaseResultMap">
+        SELECT * FROM email_verification_codes
+        WHERE email = #{email}
+          AND code = #{code}
+          AND purpose = #{purpose}
+          AND used = FALSE
+          AND expire_time &gt; NOW()
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <update id="markAsUsed">
+        UPDATE email_verification_codes
+        SET used = TRUE
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteExpiredCodes">
+        DELETE FROM email_verification_codes
+        WHERE expire_time &lt; NOW() OR used = TRUE
+    </delete>
+
+</mapper>

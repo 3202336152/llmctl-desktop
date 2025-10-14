@@ -1,0 +1,262 @@
+/* 容器 */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f7f9fb;
+    font-family: 'Inter', 'PingFang SC', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* 卡片 */
+.auth-card {
+    width: 400px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.auth-card-register {
+    width: 450px;
+}
+
+/* Logo 和标题 */
+.auth-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.auth-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+    border-radius: 8px;
+}
+
+.logo-icon-svg {
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 2px 4px rgba(0, 123, 255, 0.2));
+}
+
+.logo-icon-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 123, 255, 0.2));
+}
+
+.logo-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: #007BFF;
+    letter-spacing: -0.5px;
+}
+
+.auth-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333333;
+    margin: 0;
+}
+
+/* 表单 */
+.auth-form {
+    margin-bottom: 24px;
+}
+
+.auth-form .ant-form-item {
+    margin-bottom: 20px;
+}
+
+.auth-form .ant-form-item-label {
+    display: none;
+}
+
+/* 输入框包装器 */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper .input-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 16px;
+    color: #999;
+    z-index: 1;
+}
+
+.auth-input {
+    height: 42px !important;
+    border-radius: 8px !important;
+    border: 1px solid #ddd !important;
+    padding-left: 38px !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+}
+
+.auth-input:focus,
+.auth-input:hover {
+    border-color: #007BFF !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1) !important;
+}
+
+.auth-input::placeholder {
+    color: #999;
+}
+
+/* 密码显示/隐藏图标 */
+.password-toggle {
+    position: absolute;
+    right: 14px;
+    font-size: 16px;
+    color: #999;
+    cursor: pointer;
+    z-index: 1;
+    transition: color 0.3s;
+}
+
+.password-toggle:hover {
+    color: #007BFF;
+}
+
+/* 带按钮的输入框 */
+.input-with-button {
+    gap: 8px;
+}
+
+.auth-input-with-button {
+    flex: 1;
+}
+
+.code-button {
+    height: 42px;
+    border-radius: 8px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 0 16px;
+    transition: all 0.3s;
+}
+
+.code-button:hover:not(:disabled) {
+    background-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.code-button:disabled {
+    background-color: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* 主按钮 */
+.auth-button {
+    height: 42px !important;
+    border-radius: 8px !important;
+    background-color: #007BFF !important;
+    border: none !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.auth-button:hover:not(:disabled) {
+    background-color: #0056b3 !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4) !important;
+    transform: scale(0.98);
+}
+
+.auth-button:active {
+    transform: scale(0.95);
+}
+
+/* 链接 */
+.auth-link-center {
+    text-align: center;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+
+.auth-link {
+    color: #007BFF;
+    font-size: 14px;
+    text-decoration: none;
+    transition: color 0.3s;
+    cursor: pointer;
+}
+
+.auth-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* 分割线 */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0;
+    color: #999;
+    font-size: 14px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.auth-divider span {
+    padding: 0 16px;
+}
+
+/* 其他选项 */
+.auth-other-options {
+    margin-bottom: 24px;
+    min-height: 10px;
+}
+
+/* 页脚 */
+.auth-footer {
+    text-align: center;
+    font-size: 14px;
+}
+
+.auth-footer-text {
+    color: #666;
+    margin-right: 8px;
+}
+
+.auth-footer-link {
+    color: #007BFF;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.auth-footer-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* 表单错误信息 */
+.auth-form .ant-form-item-explain-error {
+    font-size: 12px;
+    margin-top: 4px;
+}

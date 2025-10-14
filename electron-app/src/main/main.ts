@@ -14,35 +14,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 // 获取图标路径（兼容开发和生产环境）
 const getIconPath = (): string => {
-  if (isDev) {
-    // 开发环境：使用绝对路径
-    const devPath = path.join(process.cwd(), 'assets/icon.png');
-    console.log('[Icon] 开发环境图标路径:', devPath);
-
-    // 检查本地文件是否存在，如果不存在则使用远程图标
-    if (fs.existsSync(devPath)) {
-      return devPath;
-    } else {
-      console.log('[Icon] 本地图标文件不存在，将使用远程图标');
-      return devPath; // 返回本地路径，但会失败
-    }
-  } else {
-    // 生产环境：输出调试信息
-    console.log('[Icon] process.resourcesPath:', process.resourcesPath);
-    console.log('[Icon] __dirname:', __dirname);
-    console.log('[Icon] app.getAppPath():', app.getAppPath());
-
-    const prodPath = path.join(process.resourcesPath, 'assets/icon.png');
-    console.log('[Icon] 生产环境图标路径:', prodPath);
-
-    // 检查生产环境图标是否存在
-    if (fs.existsSync(prodPath)) {
-      return prodPath;
-    } else {
-      console.log('[Icon] 生产环境图标文件不存在，将使用远程图标');
-      return prodPath; // 返回本地路径，但会失败
-    }
-  }
+  return 'http://117.72.200.2/downloads/llmctl/icon.png';
 };
 
 // 获取远程图标URL（备用方案）

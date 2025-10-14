@@ -5,6 +5,86 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.2] - 2025-10-14
+
+### Added 🎉
+- **邮箱验证码注册/登录** - 完整的邮箱验证功能
+  - 支持 QQ 邮箱（@qq.com）和 163 邮箱（@163.com）注册
+  - 6位数字验证码，5分钟有效期，一次性使用
+  - 60秒倒计时防止验证码滥发
+  - 注册时自动验证邮箱验证码
+  - 后端实现完整的邮件发送和验证逻辑
+- **用户名或邮箱登录** - 灵活的登录方式
+  - 支持使用用户名登录（原有功能）
+  - 支持使用邮箱地址登录（新增功能）
+  - 自动识别输入类型（包含@符号即为邮箱）
+  - 邮箱优先查找，用户名兜底
+  - 保持原有的安全机制（密码验证、账户锁定等）
+- **忘记密码功能** - 密码重置入口
+  - 登录页面添加"忘记密码？"链接
+  - 点击显示提示模态框
+  - 引导用户联系管理员重置密码（密码重置功能即将推出）
+
+### Changed 🎨
+- **登录注册UI优化** - 更简洁统一的界面
+  - 使用实际的 icon.png 作为 Logo 图标
+  - 移除空的分割线和"或"内容
+  - 统一登录和注册页面的视觉风格
+  - 优化忘记密码链接的交互体验
+
+### Technical Details 🔧
+- **后端新增文件**：
+  - `EmailVerificationCode.java` - 验证码实体类
+  - `SendVerificationCodeRequest.java` - 发送验证码请求DTO
+  - `VerifyCodeRequest.java` - 验证验证码请求DTO
+  - `EmailVerificationCodeMapper.java` - 验证码数据访问接口
+  - `EmailVerificationCodeMapper.xml` - MyBatis映射文件
+  - `IEmailService.java` - 邮件服务接口
+  - `EmailServiceImpl.java` - 邮件服务实现
+  - `IVerificationCodeService.java` - 验证码服务接口
+  - `VerificationCodeServiceImpl.java` - 验证码服务实现
+  - `PurposeTypeHandler.java` - 枚举类型处理器
+- **后端修改文件**：
+  - `AuthController.java` - 新增验证码发送和验证接口
+  - `AuthServiceImpl.java` - 优化登录逻辑支持邮箱登录
+  - `pom.xml` - 添加 Spring Boot Mail 依赖
+  - `application.yml` - 配置邮件服务参数
+  - `schema.sql` - 新增 email_verification_codes 表
+- **前端修改文件**：
+  - `LoginPage.tsx` - 更新Logo、添加忘记密码模态框、移除空内容
+  - `RegisterPage.tsx` - 完整的注册表单含邮箱验证功能、更新Logo、移除空内容
+  - `Auth.css` - 添加Logo图片样式、优化链接样式
+- **数据库设计**：
+  - `email_verification_codes` 表结构：
+    - `id` - 主键（VARCHAR 36）
+    - `email` - 邮箱地址
+    - `code` - 6位验证码
+    - `purpose` - 用途（REGISTER/LOGIN/RESET_PASSWORD）
+    - `used` - 是否已使用
+    - `expire_time` - 过期时间
+    - `created_at` - 创建时间
+    - 索引：`idx_email_purpose`, `idx_expire_time`
+
+### Security 🔐
+- **邮箱验证安全**：
+  - 验证码有效期仅5分钟
+  - 验证码一次性使用，验证后立即标记为已使用
+  - 邮箱域名严格限制（仅QQ和163）
+  - 60秒发送间隔防止滥发
+  - 后端验证邮箱格式和验证码有效性
+- **登录安全增强**：
+  - 邮箱登录同样受到账户锁定保护
+  - 保持原有的防暴力破解机制
+  - 登录日志记录用户名或邮箱
+
+### Documentation 📖
+- 新增 `EMAIL_SETUP.md` - 完整的邮件服务配置指南
+  - QQ邮箱配置步骤
+  - 163邮箱配置步骤
+  - 环境变量设置方法
+  - 常见问题解答
+  - 安全建议
+
 ## [2.1.1] - 2025-10-14
 
 ### Added 🎉

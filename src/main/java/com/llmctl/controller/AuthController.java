@@ -2,6 +2,7 @@ package com.llmctl.controller;
 
 import com.llmctl.dto.*;
 import com.llmctl.service.IAuthService;
+import com.llmctl.service.IVerificationCodeService;
 import com.llmctl.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final IAuthService authService;
+    private final IVerificationCodeService verificationCodeService;
     private final JwtUtil jwtUtil;
 
     /**
@@ -114,6 +116,49 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(ApiResponse.success(null, "登出成功"));
+    }
+
+    /**
+     * 发送验证码
+     *
+     * POST /auth/send-verification-code
+     * {
+     *   "email": "user@qq.com",
+     *   "purpose": "REGISTER"
+     * }
+     */
+    @PostMapping("/send-verification-code")
+    public ResponseEntity<ApiResponse<Void>> sendVerificationCode(
+            @Valid @RequestBody SendVerificationCodeRequest request) {
+        log.info("发送验证码请求: email={}, purpose={}", request.getEmail(), request.getPurpose());
+
+        verificationCodeService.sendVerificationCode(request.getEmail(), request.getPurpose());
+
+        return ResponseEntity.ok(ApiResponse.success(null, "验证码已发送"));
+    }
+
+    /**
+     * 验证验证码
+     *
+     * POST /auth/verify-code
+     * {
+     *   "email": "user@qq.com",
+     *   "code": "123456",
+     *   "purpose": "REGISTER"
+     * }
+     */
+    @PostMapping("/verify-code")
+    public ResponseEntity<ApiResponse<Boolean>> verifyCode(
+            @Valid @RequestBody VerifyCodeRequest request) {
+        log.info("验证验证码请求: email={}, purpose={}", request.getEmail(), request.getPurpose());
+
+        boolean valid = verificationCodeService.verifyCode(
+            request.getEmail(),
+            request.getCode(),
+            request.getPurpose()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(valid, valid ? "验证码正确" : "验证码无效"));
     }
 
     /**

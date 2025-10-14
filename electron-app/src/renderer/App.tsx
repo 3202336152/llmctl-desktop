@@ -23,6 +23,7 @@ import Help from './components/Help/Help';
 import NotificationCenter from './components/Notifications/NotificationCenter';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
+import RegisterPage from './components/Auth/RegisterPage';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
@@ -307,7 +308,7 @@ const AppContent: React.FC = () => {
   const isTerminalPage = location.pathname === '/terminals';
 
   // 是否在登录页面
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === "/login" || location.pathname === "/register";;
 
 
   const menuItems = [
@@ -419,6 +420,7 @@ const AppContent: React.FC = () => {
               <Routes>
                 {/* 公开路由 - 登录页面 */}
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
 
                 {/* 受保护的路由 - 需要登录 */}
                 <Route path="/providers" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
