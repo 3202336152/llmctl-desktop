@@ -23,12 +23,13 @@ import Help from './components/Help/Help';
 import NotificationCenter from './components/Notifications/NotificationCenter';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
+import RegisterPage from './components/Auth/RegisterPage';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
 import TerminalManager from './components/Terminal/TerminalManager';
 import { ResizableSider, StatusBar, TopBar } from './components/Layout';
-import { configAPI, sessionAPI } from './services/api';
+import { configAPI, sessionAPI, tokenAPI } from './services/api';
 import { ConfigImportRequest, StartSessionRequest } from './types';
 import { authStorage } from './utils/authStorage';
 import './i18n'; // 引入 i18n 配置
@@ -214,21 +215,38 @@ const AppContent: React.FC = () => {
           return;
         }
 
-        // 1. 终止Electron端的终端进程
+        // ✅ 1. 标记失效的Token为不健康状态
+        if (failedSession.tokenId) {
+          try {
+            console.log('[App] 标记Token为不健康:', {
+              providerId: failedSession.providerId,
+              tokenId: failedSession.tokenId
+            });
+            await tokenAPI.updateTokenHealth(failedSession.providerId, failedSession.tokenId, false);
+            console.log('[App] ✅ Token健康状态已更新为不健康');
+          } catch (error) {
+            console.error('[App] 更新Token健康状态失败:', error);
+            // 不阻塞后续流程，继续重启会话
+          }
+        } else {
+          console.warn('[App] 会话未关联tokenId，跳过健康状态更新');
+        }
+
+        // 2. 终止Electron端的终端进程
         try {
           await window.electronAPI.terminalKill(data.sessionId);
         } catch (error) {
           console.error('终止终端进程失败:', error);
         }
 
-        // 2. 销毁前端终端实例
+        // 3. 销毁前端终端实例
         dispatch(destroyTerminal(data.sessionId));
 
-        // 3. 删除旧会话（直接从数据库清除，不保留记录）
+        // 4. 删除旧会话（直接从数据库清除，不保留记录）
         await sessionAPI.deleteSession(data.sessionId);
         dispatch(removeSession(data.sessionId));
 
-        // 4. 创建新会话（使用相同的配置）
+        // 5. 创建新会话（使用相同的配置）
         const newSessionRequest: StartSessionRequest = {
           providerId: failedSession.providerId,
           workingDirectory: failedSession.workingDirectory,
@@ -307,7 +325,7 @@ const AppContent: React.FC = () => {
   const isTerminalPage = location.pathname === '/terminals';
 
   // 是否在登录页面
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === "/login" || location.pathname === "/register";;
 
 
   const menuItems = [
@@ -419,6 +437,7 @@ const AppContent: React.FC = () => {
               <Routes>
                 {/* 公开路由 - 登录页面 */}
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
 
                 {/* 受保护的路由 - 需要登录 */}
                 <Route path="/providers" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />

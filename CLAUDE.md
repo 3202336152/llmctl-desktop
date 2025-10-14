@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构，当前版本为 **v2.1.0**。
+LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构，当前版本为 **v2.1.3**。
 
 ## 开发环境要求
 
@@ -219,12 +219,17 @@ FLUSH PRIVILEGES;
 ### 4. 终端功能
 - **多终端并发**: 同时打开多个终端窗口
 - **标签页管理**: 便捷的终端标签页切换
+- **快捷键支持** (v2.1.3 新增):
+  - `Ctrl+1/2/3` 快速切换终端标签页
+  - `Ctrl+W` 快速关闭当前终端
 - **全屏模式**: F11/ESC快捷键切换全屏
 - **字体缩放**: Ctrl+滚轮动态调整字体（8-30px）
-- **复制粘贴**: Ctrl+C/Ctrl+V完整支持
+- **复制粘贴**: Ctrl+C/Ctrl+V完整支持，右键点击粘贴 (v2.1.3 新增)
 - **本地执行**: Electron本地执行，响应时间<10ms
 - **错误检测**: 实时监控终端输出，识别Token错误
 - **自动重启**: Token失效时自动重启会话
+- **手动切换Token** (v2.1.3 新增): 终端标签栏一键手动切换Token
+- **外部终端支持** (v2.1.3 新增): 一键切换到系统原生终端（Windows CMD/macOS Terminal/Linux Terminal）
 
 ### 5. 配置管理
 - 导入导出功能 (支持bash, powershell, cmd, json格式)
@@ -385,7 +390,25 @@ FLUSH PRIVILEGES;
 - `README.md` - 项目主页文档
 - `CHANGELOG.md` - 版本更新记录
 
-## 最新版本特性 (v2.1.0)
+## 最新版本特性 (v2.1.3)
+
+### 🎯 终端功能增强
+- **快捷键支持**：`Ctrl+1/2/3` 切换标签页，`Ctrl+W` 关闭终端
+- **右键粘贴**：在终端区域右键直接粘贴剪贴板内容
+- **手动切换Token**：终端标签栏新增"切换 Token"按钮，支持手动触发Token切换
+- **外部终端支持**：一键切换到系统原生终端
+  - Windows: CMD 窗口
+  - macOS: Terminal.app
+  - Linux: gnome-terminal
+  - 自动切换工作目录并执行会话命令
+  - **已知限制**：外部终端关闭后，系统无法自动检测，需手动重新创建会话
+
+### 🐛 Bug修复
+- 修复粘贴内容截断问题（移除分块发送逻辑）
+- 修复 MyBatis 参数映射错误
+- 优化粘贴逻辑，保留 CMD 原生 `[Pasted text]` 提示
+
+## 历史版本特性 (v2.1.0)
 
 ### 🎉 通知系统完整实现
 - **实时推送机制**：基于 SSE (Server-Sent Events) 的实时通知推送

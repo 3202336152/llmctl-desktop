@@ -194,3 +194,19 @@ CREATE TABLE `notifications` (
                                      KEY `idx_expires_at` (`expires_at`),
                                      CONSTRAINT `fk_notification_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='通知消息表';
+
+
+-- llmctl.email_verification_codes definition
+
+CREATE TABLE `email_verification_codes` (
+    `id` varchar(36) NOT NULL COMMENT '验证码ID',
+    `email` varchar(255) NOT NULL COMMENT '邮箱地址',
+    `code` varchar(6) NOT NULL COMMENT '验证码(6位数字)',
+    `purpose` enum('REGISTER','LOGIN','RESET_PASSWORD') NOT NULL COMMENT '验证码用途',
+    `used` tinyint(1) DEFAULT '0' COMMENT '是否已使用',
+    `expire_time` datetime NOT NULL COMMENT '过期时间',
+    `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_email_purpose` (`email`,`purpose`),
+    KEY `idx_expire_time` (`expire_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='邮箱验证码表';

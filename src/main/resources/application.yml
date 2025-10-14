@@ -24,6 +24,20 @@ spring:
       write-dates-as-timestamps: false
     default-property-inclusion: non_null
 
+  # 邮件配置
+  mail:
+    host: smtp.qq.com  # 或 smtp.163.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 # MyBatis配置
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -51,7 +65,7 @@ info:
   app:
     name: LLMctl
     description: LLM Control System
-    version: 2.1.0
+    version: 2.1.3
     author: Liu Yifan
 
 # Jasypt加密配置

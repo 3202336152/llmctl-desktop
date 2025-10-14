@@ -45,6 +45,9 @@ export interface ElectronAPI {
   // 监听 Token 切换要求
   onTokenSwitchRequired(callback: (data: { sessionId: string; errorMessage: string }) => void): () => void;
 
+  // 打开外部终端
+  openExternalTerminal(options: { workingDirectory: string; command: string }): Promise<{ success: boolean }>;
+
   // ==================== 配置导入导出 ====================
   // 监听导入配置消息
   onImportConfig(callback: (filePath: string) => void): () => void;
@@ -107,6 +110,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('token-switch-required', listener);
     };
   },
+
+  openExternalTerminal: (options) => ipcRenderer.invoke('open-external-terminal', options),
 
   // ==================== 配置导入导出 ====================
   onImportConfig: (callback) => {

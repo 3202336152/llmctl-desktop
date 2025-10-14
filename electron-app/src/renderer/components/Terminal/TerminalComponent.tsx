@@ -113,11 +113,8 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
           terminal.write(`\r\n\x1b[1;31m[错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
         } else {
           // ✅ 每次打开都是全新的 pty 进程，无历史记录恢复
-          console.log('[Terminal] 已创建全新的 pty 进程:', sessionId);
-
           // ✅ 如果会话配置了命令，自动执行该命令
           if (command && command !== 'cmd.exe') {
-            console.log('[Terminal] 自动执行会话命令:', command);
             // 延迟100ms确保pty完全初始化后再发送命令
             setTimeout(() => {
               window.electronAPI.terminalInput(sessionId, `${command}\r`).catch((error) => {
@@ -146,7 +143,18 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       });
     });
 
-    // 复制和粘贴功能
+    // ✅ 优化的粘贴逻辑：使用 xterm.js 的原生 paste()，让 CMD 完整处理
+    const handlePaste = (text: string) => {
+      if (!text) return;
+
+      // ✅ 使用 xterm.js 的原生 paste() 方法
+      // 这样可以让 CMD 完整处理粘贴内容，显示 [Pasted text #N +X lines] 提示
+      if (xtermRef.current) {
+        xtermRef.current.paste(text);
+      }
+    };
+
+    // 复制、粘贴和换行功能
     terminal.attachCustomKeyEventHandler((event) => {
       // Ctrl+C 复制
       if ((event.ctrlKey || event.metaKey) && event.key === 'c' && event.type === 'keydown') {
@@ -160,17 +168,25 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         }
       }
 
-      // Ctrl+V 粘贴
+      // Ctrl+V 粘贴（使用优化的粘贴逻辑）
       if ((event.ctrlKey || event.metaKey) && event.key === 'v' && event.type === 'keydown') {
         event.preventDefault();
         navigator.clipboard.readText().then(text => {
           if (text) {
-            window.electronAPI.terminalInput(sessionId, text).catch((error) => {
-              console.error('粘贴失败:', error);
-            });
+            handlePaste(text);
           }
         }).catch(err => {
           console.error('读取剪贴板失败:', err);
+        });
+        return false;
+      }
+
+      // ✅ Ctrl+Enter 换行（不执行命令）
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && event.type === 'keydown') {
+        event.preventDefault();
+        // 发送换行符 \n，而不是回车符 \r
+        window.electronAPI.terminalInput(sessionId, '\n').catch((error) => {
+          console.error('发送换行失败:', error);
         });
         return false;
       }
@@ -202,6 +218,26 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       }
     };
     window.addEventListener('resize', handleResize);
+
+    // ✅ 右键粘贴功能
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault(); // 阻止默认右键菜单
+
+      // 触发粘贴操作
+      navigator.clipboard.readText().then(text => {
+        if (text) {
+          // 使用优化的粘贴逻辑
+          handlePaste(text);
+        }
+      }).catch(err => {
+        console.error('读取剪贴板失败:', err);
+      });
+    };
+
+    // 添加右键菘贴监听
+    if (terminalRef.current) {
+      terminalRef.current.addEventListener('contextmenu', handleContextMenu);
+    }
 
     // 监听终端容器可见性变化，自动调整尺寸
     const observer = new IntersectionObserver(
@@ -235,6 +271,11 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     return () => {
       window.removeEventListener('resize', handleResize);
       observer.disconnect();
+
+      // 移除右键菜单监听
+      if (terminalRef.current) {
+        terminalRef.current.removeEventListener('contextmenu', handleContextMenu);
+      }
 
       // 取消监听输出
       unsubscribe();

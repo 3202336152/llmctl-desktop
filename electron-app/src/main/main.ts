@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, ipcMain, shell, Tray, nativeImage, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as child_process from 'child_process';
 import axios from 'axios';
 import { createMenu, setMenuLanguage, setAuthenticationStatus, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
@@ -14,35 +15,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 // 获取图标路径（兼容开发和生产环境）
 const getIconPath = (): string => {
-  if (isDev) {
-    // 开发环境：使用绝对路径
-    const devPath = path.join(process.cwd(), 'assets/icon.png');
-    console.log('[Icon] 开发环境图标路径:', devPath);
-
-    // 检查本地文件是否存在，如果不存在则使用远程图标
-    if (fs.existsSync(devPath)) {
-      return devPath;
-    } else {
-      console.log('[Icon] 本地图标文件不存在，将使用远程图标');
-      return devPath; // 返回本地路径，但会失败
-    }
-  } else {
-    // 生产环境：输出调试信息
-    console.log('[Icon] process.resourcesPath:', process.resourcesPath);
-    console.log('[Icon] __dirname:', __dirname);
-    console.log('[Icon] app.getAppPath():', app.getAppPath());
-
-    const prodPath = path.join(process.resourcesPath, 'assets/icon.png');
-    console.log('[Icon] 生产环境图标路径:', prodPath);
-
-    // 检查生产环境图标是否存在
-    if (fs.existsSync(prodPath)) {
-      return prodPath;
-    } else {
-      console.log('[Icon] 生产环境图标文件不存在，将使用远程图标');
-      return prodPath; // 返回本地路径，但会失败
-    }
-  }
+  return 'http://117.72.200.2/downloads/llmctl/icon.png';
 };
 
 // 获取远程图标URL（备用方案）
@@ -411,6 +384,70 @@ ipcMain.handle('terminal-resize', (_event, data: { sessionId: string; cols: numb
   console.log('[IPC] terminal-resize:', data);
   terminalManager.resize(data.sessionId, data.cols, data.rows);
   return { success: true };
+});
+
+/**
+ * 打开外部终端
+ */
+ipcMain.handle('open-external-terminal', async (_event, options: { workingDirectory: string; command: string }) => {
+  try {
+    console.log('[IPC] open-external-terminal:', options);
+
+    // Windows: 使用 cmd.exe 打开新窗口
+    if (process.platform === 'win32') {
+      // 使用 start 命令打开新的 CMD 窗口
+      // /K 保持窗口打开，/D 设置工作目录
+      const command = `start "LLMctl Terminal" /D "${options.workingDirectory}" cmd /K ${options.command}`;
+
+      child_process.exec(command, (error) => {
+        if (error) {
+          console.error('[IPC] 打开外部终端失败:', error);
+        } else {
+          console.log('[IPC] ✅ 外部终端已成功打开');
+        }
+      });
+
+      console.log('[IPC] 正在打开外部终端...', command);
+      return { success: true };
+    }
+    // macOS: 使用 Terminal.app
+    else if (process.platform === 'darwin') {
+      const script = `
+        tell application "Terminal"
+          do script "cd '${options.workingDirectory}' && ${options.command}"
+          activate
+        end tell
+      `;
+      child_process.exec(`osascript -e '${script}'`, (error) => {
+        if (error) {
+          console.error('[IPC] 打开外部终端失败:', error);
+        } else {
+          console.log('[IPC] ✅ 外部终端已成功打开 (macOS)');
+        }
+      });
+
+      console.log('[IPC] 正在打开外部终端 (macOS)...');
+      return { success: true };
+    }
+    // Linux: 使用 gnome-terminal 或其他终端
+    else {
+      const command = `gnome-terminal --working-directory="${options.workingDirectory}" -- bash -c "${options.command}; exec bash"`;
+
+      child_process.exec(command, (error) => {
+        if (error) {
+          console.error('[IPC] 打开外部终端失败:', error);
+        } else {
+          console.log('[IPC] ✅ 外部终端已成功打开 (Linux)');
+        }
+      });
+
+      console.log('[IPC] 正在打开外部终端 (Linux)...');
+      return { success: true };
+    }
+  } catch (error) {
+    console.error('[IPC] open-external-terminal 失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 // 清理所有会话

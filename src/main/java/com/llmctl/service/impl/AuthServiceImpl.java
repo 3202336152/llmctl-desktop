@@ -43,21 +43,21 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        String username = request.getUsername();
+        String usernameOrEmail = request.getUsername();
         String password = request.getPassword();
 
-        log.info("用户尝试登录: {}", username);
+        log.info("用户尝试登录: {}", usernameOrEmail);
 
-        // 1. 查询用户
-        User user = userMapper.findByUsername(username);
+        // 1. 查询用户（支持用户名或邮箱登录）
+        User user = findUserByUsernameOrEmail(usernameOrEmail);
         if (user == null) {
-            recordLoginFailure(null, username, "用户不存在", request.getIpAddress());
+            recordLoginFailure(null, usernameOrEmail, "用户不存在", request.getIpAddress());
             throw new AuthenticationException("用户名或密码错误");
         }
 
         // 2. 检查账户状态
         if (!user.getIsActive()) {
-            recordLoginFailure(user.getId(), username, "账户未激活", request.getIpAddress());
+            recordLoginFailure(user.getId(), usernameOrEmail, "账户未激活", request.getIpAddress());
             throw new AuthenticationException("账户未激活");
         }
 
@@ -65,7 +65,7 @@ public class AuthServiceImpl implements IAuthService {
         if (user.getIsLocked()) {
             if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
                 long remainingMinutes = java.time.Duration.between(LocalDateTime.now(), user.getLockedUntil()).toMinutes();
-                recordLoginFailure(user.getId(), username, "账户已锁定", request.getIpAddress());
+                recordLoginFailure(user.getId(), usernameOrEmail, "账户已锁定", request.getIpAddress());
                 throw new AuthenticationException("账户已锁定，请在 " + remainingMinutes + " 分钟后重试");
             } else {
                 // 锁定时间已过，解锁账户
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // 4. 验证密码
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            handleLoginFailure(user, username, request.getIpAddress());
+            handleLoginFailure(user, usernameOrEmail, request.getIpAddress());
             throw new AuthenticationException("用户名或密码错误");
         }
 
@@ -91,7 +91,7 @@ public class AuthServiceImpl implements IAuthService {
         userMapper.updateRefreshToken(user.getId(), refreshTokenHash,
                 LocalDateTime.now().plusDays(7)); // 7天
 
-        log.info("用户登录成功: userId={}, username={}", user.getId(), username);
+        log.info("用户登录成功: userId={}, username={}", user.getId(), user.getUsername());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -252,5 +252,35 @@ public class AuthServiceImpl implements IAuthService {
         log.setFailureReason(reason);
         log.setIpAddress(ipAddress);
         loginLogMapper.insert(log);
+    }
+
+    /**
+     * 根据用户名或邮箱查找用户
+     * 支持同时使用用户名或邮箱登录
+     *
+     * @param usernameOrEmail 用户名或邮箱
+     * @return User对象，如果不存在则返回null
+     */
+    private User findUserByUsernameOrEmail(String usernameOrEmail) {
+        if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
+            return null;
+        }
+
+        // 判断输入是否为邮箱格式（包含@符号）
+        if (usernameOrEmail.contains("@")) {
+            // 尝试通过邮箱查找
+            User user = userMapper.findByEmail(usernameOrEmail);
+            if (user != null) {
+                log.debug("通过邮箱找到用户: {}", usernameOrEmail);
+                return user;
+            }
+        }
+
+        // 通过用户名查找
+        User user = userMapper.findByUsername(usernameOrEmail);
+        if (user != null) {
+            log.debug("通过用户名找到用户: {}", usernameOrEmail);
+        }
+        return user;
     }
 }

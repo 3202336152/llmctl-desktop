@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Tabs, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Form, Input, Button, message, Modal } from 'antd';
+import { UserOutlined, LockOutlined, EyeOutlined, EyeInvisibleOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../utils/authStorage';
 import apiClient from '../../services/httpClient';
-import './LoginPage.css';
+import './Auth.css';
 
 const LoginPage: React.FC = () => {
-    const [loginForm] = Form.useForm();
-    const [registerForm] = Form.useForm();
+    const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('login');
+    const [showPassword, setShowPassword] = useState(false);
+    const [forgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = async () => {
+    const handleLogin = async (values: any) => {
         try {
             setLoading(true);
-            const values = await loginForm.validateFields();
 
             const response = await apiClient.post('/auth/login', {
-                username: values.username,
+                username: values.usernameOrEmail,
                 password: values.password,
             });
 
@@ -39,113 +38,102 @@ const LoginPage: React.FC = () => {
         }
     };
 
-    const handleRegister = async () => {
-        try {
-            setLoading(true);
-            const values = await registerForm.validateFields();
+    const handleForgotPassword = () => {
+        setForgotPasswordModalVisible(true);
+    };
 
-            await apiClient.post('/auth/register', {
-                username: values.username,
-                password: values.password,
-                displayName: values.displayName,
-                email: values.email,
-            });
-
-            message.success('注册成功！请登录');
-            setActiveTab('login');
-            registerForm.resetFields();
-        } catch (error: any) {
-            console.error('注册失败:', error);
-            message.error(error.message || '注册失败');
-        } finally {
-            setLoading(false);
-        }
+    const handleForgotPasswordSubmit = () => {
+        message.info('密码重置功能即将推出，请联系管理员重置密码');
+        setForgotPasswordModalVisible(false);
     };
 
     return (
-        <div className="login-container">
-            <Card className="login-card" style={{ width: 400 }}>
-                <div className="login-header">
-                    <h1>LLMctl</h1>
-                    <p>LLM Provider 管理系统</p>
+        <div className="auth-container">
+            <div className="auth-card">
+                {/* Logo 和标题 */}
+                <div className="auth-header">
+                    <div className="auth-logo">
+                        <img src="http://117.72.200.2/downloads/llmctl/icon.png" alt="LLMctl" className="logo-icon-img" />
+                        <span className="logo-text">LLMctl</span>
+                    </div>
+                    <h1 className="auth-title">登录</h1>
                 </div>
 
-                <Tabs activeKey={activeTab} onChange={setActiveTab} centered>
-                    <Tabs.TabPane tab="登录" key="login">
-                        <Form form={loginForm} onFinish={handleLogin} layout="vertical">
-                            <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-                                <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
-                            </Form.Item>
+                {/* 登录表单 */}
+                <Form form={form} onFinish={handleLogin} layout="vertical" className="auth-form">
+                    {/* 用户名或邮箱 */}
+                    <Form.Item
+                        name="usernameOrEmail"
+                        rules={[{ required: true, message: '请输入您的用户名或邮箱地址' }]}
+                    >
+                        <div className="input-wrapper">
+                            <MailOutlined className="input-icon" />
+                            <Input
+                                className="auth-input"
+                                placeholder="请输入您的用户名或邮箱地址"
+                                size="large"
+                            />
+                        </div>
+                    </Form.Item>
 
-                            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-                                <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
-                            </Form.Item>
+                    {/* 密码 */}
+                    <Form.Item
+                        name="password"
+                        rules={[{ required: true, message: '请输入您的密码' }]}
+                    >
+                        <div className="input-wrapper">
+                            <LockOutlined className="input-icon" />
+                            <Input
+                                className="auth-input"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="请输入您的密码"
+                                size="large"
+                            />
+                            <div className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                            </div>
+                        </div>
+                    </Form.Item>
 
-                            <Form.Item>
-                                <Button type="primary" htmlType="submit" loading={loading} size="large" block>
-                                    登录
-                                </Button>
-                            </Form.Item>
-                        </Form>
-                    </Tabs.TabPane>
+                    {/* 继续按钮 */}
+                    <Form.Item>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={loading}
+                            className="auth-button"
+                            size="large"
+                            block
+                        >
+                            登录
+                        </Button>
+                    </Form.Item>
 
-                    <Tabs.TabPane tab="注册" key="register">
-                        <Form form={registerForm} onFinish={handleRegister} layout="vertical">
-                            <Form.Item
-                                name="username"
-                                rules={[
-                                    { required: true, message: '请输入用户名' },
-                                    { min: 3, message: '用户名至少3个字符' },
-                                ]}
-                            >
-                                <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
-                            </Form.Item>
+                    {/* 忘记密码 */}
+                    <div className="auth-link-center">
+                        <a onClick={handleForgotPassword} className="auth-link">忘记密码？</a>
+                    </div>
+                </Form>
 
-                            <Form.Item
-                                name="password"
-                                rules={[
-                                    { required: true, message: '请输入密码' },
-                                    { min: 6, message: '密码至少6个字符' },
-                                ]}
-                            >
-                                <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
-                            </Form.Item>
+                {/* 注册提示 */}
+                <div className="auth-footer">
+                    <span className="auth-footer-text">没有账户？</span>
+                    <a onClick={() => navigate('/register')} className="auth-footer-link">注册</a>
+                </div>
+            </div>
 
-                            <Form.Item
-                                name="confirmPassword"
-                                dependencies={['password']}
-                                rules={[
-                                    { required: true, message: '请确认密码' },
-                                    ({ getFieldValue }: any) => ({
-                                        validator(_: any, value: any) {
-                                            if (!value || getFieldValue('password') === value) {
-                                                return Promise.resolve();
-                                            }
-                                            return Promise.reject(new Error('两次输入的密码不一致'));
-                                        },
-                                    }),
-                                ]}
-                            >
-                                <Input.Password prefix={<LockOutlined />} placeholder="确认密码" size="large" />
-                            </Form.Item>
-
-                            <Form.Item name="displayName">
-                                <Input prefix={<UserOutlined />} placeholder="显示名称（可选）" size="large" />
-                            </Form.Item>
-
-                            <Form.Item name="email" rules={[{ type: 'email', message: '请输入有效的邮箱地址' }]}>
-                                <Input prefix={<MailOutlined />} placeholder="邮箱（可选）" size="large" />
-                            </Form.Item>
-
-                            <Form.Item>
-                                <Button type="primary" htmlType="submit" loading={loading} size="large" block>
-                                    注册
-                                </Button>
-                            </Form.Item>
-                        </Form>
-                    </Tabs.TabPane>
-                </Tabs>
-            </Card>
+            {/* 忘记密码模态框 */}
+            <Modal
+                title="忘记密码"
+                open={forgotPasswordModalVisible}
+                onOk={handleForgotPasswordSubmit}
+                onCancel={() => setForgotPasswordModalVisible(false)}
+                okText="确定"
+                cancelText="取消"
+            >
+                <p>密码重置功能即将推出。</p>
+                <p>目前请联系管理员协助重置您的密码。</p>
+            </Modal>
         </div>
     );
 };

@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo } from 'react';
-import { Card, Button, Tabs, Space, Tag, Empty, message } from 'antd';
+import { Card, Button, Tabs, Space, Tag, Empty, message, Modal } from 'antd';
 import {
   FolderOutlined,
   ExpandOutlined,
   CompressOutlined,
   DesktopOutlined,
+  SwapOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
-import { closeTerminal, setActiveTab, toggleTerminalFullscreen, openTerminal } from '../../store/slices/sessionSlice';
+import { closeTerminal, setActiveTab, toggleTerminalFullscreen, openTerminal, addSession, removeSession, destroyTerminal } from '../../store/slices/sessionSlice';
 import TerminalComponent from './TerminalComponent';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { sessionAPI, tokenAPI } from '../../services/api';
+import { StartSessionRequest } from '../../types';
 
 /**
  * 终端管理器 - 独立页面
@@ -70,6 +74,178 @@ const TerminalManager: React.FC = () => {
       message.error('关闭终端失败，请重试');
     }
   };
+
+  // ✅ 手动切换当前终端的 Token
+  const handleManualSwitchToken = async () => {
+    if (!activeTabKey) {
+      message.warning('请先选择一个终端');
+      return;
+    }
+
+    const currentSession = sessions.find(s => s.id === activeTabKey);
+    if (!currentSession) {
+      message.error('无法找到当前会话');
+      return;
+    }
+
+    Modal.confirm({
+      title: '手动切换 Token',
+      content: `确定要为当前终端 "${currentSession.workingDirectory.split(/[\\/]/).filter(Boolean).pop()}" 切换 Token 吗？这将重启终端会话。`,
+      okText: '确认切换',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          message.loading({ content: '正在切换 Token...', key: 'switch-token', duration: 0 });
+
+          // 1. 标记当前Token为不健康（如果存在）
+          if (currentSession.tokenId) {
+            try {
+              console.log('[TerminalManager] 标记Token为不健康:', {
+                providerId: currentSession.providerId,
+                tokenId: currentSession.tokenId
+              });
+              await tokenAPI.updateTokenHealth(currentSession.providerId, currentSession.tokenId, false);
+              console.log('[TerminalManager] ✅ Token健康状态已更新为不健康');
+            } catch (error) {
+              console.error('[TerminalManager] 更新Token健康状态失败:', error);
+              // 不阻塞后续流程
+            }
+          }
+
+          // 2. 终止Electron端的终端进程
+          try {
+            await window.electronAPI.terminalKill(activeTabKey);
+          } catch (error) {
+            console.error('[TerminalManager] 终止终端进程失败:', error);
+          }
+
+          // 3. 销毁前端终端实例
+          dispatch(destroyTerminal(activeTabKey));
+
+          // 4. 删除旧会话
+          await sessionAPI.deleteSession(activeTabKey);
+          dispatch(removeSession(activeTabKey));
+
+          // 5. 创建新会话（使用相同配置）
+          const newSessionRequest: StartSessionRequest = {
+            providerId: currentSession.providerId,
+            workingDirectory: currentSession.workingDirectory,
+            command: currentSession.command,
+          };
+
+          const response = await sessionAPI.startSession(newSessionRequest);
+          if (response.data) {
+            dispatch(addSession(response.data));
+            dispatch(openTerminal(response.data.id));
+            message.success({ content: 'Token 切换成功，会话已重启', key: 'switch-token' });
+          } else {
+            message.error({ content: '创建新会话失败', key: 'switch-token' });
+          }
+        } catch (error) {
+          console.error('[TerminalManager] 切换Token失败:', error);
+          message.error({ content: `切换Token失败: ${error}`, key: 'switch-token' });
+        }
+      },
+    });
+  };
+
+  // ✅ 切换到外部终端
+  const handleOpenExternalTerminal = async () => {
+    if (!activeTabKey) {
+      message.warning('请先选择一个终端');
+      return;
+    }
+
+    const currentSession = sessions.find(s => s.id === activeTabKey);
+    if (!currentSession) {
+      message.error('无法找到当前会话');
+      return;
+    }
+
+    Modal.confirm({
+      title: '切换到外部终端',
+      content: (
+        <div>
+          <p>确定要切换到系统外部终端吗？</p>
+          <p style={{ marginTop: 8, color: '#666', fontSize: '13px' }}>
+            ⚠️ 注意：
+          </p>
+          <ul style={{ color: '#666', fontSize: '13px', marginTop: 4, paddingLeft: 20 }}>
+            <li>当前内置终端将被关闭</li>
+            <li>会话状态将更新为"非活跃"</li>
+            <li>外部终端关闭后，系统无法自动检测</li>
+            <li>如需继续使用，请重新创建会话</li>
+          </ul>
+        </div>
+      ),
+      okText: '确认切换',
+      cancelText: '取消',
+      width: 480,
+      onOk: async () => {
+        try {
+          message.loading({ content: '正在打开外部终端...', key: 'external-terminal', duration: 0 });
+
+          // 1. 打开外部终端（传递工作目录和命令）
+          const result = await window.electronAPI.openExternalTerminal({
+            workingDirectory: currentSession.workingDirectory,
+            command: currentSession.command || 'claude',
+          });
+
+          if (!result.success) {
+            throw new Error('打开外部终端失败');
+          }
+
+          // 2. 关闭当前内置终端（这会自动将会话状态改为 inactive）
+          await handleCloseTerminal(activeTabKey);
+
+          message.success({
+            content: '已切换到外部终端。注意：外部终端关闭后，请手动重新创建会话。',
+            key: 'external-terminal',
+            duration: 5,
+          });
+        } catch (error) {
+          console.error('[TerminalManager] 切换到外部终端失败:', error);
+          message.error({
+            content: `切换失败: ${error}`,
+            key: 'external-terminal',
+          });
+        }
+      },
+    });
+  };
+
+  // ✅ 快捷键支持：Ctrl+1/2/3 切换标签页，Ctrl+W 关闭当前标签页
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+W 关闭当前标签页
+      if ((event.ctrlKey || event.metaKey) && event.key === 'w') {
+        // 检查焦点是否在终端页面上（避免干扰其他页面）
+        const isTerminalPage = window.location.hash.includes('/terminals');
+        if (isTerminalPage && activeTabKey && openTerminalSessions.length > 0) {
+          event.preventDefault();
+          handleCloseTerminal(activeTabKey);
+        }
+      }
+
+      // Ctrl+数字键 切换标签页（Ctrl+1 切换到第一个标签，Ctrl+2 切换到第二个...）
+      if ((event.ctrlKey || event.metaKey) && /^[1-9]$/.test(event.key)) {
+        const isTerminalPage = window.location.hash.includes('/terminals');
+        if (isTerminalPage) {
+          event.preventDefault();
+          const index = parseInt(event.key, 10) - 1; // 索引从0开始
+          if (index < openTerminalSessions.length) {
+            const targetSessionId = openTerminalSessions[index];
+            dispatch(setActiveTab(targetSessionId));
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [dispatch, activeTabKey, openTerminalSessions]);
 
   // 生成标签页数据
   const tabItems = openTerminalSessions.map(sessionId => {
@@ -203,16 +379,35 @@ const TerminalManager: React.FC = () => {
             background: '#f5f5f5',
           }}
           tabBarExtraContent={
-            <Button
-              type="text"
-              size={isTerminalFullscreen ? 'small' : 'middle'}
-              icon={isTerminalFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
-              onClick={() => dispatch(toggleTerminalFullscreen())}
-              title={isTerminalFullscreen ? '退出全屏 (F11)' : '全屏显示 (F11)'}
-              style={{
-                marginRight: 8,
-              }}
-            />
+            <Space size="small">
+              <Button
+                type="text"
+                size={isTerminalFullscreen ? 'small' : 'middle'}
+                icon={<SwapOutlined />}
+                onClick={handleManualSwitchToken}
+                title="手动切换 Token"
+                disabled={!activeTabKey || openTerminalSessions.length === 0}
+              >
+                {!isTerminalFullscreen && '切换 Token'}
+              </Button>
+              <Button
+                type="text"
+                size={isTerminalFullscreen ? 'small' : 'middle'}
+                icon={<ExportOutlined />}
+                onClick={handleOpenExternalTerminal}
+                title="切换到外部终端"
+                disabled={!activeTabKey || openTerminalSessions.length === 0}
+              >
+                {!isTerminalFullscreen && '外部终端'}
+              </Button>
+              <Button
+                type="text"
+                size={isTerminalFullscreen ? 'small' : 'middle'}
+                icon={isTerminalFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
+                onClick={() => dispatch(toggleTerminalFullscreen())}
+                title={isTerminalFullscreen ? '退出全屏 (F11)' : '全屏显示 (F11)'}
+              />
+            </Space>
           }
         />
 

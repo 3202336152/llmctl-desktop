@@ -42,4 +42,9 @@ export const tokenAPI = {
   recoverAllUnhealthyTokens: (providerId: string): Promise<ApiResponse<number>> => {
     return httpClient.post(`/providers/${providerId}/tokens/recover-all`).then(response => response.data);
   },
+
+  // 更新单个Token的健康状态
+  updateTokenHealth: (providerId: string, tokenId: string, healthy: boolean): Promise<ApiResponse<void>> => {
+    return httpClient.put(`/providers/${providerId}/tokens/${tokenId}/health`, { healthy }).then(response => response.data);
+  },
 };

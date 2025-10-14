@@ -12,41 +12,66 @@ interface TerminalSession {
   instanceId: number; // 添加实例ID，用于区分不同的会话实例
   outputBuffer: string; // 输出缓冲区，用于错误检测
   errorDetected: boolean; // 标记是否已检测到错误，避免重复通知
+  createdAt: number; // 会话创建时间戳，用于延迟错误检测
+  errorDetectionEnabled: boolean; // 是否启用错误检测（延迟启动）
+  errorDetectionTimer?: NodeJS.Timeout; // 错误检测延迟定时器（用于清除）
+  isResumed: boolean; // 标记是否为重建的会话(/resume)
 }
 
 // Token/API 错误检测模式
 const TOKEN_ERROR_PATTERNS = [
-  // Claude API 错误
+  // ===== Claude/Anthropic API 错误 =====
+  // 余额/配额错误
   /credit balance is too low/i,
   /insufficient credits/i,
   /rate limit exceeded/i,
   /quota.*exceeded/i,
 
-  // 认证错误
+  // 账户/组织错误
+  /no available claude account/i,                    // ✅ 新增: 无可用Claude账户
+  /this organization has been disabled/i,            // ✅ 新增: 组织已被禁用
+  /organization.*disabled/i,                         // ✅ 新增: 组织禁用(通用)
+  /account.*suspended/i,                             // ✅ 新增: 账户已暂停
+  /account.*disabled/i,                              // ✅ 新增: 账户已禁用
+
+  // 认证/权限错误
   /401.*unauthorized/i,
   /403.*forbidden/i,
   /authentication.*failed/i,
   /invalid.*api.*key/i,
   /invalid.*token/i,
+  /api.*key.*invalid/i,                              // ✅ 新增: API密钥无效
+  /api.*key.*expired/i,                              // ✅ 新增: API密钥过期
 
-  // Anthropic 特定错误
+  // Anthropic 特定错误类型
   /error.*authentication_error/i,
   /error.*permission_error/i,
   /error.*rate_limit_error/i,
+  /error.*api_error/i,                               // ✅ 新增: API错误
+  /error.*overloaded_error/i,                        // ✅ 新增: 过载错误
 
-  // OpenAI 错误
+  // ===== OpenAI 错误 =====
   /insufficient_quota/i,
   /invalid_api_key/i,
+  /account.*deactivated/i,                           // ✅ 新增: 账户已停用
+  /billing.*hard.*limit/i,                           // ✅ 新增: 计费硬限制
 
-  // 通用错误
+  // ===== 通用 HTTP 错误 =====
+  /500.*internal.*server.*error/i,                   // ✅ 新增: 服务器内部错误
+  /502.*bad.*gateway/i,                              // ✅ 新增: 网关错误
+  /503.*service.*unavailable/i,                      // ✅ 新增: 服务不可用
+  /504.*gateway.*timeout/i,                          // ✅ 新增: 网关超时
+
+  // ===== 通用认证/授权错误 =====
   /authentication.*error/i,
   /authorization.*failed/i,
-];
+  /access.*denied/i,                                 // ✅ 新增: 访问被拒绝
+  /permission.*denied/i,                             // ✅ 新增: 权限被拒绝
 
-// 获取 API Base URL（支持环境变量配置）
-const getApiBaseUrl = (): string => {
-  return process.env.LLMCTL_API_BASE_URL || 'http://localhost:8080/llmctl';
-};
+  // ===== API 错误消息格式 =====
+  /"type"\s*:\s*"error"/i,                           // ✅ 新增: JSON错误类型
+  /api.*error.*\d{3}/i,                              // ✅ 新增: API错误带状态码
+];
 
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
@@ -59,8 +84,17 @@ class TerminalManager {
   } = {}): Promise<{ existed: boolean }> {
     // ✅ 检查是否已存在会话
     const existingSession = this.sessions.get(sessionId);
+    const isResumed = !!existingSession; // 如果会话已存在，说明是 /resume 重建
+
     if (existingSession) {
-      console.log('[TerminalManager] ⚠️ 会话已存在，销毁旧进程并创建新的:', sessionId);
+      console.log('[TerminalManager] ⚠️ 会话已存在，销毁旧进程并创建新的 (resume):', sessionId);
+
+      // ✅ 清除之前的错误检测定时器
+      if (existingSession.errorDetectionTimer) {
+        clearTimeout(existingSession.errorDetectionTimer);
+        console.log('[TerminalManager] ✅ 已清除旧的错误检测定时器');
+      }
+
       try {
         existingSession.process.kill();
       } catch (error) {
@@ -99,7 +133,8 @@ class TerminalManager {
       // 分配新的实例ID
       const currentInstanceId = ++this.instanceCounter;
 
-      this.sessions.set(sessionId, {
+      // ✅ 创建会话对象（暂不设置定时器）
+      const newSession: TerminalSession = {
         id: sessionId,
         process: ptyProcess,
         window,
@@ -108,7 +143,34 @@ class TerminalManager {
         instanceId: currentInstanceId,
         outputBuffer: '', // 初始化输出缓冲区
         errorDetected: false, // 初始化错误检测标记
-      });
+        createdAt: Date.now(), // 记录创建时间
+        errorDetectionEnabled: false, // 初始禁用错误检测
+        errorDetectionTimer: undefined, // 初始无定时器
+        isResumed, // 标记是否为重建的会话
+      };
+
+      this.sessions.set(sessionId, newSession);
+
+      // ✅ 智能延迟启动错误检测
+      // - 首次创建会话: 延迟5秒（避免检测到历史错误）
+      // - 重建会话(/resume): 延迟2秒（更快响应新错误）
+      const detectionDelay = isResumed ? 2000 : 5000;
+      const delayLabel = isResumed ? '2秒 (resume)' : '5秒 (首次创建)';
+
+      console.log(`[TerminalManager] ⏰ 将在 ${delayLabel} 后启用错误检测:`, sessionId);
+
+      // ✅ 保存定时器引用，以便后续可以清除
+      const timer = setTimeout(() => {
+        const session = this.sessions.get(sessionId);
+        if (session && session.instanceId === currentInstanceId) {
+          session.errorDetectionEnabled = true;
+          session.errorDetectionTimer = undefined; // 清除定时器引用
+          console.log('[TerminalManager] ✅ 错误检测已启用:', sessionId);
+        }
+      }, detectionDelay);
+
+      // ✅ 将定时器保存到会话对象中
+      newSession.errorDetectionTimer = timer;
 
       ptyProcess.onData((data: string) => {
         // 打印原始终端输出（帮助调试）
@@ -116,12 +178,20 @@ class TerminalManager {
           console.log('[TerminalManager] ⚠️ 检测到可疑输出:', sessionId, data.substring(0, 200));
         }
 
+        // ✅ 过滤掉 bracketed paste mode 的控制序列
+        // 1. 移除启用/禁用控制序列：\x1b[?2004h 和 \x1b[?2004l
+        // 2. 移除 bracketed paste 包裹序列：\x1b[200~ 和 \x1b[201~
+        // ✅ 保留 CMD 的粘贴提示文本 [Pasted text #N +X lines]
+        let filteredData = data
+          .replace(/\x1b\[\?2004[hl]/g, '')
+          .replace(/\x1b\[20[01]~/g, '');
+
         // 检测 Token 错误（不阻塞输出）
-        this.detectTokenError(sessionId, data, currentInstanceId).catch(err => {
+        this.detectTokenError(sessionId, filteredData, currentInstanceId).catch(err => {
           console.error('[TerminalManager] ❌ 错误检测失败:', err);
         });
 
-        this.sendOutput(sessionId, data, currentInstanceId);
+        this.sendOutput(sessionId, filteredData, currentInstanceId);
       });
 
       ptyProcess.onExit(({ exitCode }) => {
@@ -148,9 +218,18 @@ class TerminalManager {
     }
 
     try {
+      // ✅ 过滤掉 bracketed paste mode 的控制序列
+      // 移除 \x1b[?2004h (启用) 和 \x1b[?2004l (禁用)
+      let filteredData = data.replace(/\x1b\[\?2004[hl]/g, '');
+
+      // 如果过滤后数据为空，直接返回
+      if (!filteredData) {
+        return;
+      }
+
       // 如果数据较小，直接写入
-      if (data.length <= 1024) {
-        session.process.write(data);
+      if (filteredData.length <= 1024) {
+        session.process.write(filteredData);
         return;
       }
 
@@ -160,11 +239,11 @@ class TerminalManager {
 
       let offset = 0;
       const writeChunk = () => {
-        if (offset >= data.length) {
+        if (offset >= filteredData.length) {
           return; // 写入完成
         }
 
-        const chunk = data.slice(offset, offset + chunkSize);
+        const chunk = filteredData.slice(offset, offset + chunkSize);
         session.process.write(chunk);
         offset += chunkSize;
 
@@ -205,6 +284,11 @@ class TerminalManager {
       return;
     }
 
+    // ✅ 如果错误检测未启用，跳过检测（避免检测历史输出）
+    if (!session.errorDetectionEnabled) {
+      return;
+    }
+
     // 如果已经检测到错误，不再重复检测
     if (session.errorDetected) {
       return;
@@ -232,23 +316,14 @@ class TerminalManager {
         // 标记已检测到错误，避免重复触发
         session.errorDetected = true;
 
-        // 调用后端 API 标记 Token 为不健康
-        console.log('[TerminalManager] 🔧 即将调用 markTokenUnhealthy...');
-
-        try {
-          await this.markTokenUnhealthy(sessionId);
-          console.log('[TerminalManager] ✅ markTokenUnhealthy 调用完成');
-        } catch (error) {
-          console.error('[TerminalManager] ❌ markTokenUnhealthy 调用失败:', error);
-        }
-
-        // 提示用户重启会话以切换 Token
+        // ✅ 不在主进程调用健康状态更新API（因为缺少JWT认证）
+        // ✅ 改为在渲染进程的App.tsx中调用tokenAPI.updateTokenHealth（携带JWT）
         console.log('[TerminalManager] 📤 发送 token-switch-required 事件到渲染进程...');
         session.window.webContents.send('token-switch-required', {
           sessionId,
           errorMessage: '当前 Token 已失效',
         });
-        console.log('[TerminalManager] ✅ 事件已发送');
+        console.log('[TerminalManager] ✅ 事件已发送（渲染进程将负责更新Token健康状态）');
 
         // 清空缓冲区
         session.outputBuffer = '';
@@ -257,108 +332,16 @@ class TerminalManager {
     }
   }
 
-  /**
-   * 标记 Token 为不健康状态
-   */
-  private async markTokenUnhealthy(sessionId: string): Promise<void> {
-    console.log('[TerminalManager] ========== 开始标记Token为不健康 ==========');
-    console.log('[TerminalManager] Session ID:', sessionId);
-
-    try {
-      // 从后端获取会话信息，直接获取保存的 tokenId
-      const apiBaseUrl = getApiBaseUrl();
-      const sessionUrl = `${apiBaseUrl}/sessions/${sessionId}`;
-      console.log('[TerminalManager] 正在请求会话信息:', sessionUrl);
-
-      const sessionResponse = await fetch(sessionUrl);
-      console.log('[TerminalManager] 会话请求响应状态:', sessionResponse.status);
-
-      if (!sessionResponse.ok) {
-        console.error('[TerminalManager] ❌ 获取会话信息失败:', sessionResponse.status, sessionResponse.statusText);
-        return;
-      }
-
-      const sessionData = await sessionResponse.json();
-      console.log('[TerminalManager] 会话数据:', JSON.stringify(sessionData, null, 2));
-
-      const providerId = sessionData.data?.providerId;
-      const tokenId = sessionData.data?.tokenId;
-
-      console.log('[TerminalManager] 提取的信息:', { providerId, tokenId });
-
-      if (!providerId) {
-        console.error('[TerminalManager] ❌ 无法获取 Provider ID');
-        return;
-      }
-
-      if (!tokenId) {
-        console.error('[TerminalManager] ❌ 会话未关联 Token ID');
-        return;
-      }
-
-      // 构建更新URL
-      const updateUrl = `${apiBaseUrl}/providers/${providerId}/tokens/${tokenId}/health`;
-      const requestBody = { healthy: false };
-
-      console.log('[TerminalManager] 准备发送PUT请求:');
-      console.log('  URL:', updateUrl);
-      console.log('  Body:', JSON.stringify(requestBody));
-
-      // 直接使用保存的 tokenId 标记为不健康
-      const updateResponse = await fetch(updateUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('[TerminalManager] 更新请求响应状态:', updateResponse.status);
-
-      if (updateResponse.ok) {
-        const updateResult = await updateResponse.json();
-        console.log('[TerminalManager] ✅ 成功标记 Token 为不健康:', tokenId);
-        console.log('[TerminalManager] 更新响应:', JSON.stringify(updateResult, null, 2));
-
-        // 验证更新是否成功
-        const verifyUrl = `${apiBaseUrl}/providers/${providerId}/tokens/${tokenId}`;
-        console.log('[TerminalManager] 验证Token状态:', verifyUrl);
-
-        const verifyResponse = await fetch(verifyUrl);
-        if (verifyResponse.ok) {
-          const tokenData = await verifyResponse.json();
-          console.log('[TerminalManager] 🔍 验证结果:', {
-            tokenId,
-            alias: tokenData.data?.alias,
-            healthy: tokenData.data?.healthy,
-            enabled: tokenData.data?.enabled
-          });
-
-          if (tokenData.data?.healthy === false) {
-            console.log('[TerminalManager] ✅✅ 数据库已确认Token为不健康状态');
-          } else {
-            console.error('[TerminalManager] ⚠️ 警告：Token状态未按预期更新！实际状态:', tokenData.data?.healthy);
-          }
-        }
-      } else {
-        const errorText = await updateResponse.text();
-        console.error('[TerminalManager] ❌ 标记 Token 失败:', updateResponse.status, updateResponse.statusText);
-        console.error('[TerminalManager] 错误响应体:', errorText);
-      }
-    } catch (error: any) {
-      console.error('[TerminalManager] ❌❌ 标记 Token 过程中发生异常:');
-      console.error('[TerminalManager] 错误类型:', error?.constructor?.name);
-      console.error('[TerminalManager] 错误消息:', error?.message);
-      console.error('[TerminalManager] 错误堆栈:', error?.stack);
-    }
-
-    console.log('[TerminalManager] ========== 标记Token流程结束 ==========');
-  }
-
   killSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) {
       return;
+    }
+
+    // ✅ 清除错误检测定时器
+    if (session.errorDetectionTimer) {
+      clearTimeout(session.errorDetectionTimer);
+      console.log('[TerminalManager] ✅ 已清除错误检测定时器 (killSession)');
     }
 
     try {
@@ -384,6 +367,11 @@ class TerminalManager {
 
   cleanup(): void {
     this.sessions.forEach((session) => {
+      // ✅ 清除错误检测定时器
+      if (session.errorDetectionTimer) {
+        clearTimeout(session.errorDetectionTimer);
+      }
+
       try {
         session.process.kill();
       } catch (error) {

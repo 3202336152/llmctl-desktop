@@ -101,10 +101,10 @@
     </update>
 
     <!-- 更新Token健康状态 -->
-    <update id="updateHealthStatus" parameterType="map">
+    <update id="updateHealthStatus">
         UPDATE tokens
-        SET healthy = #{healthy}, updated_at = NOW()
-        WHERE id = #{id}
+        SET healthy = #{healthy,jdbcType=BOOLEAN}, updated_at = NOW()
+        WHERE id = #{id,jdbcType=VARCHAR}
     </update>
 
     <!-- 更新Token最后使用时间 -->

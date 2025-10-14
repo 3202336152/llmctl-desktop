@@ -5,6 +5,157 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.3] - 2025-10-15
+
+### Added 🎉
+- **终端快捷键功能** - 提升终端操作效率
+  - `Ctrl+1/2/3` 快速切换终端标签页（最多支持9个标签）
+  - `Ctrl+W` 快速关闭当前终端标签页
+  - 仅在 Terminals 页面生效，不干扰其他页面操作
+
+- **右键粘贴功能** - 增强终端粘贴体验
+  - 在终端区域右键点击直接粘贴剪贴板内容
+  - 支持多行文本粘贴
+  - 自动读取系统剪贴板
+
+- **手动切换 Token 按钮** - 灵活的 Token 管理
+  - 终端标签栏新增"切换 Token"按钮
+  - 支持手动触发 Token 切换（不依赖自动错误检测）
+  - 切换时自动标记当前 Token 为不健康
+  - 重启会话并使用新 Token
+  - 适用于自动检测未捕获的错误场景
+
+- **切换到外部终端功能** - 支持系统原生终端
+  - 终端标签栏新增"外部终端"按钮
+  - 一键切换到系统外部终端（Windows CMD/macOS Terminal/Linux Terminal）
+  - 自动切换到会话工作目录
+  - 自动执行会话命令（如 `claude`）
+  - 关闭内置终端，会话状态更新为非活跃
+  - **跨平台支持**：Windows、macOS、Linux
+  - **详细用户提示**：明确告知外部终端限制和状态管理
+
+### Changed 🎨
+- **优化粘贴逻辑** - 更好的 Windows CMD 兼容性
+  - 使用 xterm.js 原生 `paste()` 方法
+  - 保留 CMD 的 `[Pasted text #N +X lines]` 提示
+  - 确保粘贴内容完整，无截断
+  - 移除分块发送逻辑，避免内容碎片化
+
+- **外部终端确认对话框优化**
+  - 添加详细的警告提示
+  - 说明会话状态变化和限制
+  - 引导用户正确使用外部终端功能
+
+### Fixed 🐛
+- **修复粘贴内容截断问题**
+  - 移除调试日志，保持控制台简洁
+  - 解决大文本粘贴时内容不完整的问题
+  - 修复粘贴时出现碎片（如 `rit`, `IOUt。`）的问题
+
+### Technical Details 🔧
+- **前端修改文件**：
+  - `TerminalManager.tsx` - 添加快捷键、手动切换Token、外部终端功能
+  - `TerminalComponent.tsx` - 优化粘贴逻辑、添加右键粘贴
+  - `preload.ts` - 新增 `openExternalTerminal` API
+  - `tokenAPI.ts` - 新增 `updateTokenHealth` 方法
+
+- **后端修改文件**：
+  - `main.ts` - 实现 `open-external-terminal` IPC处理器
+  - `TokenMapper.xml` - 修复 MyBatis 参数映射错误
+
+- **外部终端实现细节**：
+  - Windows: 使用 `start` 命令打开新 CMD 窗口，`/K` 保持窗口打开
+  - macOS: 使用 AppleScript 控制 Terminal.app
+  - Linux: 使用 `gnome-terminal` 或 `x-terminal-emulator`
+  - 使用 `child_process.exec()` 替代 `spawn()` 确保窗口正确创建
+
+### Known Limitations ⚠️
+- **外部终端状态检测限制**：
+  - 系统无法自动检测外部终端是否关闭
+  - 用户需手动管理外部终端的生命周期
+  - 外部终端关闭后，需手动重新创建会话
+  - 技术原因：外部终端是独立进程，受操作系统安全限制
+
+## [2.1.2] - 2025-10-14
+
+### Added 🎉
+- **邮箱验证码注册/登录** - 完整的邮箱验证功能
+  - 支持 QQ 邮箱（@qq.com）和 163 邮箱（@163.com）注册
+  - 6位数字验证码，5分钟有效期，一次性使用
+  - 60秒倒计时防止验证码滥发
+  - 注册时自动验证邮箱验证码
+  - 后端实现完整的邮件发送和验证逻辑
+- **用户名或邮箱登录** - 灵活的登录方式
+  - 支持使用用户名登录（原有功能）
+  - 支持使用邮箱地址登录（新增功能）
+  - 自动识别输入类型（包含@符号即为邮箱）
+  - 邮箱优先查找，用户名兜底
+  - 保持原有的安全机制（密码验证、账户锁定等）
+- **忘记密码功能** - 密码重置入口
+  - 登录页面添加"忘记密码？"链接
+  - 点击显示提示模态框
+  - 引导用户联系管理员重置密码（密码重置功能即将推出）
+
+### Changed 🎨
+- **登录注册UI优化** - 更简洁统一的界面
+  - 使用实际的 icon.png 作为 Logo 图标
+  - 移除空的分割线和"或"内容
+  - 统一登录和注册页面的视觉风格
+  - 优化忘记密码链接的交互体验
+
+### Technical Details 🔧
+- **后端新增文件**：
+  - `EmailVerificationCode.java` - 验证码实体类
+  - `SendVerificationCodeRequest.java` - 发送验证码请求DTO
+  - `VerifyCodeRequest.java` - 验证验证码请求DTO
+  - `EmailVerificationCodeMapper.java` - 验证码数据访问接口
+  - `EmailVerificationCodeMapper.xml` - MyBatis映射文件
+  - `IEmailService.java` - 邮件服务接口
+  - `EmailServiceImpl.java` - 邮件服务实现
+  - `IVerificationCodeService.java` - 验证码服务接口
+  - `VerificationCodeServiceImpl.java` - 验证码服务实现
+  - `PurposeTypeHandler.java` - 枚举类型处理器
+- **后端修改文件**：
+  - `AuthController.java` - 新增验证码发送和验证接口
+  - `AuthServiceImpl.java` - 优化登录逻辑支持邮箱登录
+  - `pom.xml` - 添加 Spring Boot Mail 依赖
+  - `application.yml` - 配置邮件服务参数
+  - `schema.sql` - 新增 email_verification_codes 表
+- **前端修改文件**：
+  - `LoginPage.tsx` - 更新Logo、添加忘记密码模态框、移除空内容
+  - `RegisterPage.tsx` - 完整的注册表单含邮箱验证功能、更新Logo、移除空内容
+  - `Auth.css` - 添加Logo图片样式、优化链接样式
+- **数据库设计**：
+  - `email_verification_codes` 表结构：
+    - `id` - 主键（VARCHAR 36）
+    - `email` - 邮箱地址
+    - `code` - 6位验证码
+    - `purpose` - 用途（REGISTER/LOGIN/RESET_PASSWORD）
+    - `used` - 是否已使用
+    - `expire_time` - 过期时间
+    - `created_at` - 创建时间
+    - 索引：`idx_email_purpose`, `idx_expire_time`
+
+### Security 🔐
+- **邮箱验证安全**：
+  - 验证码有效期仅5分钟
+  - 验证码一次性使用，验证后立即标记为已使用
+  - 邮箱域名严格限制（仅QQ和163）
+  - 60秒发送间隔防止滥发
+  - 后端验证邮箱格式和验证码有效性
+- **登录安全增强**：
+  - 邮箱登录同样受到账户锁定保护
+  - 保持原有的防暴力破解机制
+  - 登录日志记录用户名或邮箱
+
+### Documentation 📖
+- 新增 `EMAIL_SETUP.md` - 完整的邮件服务配置指南
+  - QQ邮箱配置步骤
+  - 163邮箱配置步骤
+  - 环境变量设置方法
+  - 常见问题解答
+  - 安全建议
+
 ## [2.1.1] - 2025-10-14
 
 ### Added 🎉
