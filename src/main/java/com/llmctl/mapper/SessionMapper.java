@@ -26,11 +26,37 @@ public interface SessionMapper {
     Session findById(@Param("id") String id);
 
     /**
+     * 根据ID查询Session（优化版本：同时验证Provider权限并获取Provider名称）
+     * 使用JOIN避免额外的Provider权限查询
+     *
+     * @param sessionId Session ID
+     * @param userId 用户ID
+     * @return Session对象（包含Provider名称），如果不存在或无权访问则返回null
+     */
+    Session findByIdWithPermissionCheck(@Param("sessionId") String sessionId, @Param("userId") Long userId);
+
+    /**
      * 查询所有Session
      *
      * @return Session列表
      */
     List<Session> findAll();
+
+    /**
+     * 查询指定用户的所有Session（优化版本：使用JOIN避免N+1查询）
+     *
+     * @param userId 用户ID
+     * @return Session列表（包含Provider名称）
+     */
+    List<Session> findAllByUserIdWithProvider(@Param("userId") Long userId);
+
+    /**
+     * 查询指定用户的活跃Session（优化版本：使用JOIN避免N+1查询）
+     *
+     * @param userId 用户ID
+     * @return 活跃的Session列表（包含Provider名称）
+     */
+    List<Session> findActiveSessionsByUserIdWithProvider(@Param("userId") Long userId);
 
     /**
      * 根据状态查询Session列表

@@ -54,14 +54,10 @@ public class SessionServiceImpl implements ISessionService {
         Long userId = UserContext.getUserId();
         log.debug("获取所有活跃会话, 用户ID: {}", userId);
 
-        List<Session> sessions = sessionMapper.findActiveSessions();
-        // 过滤属于当前用户的会话
+        // 使用优化的JOIN查询，避免N+1查询问题
+        List<Session> sessions = sessionMapper.findActiveSessionsByUserIdWithProvider(userId);
         return sessions.stream()
-                .filter(session -> {
-                    Provider provider = providerMapper.findById(session.getProviderId(), userId);
-                    return provider != null;
-                })
-                .map(this::convertToDTO)
+                .map(this::convertToDTOOptimized)
                 .collect(Collectors.toList());
     }
 
@@ -70,14 +66,10 @@ public class SessionServiceImpl implements ISessionService {
         Long userId = UserContext.getUserId();
         log.debug("获取所有会话, 用户ID: {}", userId);
 
-        List<Session> sessions = sessionMapper.findAll();
-        // 过滤属于当前用户的会话
+        // 使用优化的JOIN查询，避免N+1查询问题
+        List<Session> sessions = sessionMapper.findAllByUserIdWithProvider(userId);
         return sessions.stream()
-                .filter(session -> {
-                    Provider provider = providerMapper.findById(session.getProviderId(), userId);
-                    return provider != null;
-                })
-                .map(this::convertToDTO)
+                .map(this::convertToDTOOptimized)
                 .collect(Collectors.toList());
     }
 
@@ -209,15 +201,11 @@ public class SessionServiceImpl implements ISessionService {
         Long userId = UserContext.getUserId();
         log.info("重新激活会话: {}, 用户ID: {}", sessionId, userId);
 
-        Session session = sessionMapper.findById(sessionId);
+        // 使用优化的JOIN查询，同时获取Session和验证Provider权限
+        Session session = sessionMapper.findByIdWithPermissionCheck(sessionId, userId);
         if (session == null) {
-            throw new ResourceNotFoundException("会话", sessionId);
-        }
-
-        // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
-        if (provider == null) {
-            throw new IllegalArgumentException("无权访问该会话");
+            // Session不存在或Provider无权访问
+            throw new ResourceNotFoundException("会话不存在或无权访问", sessionId);
         }
 
         if (session.getStatus() != Session.SessionStatus.INACTIVE) {
@@ -230,11 +218,11 @@ public class SessionServiceImpl implements ISessionService {
             throw new ServiceException("重新激活会话", "数据库更新失败");
         }
 
-        // 重新查询更新后的会话
-        Session reactivatedSession = sessionMapper.findById(sessionId);
+        // 重新查询更新后的会话（使用优化查询）
+        Session reactivatedSession = sessionMapper.findByIdWithPermissionCheck(sessionId, userId);
         log.info("成功重新激活会话: {}", sessionId);
 
-        return convertToDTO(reactivatedSession);
+        return convertToDTOOptimized(reactivatedSession);
     }
 
     @Override
@@ -463,6 +451,38 @@ public class SessionServiceImpl implements ISessionService {
         } catch (Exception e) {
             log.warn("获取Provider名称失败: {}", session.getProviderId(), e);
         }
+
+        return dto;
+    }
+
+    /**
+     * 将Session实体转换为DTO（优化版本：使用已查询的providerName）
+     * 用于JOIN查询结果，避免N+1查询问题
+     */
+    private SessionDTO convertToDTOOptimized(Session session) {
+        if (session == null) {
+            return null;
+        }
+
+        SessionDTO dto = new SessionDTO();
+        dto.setId(session.getId());
+        dto.setProviderId(session.getProviderId());
+        dto.setTokenId(session.getTokenId());
+        dto.setPid(session.getPid());
+        dto.setWorkingDirectory(session.getWorkingDirectory());
+        dto.setCommand(session.getCommand());
+        dto.setStatus(session.getStatus() != null ? session.getStatus().getValue() : null);
+        dto.setStartTime(session.getStartTime());
+        dto.setLastActivity(session.getLastActivity());
+        dto.setEndTime(session.getEndTime());
+
+        // 计算持续时间
+        if (session.getStartTime() != null) {
+            dto.setDurationMinutes(session.getDurationMinutes());
+        }
+
+        // 直接使用JOIN查询时已获取的providerName，避免额外查询
+        dto.setProviderName(session.getProviderName());
 
         return dto;
     }

@@ -18,9 +18,45 @@
         <result column="end_time" property="endTime"/>
     </resultMap>
 
+    <!-- Session结果映射（包含Provider名称，用于优化查询性能） -->
+    <resultMap id="SessionWithProviderResultMap" type="com.llmctl.entity.Session">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="provider_id" property="providerId"/>
+        <result column="token_id" property="tokenId"/>
+        <result column="pid" property="pid"/>
+        <result column="working_directory" property="workingDirectory"/>
+        <result column="command" property="command"/>
+        <result column="status" property="status" typeHandler="com.llmctl.config.SessionStatusTypeHandler"/>
+        <result column="start_time" property="startTime"/>
+        <result column="last_activity" property="lastActivity"/>
+        <result column="end_time" property="endTime"/>
+        <result column="provider_name" property="providerName"/>
+    </resultMap>
+
     <!-- 根据ID查询Session -->
     <select id="findById" parameterType="string" resultMap="SessionResultMap">
         SELECT * FROM sessions WHERE id = #{id}
+    </select>
+
+    <!-- 根据ID查询Session（优化版本：同时验证Provider权限并获取Provider名称）-->
+    <select id="findByIdWithPermissionCheck" resultMap="SessionWithProviderResultMap">
+        SELECT
+            s.id,
+            s.user_id,
+            s.provider_id,
+            s.token_id,
+            s.pid,
+            s.working_directory,
+            s.command,
+            s.status,
+            s.start_time,
+            s.last_activity,
+            s.end_time,
+            p.name AS provider_name
+        FROM sessions s
+        INNER JOIN providers p ON s.provider_id = p.id AND p.user_id = #{userId}
+        WHERE s.id = #{sessionId}
     </select>
 
     <!-- 查询所有Session，优先显示活跃会话 -->
@@ -34,6 +70,54 @@
                 ELSE 4
             END,
             start_time DESC
+    </select>
+
+    <!-- 查询指定用户的所有Session（优化版本：使用JOIN避免N+1查询）-->
+    <select id="findAllByUserIdWithProvider" parameterType="long" resultMap="SessionWithProviderResultMap">
+        SELECT
+            s.id,
+            s.user_id,
+            s.provider_id,
+            s.token_id,
+            s.pid,
+            s.working_directory,
+            s.command,
+            s.status,
+            s.start_time,
+            s.last_activity,
+            s.end_time,
+            p.name AS provider_name
+        FROM sessions s
+        INNER JOIN providers p ON s.provider_id = p.id AND p.user_id = #{userId}
+        ORDER BY
+            CASE s.status
+                WHEN 'active' THEN 1
+                WHEN 'inactive' THEN 2
+                WHEN 'terminated' THEN 3
+                ELSE 4
+            END,
+            s.start_time DESC
+    </select>
+
+    <!-- 查询指定用户的活跃Session（优化版本：使用JOIN避免N+1查询）-->
+    <select id="findActiveSessionsByUserIdWithProvider" parameterType="long" resultMap="SessionWithProviderResultMap">
+        SELECT
+            s.id,
+            s.user_id,
+            s.provider_id,
+            s.token_id,
+            s.pid,
+            s.working_directory,
+            s.command,
+            s.status,
+            s.start_time,
+            s.last_activity,
+            s.end_time,
+            p.name AS provider_name
+        FROM sessions s
+        INNER JOIN providers p ON s.provider_id = p.id AND p.user_id = #{userId}
+        WHERE s.status = 'active'
+        ORDER BY s.last_activity DESC
     </select>
 
     <!-- 根据状态查询Session列表 -->

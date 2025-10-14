@@ -50,13 +50,20 @@ public class TokenServiceImpl implements TokenService {
         Long userId = UserContext.getUserId();
         log.debug("根据Provider ID获取Token列表: {}, 用户ID: {}", providerId, userId);
 
-        // 验证Provider是否属于当前用户
-        Provider provider = providerMapper.findById(providerId, userId);
-        if (provider == null) {
-            throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+        // 使用优化的JOIN查询，同时验证Provider权限和获取Token列表，避免两次数据库查询
+        List<Token> tokens = tokenMapper.findByProviderIdWithPermissionCheck(providerId, userId);
+
+        // 如果返回空列表，可能是Provider不存在或该Provider下无Token
+        // 为了提供更好的错误信息，需要额外验证
+        if (tokens.isEmpty()) {
+            // 额外查询：区分"Provider不存在"和"该Provider下无Token"两种情况
+            Provider provider = providerMapper.findById(providerId, userId);
+            if (provider == null) {
+                throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
+            }
+            // Provider存在但没有Token，返回空列表
         }
 
-        List<Token> tokens = tokenMapper.findByProviderId(providerId);
         return tokens.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

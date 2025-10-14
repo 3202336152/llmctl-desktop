@@ -33,6 +33,16 @@ public interface TokenMapper {
     List<Token> findByProviderId(@Param("providerId") String providerId);
 
     /**
+     * 根据Provider ID查询Token列表（优化版本：同时验证Provider权限）
+     * 使用JOIN避免额外的Provider权限查询
+     *
+     * @param providerId Provider ID
+     * @param userId 用户ID
+     * @return Token列表，如果Provider不属于用户则返回空列表
+     */
+    List<Token> findByProviderIdWithPermissionCheck(@Param("providerId") String providerId, @Param("userId") Long userId);
+
+    /**
      * 根据Provider ID查询可用的Token列表（启用且健康）
      *
      * @param providerId Provider ID

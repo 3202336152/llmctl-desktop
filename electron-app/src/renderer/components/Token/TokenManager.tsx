@@ -12,9 +12,6 @@ import {
   InputNumber,
   Switch,
   Tag,
-  Row,
-  Col,
-  Statistic,
   App as AntApp,
 } from 'antd';
 import {
@@ -323,23 +320,35 @@ const TokenManager: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
-            <Statistic title="总Token数" value={totalTokensCount} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
-            <Statistic title="启用Token数" value={enabledTokensCount} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card styles={{ body: { padding: '24px', minHeight: '120px' } }}>
-            <Statistic title="健康Token数" value={healthyTokensCount} valueStyle={{ color: '#3f8600' }} />
-          </Card>
-        </Col>
-      </Row>
+      {/* 紧凑型统计信息 - 与 Sessions 一致的样式 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '20px 24px',
+        background: '#f5f5f5',
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 24,
+        minHeight: '80px',
+      }}>
+        <Space size={24}>
+          <Space size={8}>
+            <KeyOutlined style={{ fontSize: 16, color: '#1890ff' }} />
+            <span style={{ color: '#666' }}>总Token数:</span>
+            <span style={{ fontWeight: 600, fontSize: 16 }}>{totalTokensCount}</span>
+          </Space>
+          <Space size={8}>
+            <CheckCircleOutlined style={{ fontSize: 16, color: '#52c41a' }} />
+            <span style={{ color: '#666' }}>启用:</span>
+            <span style={{ fontWeight: 600, fontSize: 16, color: '#52c41a' }}>{enabledTokensCount}</span>
+          </Space>
+          <Space size={8}>
+            <MedicineBoxOutlined style={{ fontSize: 16, color: '#3f8600' }} />
+            <span style={{ color: '#666' }}>健康:</span>
+            <span style={{ fontWeight: 600, fontSize: 16, color: '#3f8600' }}>{healthyTokensCount}</span>
+          </Space>
+        </Space>
+      </div>
 
       <Card
         title={t('tokens.title')}

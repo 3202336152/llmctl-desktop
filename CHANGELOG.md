@@ -5,6 +5,63 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.1] - 2025-10-14
+
+### Added 🎉
+- **终端自动执行命令** - 终端打开后自动执行会话配置的命令（如 `claude`）
+  - 延迟100ms确保pty完全初始化
+  - 自动添加回车符，无需用户手动输入
+  - 提升终端使用体验
+
+### Changed
+- **终端空状态简化** - 优化"没有打开的终端"界面
+  - 移除冗余的会话数量显示
+  - 简化为单一操作按钮"前往 Sessions 页面"
+  - 更清晰的用户引导流程
+
+### Performance ⚡
+- **SQL查询性能优化** - 使用 INNER JOIN 技术显著提升核心接口响应速度
+  - **API Keys 列表查询优化**：
+    - 优化前：2次数据库查询（权限验证 + Token获取）
+    - 优化后：1次JOIN查询（减少50%查询次数）
+    - 涉及文件：`TokenMapper.xml`、`TokenMapper.java`、`TokenServiceImpl.java`
+    - 新增方法：`findByProviderIdWithPermissionCheck()`
+  - **Sessions 重启功能优化**：
+    - 优化前：4次数据库查询（Session获取 + 权限验证 + 状态更新 + 重新查询）
+    - 优化后：3次查询（减少25%查询次数）
+    - 涉及文件：`SessionMapper.xml`、`SessionMapper.java`、`SessionServiceImpl.java`
+    - 新增方法：`findByIdWithPermissionCheck()`
+  - **优化技术细节**：
+    - 使用 `INNER JOIN` 将权限验证和数据查询合并为单次操作
+    - 在 JOIN 条件中直接过滤用户权限（`p.user_id = #{userId}`）
+    - 提前加载关联数据（`provider_name`），避免额外查询
+    - 减少网络往返延迟，提升接口响应速度
+  - **建议索引优化**：
+    ```sql
+    CREATE INDEX idx_tokens_provider_id ON tokens(provider_id);
+    CREATE INDEX idx_sessions_provider_id ON sessions(provider_id);
+    CREATE INDEX idx_providers_user_id ON providers(user_id);
+    ```
+
+### Fixed 🐛
+- **终端路由切换保持内容** - 修复切换菜单时终端内容重新加载的问题
+  - 使用 CSS `visibility` 替代条件渲染
+  - 终端组件始终挂载，只控制显示隐藏
+  - 完美保持 xterm.js 的 DOM 状态和 pty 连接
+  - 切换菜单后终端内容完整保留
+- **终端关闭后页面刷新** - 修复关闭所有终端后页面不更新的问题
+  - Redux 状态变化自动触发组件重新渲染
+  - 正确显示空状态提示
+
+### Technical Details
+- **App.tsx** (437-450行)：使用 `visibility` 和 `pointerEvents` 控制终端显示
+- **TerminalComponent.tsx** (118-127行)：添加自动执行命令逻辑
+- **TerminalManager.tsx** (140-158行)：简化空状态显示组件
+- **TokenMapper.xml** (47-56行)：添加 `findByProviderIdWithPermissionCheck` 优化查询
+- **SessionMapper.xml** (42-60行)：添加 `findByIdWithPermissionCheck` 优化查询
+- **TokenServiceImpl.java** (48-70行)：使用优化查询方法
+- **SessionServiceImpl.java** (200-226行)：使用优化查询方法
+
 ## [2.1.0] - 2025-10-13
 
 ### Added 🎉

@@ -44,6 +44,17 @@
         ORDER BY last_used IS NULL, last_used DESC, created_at DESC
     </select>
 
+    <!-- 根据Provider ID查询Token列表（优化版本：同时验证Provider权限）-->
+    <select id="findByProviderIdWithPermissionCheck" resultMap="BaseResultMap">
+        SELECT
+            t.id, t.user_id, t.provider_id, t.value, t.alias, t.weight, t.enabled, t.healthy, t.last_used,
+            t.encryption_version, t.value_hash, t.created_at, t.updated_at
+        FROM tokens t
+        INNER JOIN providers p ON t.provider_id = p.id AND p.user_id = #{userId}
+        WHERE t.provider_id = #{providerId}
+        ORDER BY t.last_used IS NULL, t.last_used DESC, t.created_at DESC
+    </select>
+
     <!-- 根据Provider ID查询可用的Token列表 -->
     <select id="findAvailableByProviderId" parameterType="java.lang.String" resultMap="BaseResultMap">
         SELECT

@@ -54,13 +54,8 @@ const Help: React.FC = () => {
           <Title level={5}>第一步：用户登录</Title>
           <Paragraph>
             1. 应用启动后显示登录页面<br />
-            2. 使用默认管理员账户：
-            <ul>
-              <li>用户名：<Text code>admin</Text></li>
-              <li>密码：<Text code>admin123</Text></li>
-            </ul>
-            3. 或点击"注册"创建新账户<br />
-            4. 登录成功后进入主应用
+            2. 或点击"注册"创建新账户<br />
+            3. 登录成功后进入主应用
           </Paragraph>
 
           <Title level={5}>第二步：添加 Provider</Title>

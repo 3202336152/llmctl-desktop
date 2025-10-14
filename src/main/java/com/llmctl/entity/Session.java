@@ -77,6 +77,12 @@ public class Session {
     private Provider provider;
 
     /**
+     * Provider名称（临时字段，用于优化查询性能，不持久化到数据库）
+     * 在使用JOIN查询时直接从数据库获取，避免N+1查询问题
+     */
+    private transient String providerName;
+
+    /**
      * 会话状态枚举
      */
     public enum SessionStatus {

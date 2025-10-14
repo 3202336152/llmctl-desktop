@@ -11,7 +11,6 @@ import {
   Select,
   Tag,
   Tabs,
-  Collapse,
   App as AntApp,
 } from 'antd';
 import {
@@ -37,11 +36,13 @@ import {
 import { sessionAPI } from '../../services/api';
 import { Session, StartSessionRequest, UpdateSessionStatusRequest } from '../../types';
 import type { RootState } from '../../store';
+import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
 
 const SessionManager: React.FC = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { modal } = AntApp.useApp();
   const { providers } = useAppSelector((state: RootState) => state.provider);
   const { sessions, loading, openTerminalSessions } = useAppSelector((state: RootState) => state.session);
@@ -130,6 +131,8 @@ const SessionManager: React.FC = () => {
         dispatch(addSession(response.data));
         // 自动打开终端并切换到该标签
         dispatch(openTerminal(response.data.id));
+        // 跳转到 Terminals 页面
+        navigate('/terminals');
       }
       message.success('会话启动成功');
       setModalVisible(false);
@@ -240,6 +243,9 @@ const SessionManager: React.FC = () => {
 
     // 打开终端（会创建新的终端实例和进程）
     dispatch(openTerminal(sessionId));
+
+    // 跳转到 Terminals 页面
+    navigate('/terminals');
   };
 
   const getStatusColor = (status: string) => {
@@ -430,80 +436,67 @@ const SessionManager: React.FC = () => {
         </Space>
       </div>
 
-      <Collapse
-        defaultActiveKey={['sessions']}
-        style={{ marginBottom: 16 }}
-        items={[
-          {
-            key: 'sessions',
-            label: (
-              <Space>
-                <DesktopOutlined />
-                <span>Sessions</span>
-              </Space>
-            ),
-            extra: (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  handleStartSession();
-                }}
-              >
-                启动新会话
-              </Button>
-            ),
-            children: (
-              <>
-                <Tabs
-                  activeKey={sessionFilter}
-                  onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'inactive')}
-                  items={[
-                    {
-                      key: 'all',
-                      label: (
-                        <span>
-                          总会话 <Tag color="blue">{sessions.length}</Tag>
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'active',
-                      label: (
-                        <span>
-                          活跃会话 <Tag color="green">{activeSessions.length}</Tag>
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'inactive',
-                      label: (
-                        <span>
-                          非活跃 <Tag color="orange">{inactiveSessions.length}</Tag>
-                        </span>
-                      ),
-                    },
-                  ]}
-                />
-                <Table
-                  columns={columns}
-                  dataSource={filteredSessions}
-                  rowKey="id"
-                  loading={loading}
-                  scroll={{ x: 'max-content' }}
-                  pagination={{
-                    pageSize: 10,
-                    showQuickJumper: true,
-                    showSizeChanger: true,
-                    showTotal: (total: number) => `共 ${total} 条记录`,
-                  }}
-                />
-              </>
-            ),
-          },
-        ]}
-      />
+      <Card
+        title={
+          <Space>
+            <DesktopOutlined />
+            <span>Sessions</span>
+          </Space>
+        }
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleStartSession}
+          >
+            启动新会话
+          </Button>
+        }
+      >
+        <Tabs
+          activeKey={sessionFilter}
+          onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'inactive')}
+          items={[
+            {
+              key: 'all',
+              label: (
+                <span>
+                  总会话 <Tag color="blue">{sessions.length}</Tag>
+                </span>
+              ),
+            },
+            {
+              key: 'active',
+              label: (
+                <span>
+                  活跃会话 <Tag color="green">{activeSessions.length}</Tag>
+                </span>
+              ),
+            },
+            {
+              key: 'inactive',
+              label: (
+                <span>
+                  非活跃 <Tag color="orange">{inactiveSessions.length}</Tag>
+                </span>
+              ),
+            },
+          ]}
+        />
+        <Table
+          columns={columns}
+          dataSource={filteredSessions}
+          rowKey="id"
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            pageSize: 10,
+            showQuickJumper: true,
+            showSizeChanger: true,
+            showTotal: (total: number) => `共 ${total} 条记录`,
+          }}
+        />
+      </Card>
 
       <Modal
         title="启动新会话"

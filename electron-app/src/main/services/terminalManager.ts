@@ -57,22 +57,19 @@ class TerminalManager {
     cwd?: string;
     env?: Record<string, string>;
   } = {}): Promise<{ existed: boolean }> {
-    // 如果会话已存在且进程还活着，不重新创建，直接返回
+    // ✅ 检查是否已存在会话
     const existingSession = this.sessions.get(sessionId);
     if (existingSession) {
+      console.log('[TerminalManager] ⚠️ 会话已存在，销毁旧进程并创建新的:', sessionId);
       try {
-        // 检查进程是否还活着（尝试发送空数据）
-        existingSession.process.write('');
-        console.log('[TerminalManager] 会话已存在且正在运行，重用现有会话:', sessionId);
-        // 更新window引用，以防窗口已重新创建
-        existingSession.window = window;
-        return { existed: true };
+        existingSession.process.kill();
       } catch (error) {
-        // 进程已死，清理并重新创建
-        console.log('[TerminalManager] 会话存在但进程已死，重新创建:', sessionId);
-        this.sessions.delete(sessionId);
+        console.error('[TerminalManager] 销毁旧进程失败:', error);
       }
+      this.sessions.delete(sessionId);
     }
+
+    console.log('[TerminalManager] 🚀 创建新的 pty 会话:', sessionId);
 
     const { command = 'cmd.exe', cwd = process.cwd(), env = {} } = options;
 

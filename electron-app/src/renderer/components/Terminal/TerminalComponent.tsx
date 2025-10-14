@@ -17,7 +17,7 @@ interface TerminalComponentProps {
   showCard?: boolean; // 是否显示外层Card
 }
 
-const TerminalComponent: React.FC<TerminalComponentProps> = ({
+const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
   sessionId,
   command,
   cwd,
@@ -112,22 +112,18 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
         if (result && !result.success) {
           terminal.write(`\r\n\x1b[1;31m[错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
         } else {
-          // 检查是否是重新连接到已存在的会话
-          const existed = (result as any)?.existed || false;
+          // ✅ 每次打开都是全新的 pty 进程，无历史记录恢复
+          console.log('[Terminal] 已创建全新的 pty 进程:', sessionId);
 
-          if (existed) {
-            // 会话已存在，重新连接
-            console.log('[Terminal] 重新连接到已存在的会话:', sessionId);
-            terminal.write('\r\n\x1b[1;32m[已恢复会话]\x1b[0m\r\n');
-          } else {
-            // 新创建的会话，等待 CMD 启动完成后自动执行用户命令
-            if (command && command.trim() !== '' && command.toLowerCase() !== 'cmd.exe') {
-              setTimeout(() => {
-                window.electronAPI.terminalInput(sessionId, command + '\r').catch((error) => {
-                  console.error('自动执行命令失败:', error);
-                });
-              }, 1000);
-            }
+          // ✅ 如果会话配置了命令，自动执行该命令
+          if (command && command !== 'cmd.exe') {
+            console.log('[Terminal] 自动执行会话命令:', command);
+            // 延迟100ms确保pty完全初始化后再发送命令
+            setTimeout(() => {
+              window.electronAPI.terminalInput(sessionId, `${command}\r`).catch((error) => {
+                console.error('自动执行命令失败:', error);
+              });
+            }, 100);
           }
         }
       })
@@ -243,9 +239,9 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
       // 取消监听输出
       unsubscribe();
 
-      // 注意：不在这里终止终端会话
-      // 终端会话的销毁由会话管理器在终止会话时控制
-      // 这样可以保持会话持久化，关闭标签只是隐藏，不会销毁会话
+      // ✅ 组件卸载时仅清理前端资源
+      // pty 进程由 TerminalManager 的 handleCloseTerminal 显式终止
+      createdRef.current = false;
 
       terminal.dispose();
     };
@@ -346,6 +342,9 @@ const TerminalComponent: React.FC<TerminalComponentProps> = ({
       {terminalDiv}
     </Card>
   );
-};
+});
+
+// 添加显示名称以便调试
+TerminalComponent.displayName = 'TerminalComponent';
 
 export default TerminalComponent;
