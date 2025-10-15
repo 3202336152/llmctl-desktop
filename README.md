@@ -3,7 +3,7 @@
 # LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.1.4-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -15,41 +15,41 @@
 
 ### 核心功能
 
-- 🔐 **用户认证系统** - 用户名+密码登录，邮箱验证注册，JWT Token认证（🆕 v2.1.2）
-- 📧 **邮箱验证功能** - QQ/163邮箱验证码注册，支持用户名或邮箱登录（🆕 v2.1.2）
-- 🔔 **实时通知系统** - 基于SSE的实时推送，通知中心管理，优先级分类（🆕 v2.1.0）
+- 🔐 **用户认证系统** - 用户名+密码登录，邮箱验证注册，JWT Token认证（v2.1.2）
+- 📧 **邮箱验证功能** - QQ/163邮箱验证码注册，支持用户名或邮箱登录（v2.1.2）
+- 🔔 **实时通知系统** - 基于SSE的实时推送，通知中心管理，优先级分类（v2.1.0）
 - 🌐 **多Provider支持** - 支持Claude、OpenAI、Qwen、Gemini等主流LLM Provider
 - 🔑 **智能Token管理** - 多Token轮询、健康检查、自动切换
-- 🔒 **企业级加密** - AES-256-GCM加密存储Token，NSA绝密信息级安全（🆕 v2.0.4）
-- 🔄 **自动故障恢复** - Token失效自动检测，一键切换到健康Token（🆕 v2.0.2）
-- 🖥️ **会话管理** - CLI进程监控、工作目录记录、实时状态更新、会话重启（🆕 v2.0.3）
-- 🌍 **国际化支持** - 支持中英文切换，语言配置持久化（🆕 v2.0.3）
+- 🔒 **企业级加密** - AES-256-GCM加密存储Token，NSA绝密信息级安全（v2.0.4）
+- 🔄 **自动故障恢复** - Token失效自动检测，一键切换到健康Token（v2.0.2）
+- 🖥️ **会话管理** - CLI进程监控、工作目录记录、实时状态更新、会话重启（v2.0.3）
+- 🌍 **国际化支持** - 支持中英文切换，语言配置持久化（v2.0.3）
 - 📊 **统计分析** - 详细的使用统计和数据可视化
 - ⚙️ **配置管理** - 支持导入导出配置，方便迁移和备份
-- 📖 **帮助中心** - 完整的使用文档和常见问题解答（🆕 v2.1.0）
+- 📖 **帮助中心** - 完整的使用文档和常见问题解答（v2.1.0）
 
 ### 终端功能
 
 - 🪟 **多终端并发** - 同时打开多个终端窗口，在不同目录和项目中并行工作
-- ⌨️ **快捷键支持** - `Ctrl+1/2/3` 快速切换标签页，`Ctrl+W` 关闭终端（🆕 v2.1.3）
-- 📋 **复制粘贴支持** - 完整的终端复制粘贴功能，支持右键粘贴（🆕 v2.1.3）
+- ⌨️ **快捷键支持** - `Ctrl+1/2/3` 快速切换标签页，`Ctrl+W` 关闭终端（v2.1.3）
+- 📋 **复制粘贴支持** - 完整的终端复制粘贴功能，支持右键粘贴（v2.1.3）
 - 🏷️ **标签页管理** - 便捷的终端标签页切换和管理
-- 🔄 **手动切换Token** - 终端标签栏一键手动切换Token，适用于自动检测未捕获的错误（🆕 v2.1.3）
-- 🖥️ **外部终端支持** - 一键切换到系统原生终端（Windows CMD/macOS Terminal/Linux Terminal）（🆕 v2.1.3）
-- 📺 **全屏显示** - 支持F11/ESC快捷键切换全屏，专注终端操作（🆕 v2.0.3）
-- 🔤 **字体缩放** - Ctrl+滚轮动态调整字体大小（8-30px）（🆕 v2.0.3）
-- 🚀 **自动执行命令** - 终端打开后自动执行会话配置的命令，无需手动输入（🆕 v2.1.1）
-- 💾 **状态保持** - 切换菜单后终端内容完整保留，不会重新加载（🆕 v2.1.1）
+- 🔄 **手动切换Token** - 终端标签栏一键手动切换Token，适用于自动检测未捕获的错误（v2.1.3）
+- 🖥️ **外部终端支持** - 一键切换到系统原生终端（Windows CMD/macOS Terminal/Linux Terminal）（v2.1.3）
+- 📺 **全屏显示** - 支持F11/ESC快捷键切换全屏，专注终端操作（v2.0.3）
+- 🔤 **字体缩放** - Ctrl+滚轮动态调整字体大小（8-30px）（v2.0.3）
+- 🚀 **自动执行命令** - 终端打开后自动执行会话配置的命令，无需手动输入（v2.1.1）
+- 💾 **状态保持** - 切换菜单后终端内容完整保留，不会重新加载（v2.1.1）
 - ⚡ **高性能** - Electron本地执行，响应时间<10ms
 
 ### 安全特性
 
-#### 用户认证（🆕 v2.1.0, 增强 v2.1.2）
+#### 用户认证（v2.1.0, 增强 v2.1.2）
 - 🔐 **JWT认证** - 基于JWT Token的无状态认证机制
 - 👤 **强制登录** - 应用启动必须登录，未登录无法访问任何功能
 - 🔑 **BCrypt加密** - 密码采用BCrypt单向加密存储，永不明文
-- 📧 **邮箱验证注册** - 支持QQ/163邮箱验证码注册，提升账户安全性（🆕 v2.1.2）
-- 🔓 **多种登录方式** - 支持用户名或邮箱地址登录（🆕 v2.1.2）
+- 📧 **邮箱验证注册** - 支持QQ/163邮箱验证码注册，提升账户安全性（v2.1.2）
+- 🔓 **多种登录方式** - 支持用户名或邮箱地址登录（v2.1.2）
 - 🛡️ **防暴力破解** - 连续失败5次锁定账户30分钟
 - 🔄 **自动刷新** - Token即将过期时自动刷新，无感知续期
 - 📝 **登录审计** - 记录所有登录尝试（成功/失败/锁定），追溯攻击
@@ -63,7 +63,7 @@
 - 🎭 **Token遮掩显示** - 前端只显示前4位和后4位（如：`sk-1****abcd`）
 - 📝 **日志脱敏** - 日志中绝不记录明文Token，保护敏感信息
 
-### 智能容错（🆕 v2.0.2）
+### 智能容错（v2.0.2）
 
 - 🔍 **实时错误检测** - 自动监控终端输出，识别Token错误
 - ⚠️ **自动状态标记** - Token失效时自动标记为不健康状态
@@ -100,7 +100,7 @@
    - 运行安装的LLMctl应用
    - 首次启动会自动初始化数据库表结构
 
-4. **首次登录** 🆕
+4. **首次登录**
    - 应用启动后显示登录页面
    - 使用默认管理员账户登录：
      - 用户名：`admin`
@@ -119,13 +119,13 @@
    - 选择Provider和工作目录
    - 系统自动选择Token并启动终端
 
-3. **查看通知** 🆕
+3. **查看通知**
    - 点击顶部导航栏的通知图标（🔔）查看未读通知
    - 进入"Notifications"页面管理所有通知
    - 支持按类型、优先级过滤，支持搜索
    - 可批量标记已读或删除
 
-4. **获取帮助** 🆕
+4. **获取帮助**
    - 点击顶部导航栏的"Help"按钮
    - 查看完整的使用指南和常见问题
    - 支持中英文切换
@@ -136,7 +136,7 @@
 
 ## 🎯 核心功能
 
-### 用户认证系统 🆕
+### 用户认证系统
 
 完善的用户登录认证系统，确保数据安全和用户隔离：
 
@@ -162,7 +162,7 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 
 详细设计请参考 [用户认证系统设计文档](docs/user-authentication-system.md)
 
-### 实时通知系统 🆕
+### 实时通知系统
 
 企业级实时通知系统，让您不错过任何重要信息：
 
@@ -195,7 +195,7 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 - 通知持久化存储，不会丢失
 - 优雅的进入/删除动画效果
 
-### 帮助中心 🆕
+### 帮助中心
 
 完整的应用内帮助文档，随时随地获取帮助：
 
@@ -218,7 +218,7 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 
 通过顶部导航栏的"Help"按钮即可访问帮助中心。
 
-### 智能Token切换 🆕
+### 智能Token切换
 
 当Token失效时，LLMctl会自动检测并引导您切换到健康的Token：
 
@@ -292,13 +292,13 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 - ✅ 独立的工作目录和环境变量
 - ✅ 支持完整的终端交互
 - ✅ 支持复制粘贴（Ctrl+C / Ctrl+V）
-- ✅ 全屏模式（F11切换，ESC退出）（🆕 v2.0.3）
-- ✅ 动态字体调整（Ctrl+滚轮缩放）（🆕 v2.0.3）
-- ✅ 自动执行命令（打开即用）（🆕 v2.1.1）
-- ✅ 状态完整保留（切换菜单不重置）（🆕 v2.1.1）
+- ✅ 全屏模式（F11切换，ESC退出）（v2.0.3）
+- ✅ 动态字体调整（Ctrl+滚轮缩放）（v2.0.3）
+- ✅ 自动执行命令（打开即用）（v2.1.1）
+- ✅ 状态完整保留（切换菜单不重置）（v2.1.1）
 - ✅ 可以独立打开和关闭
 
-### 终端全屏模式 🆕
+### 终端全屏模式
 
 专注的终端操作体验：
 
@@ -314,7 +314,7 @@ JWT Token生成（Access Token 24h + Refresh Token 7天）
 - 类似本地终端的沉浸式体验
 ```
 
-### 字体动态调整 🆕
+### 字体动态调整
 
 根据需要灵活调整终端字体：
 
@@ -357,18 +357,18 @@ LLMctl/
 │   │   ├── main/          # Electron主进程
 │   │   ├── renderer/      # React渲染进程
 │   │   │   ├── components/
-│   │   │   │   ├── Notifications/  # 通知系统组件 🆕
+│   │   │   │   ├── Notifications/  # 通知系统组件
 │   │   │   │   ├── Provider/
 │   │   │   │   ├── Token/
 │   │   │   │   ├── Session/
 │   │   │   │   └── ...
 │   │   │   ├── store/
 │   │   │   │   └── slices/
-│   │   │   │       └── notificationSlice.ts  # 通知状态管理 🆕
+│   │   │   │       └── notificationSlice.ts  # 通知状态管理
 │   │   │   ├── hooks/
-│   │   │   │   └── useNotifications.ts       # 通知Hook 🆕
+│   │   │   │   └── useNotifications.ts       # 通知Hook
 │   │   │   └── utils/
-│   │   │       └── notificationHelper.ts     # 通知辅助工具 🆕
+│   │   │       └── notificationHelper.ts     # 通知辅助工具
 │   │   └── preload/       # 预加载脚本
 │   └── package.json
 ├── src/                   # Spring Boot后端
@@ -376,28 +376,28 @@ LLMctl/
 │   │   ├── java/
 │   │   │   └── com/llmctl/
 │   │   │       ├── controller/
-│   │   │       │   ├── NotificationController.java  # 通知API 🆕
-│   │   │       │   └── SseController.java           # SSE推送 🆕
+│   │   │       │   ├── NotificationController.java  # 通知API
+│   │   │       │   └── SseController.java           # SSE推送
 │   │   │       ├── service/
-│   │   │       │   ├── NotificationService.java           🆕
-│   │   │       │   ├── NotificationPublisher.java         🆕
-│   │   │       │   └── SseConnectionManager.java          🆕
+│   │   │       │   ├── NotificationService.java
+│   │   │       │   ├── NotificationPublisher.java
+│   │   │       │   └── SseConnectionManager.java
 │   │   │       ├── mapper/
-│   │   │       │   └── NotificationMapper.java            🆕
+│   │   │       │   └── NotificationMapper.java
 │   │   │       ├── entity/
-│   │   │       │   └── Notification.java                  🆕
+│   │   │       │   └── Notification.java
 │   │   │       └── dto/
-│   │   │           ├── NotificationRequest.java           🆕
-│   │   │           └── NotificationResponse.java          🆕
+│   │   │           ├── NotificationRequest.java
+│   │   │           └── NotificationResponse.java
 │   │   └── resources/
 │   │       └── mapper/    # MyBatis XML
-│   │           └── NotificationMapper.xml                  🆕
+│   │           └── NotificationMapper.xml
 │   └── test/
 ├── docs/                  # 文档
 │   ├── USER_GUIDE.md
 │   ├── DEVELOPMENT.md
 │   ├── API_DOCUMENTATION.md
-│   └── user-authentication-system.md  # 认证系统设计 🆕
+│   └── user-authentication-system.md  # 认证系统设计
 └── README.md
 ```
 
@@ -407,7 +407,7 @@ LLMctl/
 
 - [用户手册](docs/USER_GUIDE.md) - 完整的使用指南
 - [开发文档](docs/DEVELOPMENT.md) - 开发者指南
-- [用户认证系统设计](docs/user-authentication-system.md) - 完整的认证系统设计文档 🆕
+- [用户认证系统设计](docs/user-authentication-system.md) - 完整的认证系统设计文档
 - [加密配置指南](docs/encryption-guide.md) - Jasypt与AES-256-GCM加密详解
 - [API文档](docs/api-documentation.md) - 后端API说明
 - [架构设计](docs/refactor-architecture.md) - 系统架构设计
@@ -418,7 +418,29 @@ LLMctl/
 
 ## 🔄 最新更新
 
-### v2.1.3 (2025-10-15) 🆕
+### v2.1.4 (2025-10-15)
+
+#### 🎉 新功能
+- ✅ **自动更新功能** - 一键检查和安装更新
+  - 菜单栏"帮助 → 检查更新"快捷入口
+  - 基于 electron-updater 和 GitHub Releases
+  - 实时下载进度显示（圆形进度条）
+  - 支持自动检测新版本并推送通知
+  - 下载完成后提示用户重启安装
+  - 开发模式自动禁用，仅生产环境生效
+
+#### 🔧 技术实现
+- ✅ **AutoUpdater 服务** - 完整的自动更新管理器
+  - 手动检查更新机制
+  - 友好的对话框提示
+  - 下载进度实时推送
+  - 更新状态消息通知
+- ✅ **前端集成** - TopBar 显示下载进度
+  - 圆形进度条实时显示下载百分比
+  - IPC 通信支持（preload.ts）
+  - 菜单触发事件监听
+
+### v2.1.3 (2025-10-15)
 
 #### 🎯 终端功能增强
 - ✅ **快捷键支持** - 提升终端操作效率
@@ -545,7 +567,7 @@ LLMctl/
   - 防暴力破解（连续失败5次锁定30分钟）
   - Token自动刷新机制
   - 登录审计日志
-- ✅ **实时通知系统** - 企业级实时通知功能 🎉
+- ✅ **实时通知系统** - 企业级实时通知功能
   - **实时推送机制**：基于 SSE (Server-Sent Events) 的实时通知推送
   - **通知管理中心**：完整的通知列表界面，支持分页、过滤、搜索
   - **智能通知图标**：顶部导航栏实时显示未读数量和连接状态

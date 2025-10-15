@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Space, Breadcrumb, Input, Tooltip, Dropdown, Avatar, message, Modal } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Button, Space, Breadcrumb, Input, Tooltip, Dropdown, Avatar, message, Modal, Progress } from 'antd';
 import type { MenuProps as AntMenuProps } from 'antd';
 import {
   MenuFoldOutlined,
@@ -44,6 +44,59 @@ const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const navigate = useNavigate();
   const currentUser = authStorage.getCurrentUser();
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  // ==================== 自动更新功能 ====================
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    // 监听菜单触发的检查更新事件
+    const unsubscribeTrigger = window.electronAPI.onTriggerCheckUpdates(() => {
+      handleCheckForUpdates();
+    });
+
+    // 监听更新状态消息
+    const unsubscribeStatus = window.electronAPI.onUpdateStatus((msg: string) => {
+      console.log('[TopBar] 更新状态:', msg);
+      if (msg.includes('下载')) {
+        setIsDownloading(true);
+      }
+    });
+
+    // 监听下载进度
+    const unsubscribeProgress = window.electronAPI.onDownloadProgress((percent: number) => {
+      console.log('[TopBar] 下载进度:', percent);
+      setDownloadProgress(percent);
+      if (percent >= 100) {
+        setIsDownloading(false);
+      }
+    });
+
+    return () => {
+      unsubscribeTrigger();
+      unsubscribeStatus();
+      unsubscribeProgress();
+    };
+  }, []);
+
+  // 手动检查更新
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI) {
+      message.error('Electron API 不可用');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.checkForUpdates();
+      if (!result.success && result.message) {
+        message.info(result.message);
+      }
+    } catch (error) {
+      console.error('[TopBar] 检查更新失败:', error);
+      message.error('检查更新失败');
+    }
+  };
 
   const handleBreadcrumbClick = (path?: string) => {
     if (path) {
@@ -178,6 +231,22 @@ const TopBar: React.FC<TopBarProps> = ({
 
       {/* 右侧：操作按钮 */}
       <Space size={8}>
+        {/* 下载进度提示 */}
+        {isDownloading && (
+          <Tooltip title={`正在下载更新: ${downloadProgress}%`}>
+            <div style={{ padding: '0 8px' }}>
+              <Progress
+                type="circle"
+                percent={downloadProgress}
+                width={32}
+                strokeColor="#1890ff"
+                format={(percent?: number) => `${percent}%`}
+                style={{ fontSize: 10 }}
+              />
+            </div>
+          </Tooltip>
+        )}
+
         <NotificationIcon />
 
         <Tooltip title="帮助">

@@ -110,10 +110,18 @@ class TerminalManager {
     const isWindows = os.platform() === 'win32';
     const shell = isWindows ? 'cmd.exe' : (command || 'bash');
 
+    // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
     const fullEnv = {
       ...process.env,
       ...env,
     };
+
+    // Windows 系统：添加 UTF-8 编码支持
+    if (isWindows) {
+      fullEnv.PYTHONIOENCODING = 'utf-8';
+      fullEnv.CHCP = '65001'; // UTF-8 code page
+      console.log('[TerminalManager] 检测到 Windows 系统，已添加 UTF-8 编码环境变量');
+    }
 
     try {
       const ptyOptions: any = {
@@ -171,6 +179,13 @@ class TerminalManager {
 
       // ✅ 将定时器保存到会话对象中
       newSession.errorDetectionTimer = timer;
+
+      // ✅ Windows 系统：启动后立即执行 chcp 65001 切换到 UTF-8 编码
+      if (isWindows) {
+        console.log('[TerminalManager] 执行 chcp 65001 切换到 UTF-8 编码');
+        // 使用静默方式执行（> nul 隐藏输出）
+        ptyProcess.write('chcp 65001 > nul\r');
+      }
 
       ptyProcess.onData((data: string) => {
         // 打印原始终端输出（帮助调试）

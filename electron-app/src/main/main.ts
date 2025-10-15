@@ -5,11 +5,13 @@ import * as child_process from 'child_process';
 import axios from 'axios';
 import { createMenu, setMenuLanguage, setAuthenticationStatus, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
+import AutoUpdater from './services/autoUpdater';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let minimizeToTray = false;
 let isQuitting = false; // 使用局部变量而不是 app.isQuitting
+let updater: AutoUpdater | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -196,6 +198,12 @@ app.whenReady().then(() => {
   createMainWindow();
   Menu.setApplicationMenu(createMenu());
 
+  // ✅ 初始化自动更新器 (仅在生产环境)
+  if (mainWindow && !isDev) {
+    updater = new AutoUpdater(mainWindow);
+    console.log('[App] 自动更新器已初始化');
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
@@ -246,6 +254,24 @@ ipcMain.handle('open-external', async (_event, url: string) => {
   } catch (error) {
     console.error('[IPC] open-external 失败:', error);
     throw error;
+  }
+});
+
+/**
+ * 检查更新 (手动触发)
+ */
+ipcMain.handle('check-for-updates', async () => {
+  console.log('[IPC] check-for-updates: 手动检查更新');
+
+  if (isDev) {
+    return { success: false, message: '开发模式不支持自动更新' };
+  }
+
+  if (updater) {
+    updater.checkForUpdates();
+    return { success: true };
+  } else {
+    return { success: false, message: '自动更新器未初始化' };
   }
 });
 

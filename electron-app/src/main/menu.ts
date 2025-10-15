@@ -356,14 +356,8 @@ export function createMenu(): Menu {
             const win = BrowserWindow.getFocusedWindow();
             if (!win) return;
 
-            const version = app.getVersion();
-            dialog.showMessageBox(win, {
-              type: 'info',
-              title: t('updateTitle'),
-              message: t('updateMessage'),
-              detail: t('updateDetail').replace('{{version}}', version),
-              buttons: [t('ok')]
-            });
+            // ✅ 触发检查更新事件（通过渲染进程调用 IPC）
+            win.webContents.send('trigger-check-updates');
           }
         }
       ]

@@ -152,4 +152,12 @@
         WHERE id = #{userId}
     </update>
 
+    <!-- 查询所有用户 -->
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        ORDER BY id ASC
+    </select>
+
 </mapper>

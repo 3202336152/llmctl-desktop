@@ -344,6 +344,12 @@ public class SessionServiceImpl implements ISessionService {
 
         log.debug("为Provider {} 构建环境变量，Token ID: {}", provider.getId(), selectedToken.getId());
 
+        // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
+        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+            envVars.put("CHCP", "65001"); // UTF-8 code page
+            log.debug("检测到 Windows 系统，已添加 UTF-8 编码设置 (CHCP=65001)");
+        }
+
         switch (provider.getType().toLowerCase()) {
             case "anthropic":
                 envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);

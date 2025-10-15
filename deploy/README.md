@@ -28,6 +28,15 @@ git push origin main
 git tag -a v2.1.3 -m "Release version 2.1.3"
 git push origin v2.1.3
 ```
+#### 3. 重新推送版本标签：
+```bash
+# 删除现有标签
+git tag -d v2.1.3
+git push origin :refs/tags/v2.1.3
+# 重新创建并推送标签
+git tag -a v2.1.3 -m "Release version 2.1.3"
+git push origin v2.1.3
+```
 
 ### 🔧 构建系统特性
 

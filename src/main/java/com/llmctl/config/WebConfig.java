@@ -55,8 +55,9 @@ public class WebConfig implements WebMvcConfigurer {
                     "/*.html",                        // HTML文件
                     "/*.js",                          // JS文件
                     "/*.css",                         // CSS文件
-                        "/migration/**",
-                    "/*.map"                          // Source map文件
+                    "/migration/**",
+                    "/*.map",                          // Source map文件
+                    "/users/list","/users/ids"
                 );
     }
 }

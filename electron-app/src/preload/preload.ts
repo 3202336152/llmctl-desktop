@@ -21,6 +21,12 @@ export interface ElectronAPI {
   openExternal(url: string): Promise<void>;
   send(channel: string, data?: any): void;
 
+  // 自动更新
+  checkForUpdates(): Promise<{ success: boolean; message?: string }>;
+  onUpdateStatus(callback: (message: string) => void): () => void;
+  onDownloadProgress(callback: (percent: number) => void): () => void;
+  onTriggerCheckUpdates(callback: () => void): () => void;
+
   // ==================== 终端 API ====================
   // 创建终端会话
   terminalCreate(options: {
@@ -78,6 +84,42 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   send: (channel: string, data?: any) => ipcRenderer.send(channel, data),
+
+  // ==================== 自动更新 API ====================
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  onUpdateStatus: (callback) => {
+    const listener = (_event: any, message: string) => {
+      callback(message);
+    };
+    ipcRenderer.on('update-status', listener);
+
+    return () => {
+      ipcRenderer.removeListener('update-status', listener);
+    };
+  },
+
+  onDownloadProgress: (callback) => {
+    const listener = (_event: any, percent: number) => {
+      callback(percent);
+    };
+    ipcRenderer.on('download-progress', listener);
+
+    return () => {
+      ipcRenderer.removeListener('download-progress', listener);
+    };
+  },
+
+  onTriggerCheckUpdates: (callback) => {
+    const listener = () => {
+      callback();
+    };
+    ipcRenderer.on('trigger-check-updates', listener);
+
+    return () => {
+      ipcRenderer.removeListener('trigger-check-updates', listener);
+    };
+  },
 
   // ==================== 终端 API ====================
   terminalCreate: (options) => ipcRenderer.invoke('terminal-create', options),

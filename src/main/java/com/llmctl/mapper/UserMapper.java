@@ -117,4 +117,11 @@ public interface UserMapper {
      * @return 影响的行数
      */
     int clearRefreshToken(@Param("userId") Long userId);
+
+    /**
+     * 查询所有用户
+     *
+     * @return 所有用户列表
+     */
+    java.util.List<User> findAll();
 }
