@@ -76,14 +76,6 @@
   "build": {
     "appId": "com.llmctl.desktop",
     "productName": "LLMctl",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "3202336152",
-        "repo": "llmctl-desktop",
-        "releaseType": "release"
-      }
-    ],
     "directories": {
       "output": "release"
     },
