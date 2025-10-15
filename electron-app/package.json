@@ -84,6 +84,11 @@
       "node_modules/**/*",
       "assets/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "3202336152",
+      "repo": "llmctl-desktop"
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon-1024.png"
