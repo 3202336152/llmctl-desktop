@@ -1,6 +1,68 @@
-# LLMctl 部署指南（CentOS + Docker + 外部数据库）
+# LLMctl 部署指南
 
-## 📦 部署流程
+## 📦 部署架构
+
+LLMctl 采用前后端分离架构：
+- **后端**：Spring Boot + MySQL 服务器部署
+- **前端**：Electron 桌面应用，通过 GitHub Actions 自动构建发布
+
+---
+
+## 🖥️ 前端发布（GitHub Actions 自动构建）
+
+### 🎯 发布流程
+
+LLMctl 使用 GitHub Actions 实现完全自动化的构建和发布：
+
+#### 1. 开发阶段
+```bash
+# 日常开发推送到主分支（只构建，不发布）
+git add .
+git commit -m "feat: 添加新功能"
+git push origin main
+```
+
+#### 2. 正式发布
+```bash
+# 创建版本标签并推送
+git tag -a v2.1.3 -m "Release version 2.1.3"
+git push origin v2.1.3
+```
+
+### 🔧 构建系统特性
+
+- **多平台并行构建**：Windows、macOS、Linux 同时构建
+- **自动创建 Release**：版本标签触发时自动创建 GitHub Release
+- **自动上传文件**：构建完成后自动上传安装包
+- **智能版本管理**：使用语义化版本号（如 v2.1.3）
+
+### 📋 监控构建状态
+
+1. **GitHub Actions 页面**：
+   - 访问：https://github.com/3202336152/llmctl-desktop/actions
+   - 查看实时构建进度和日志
+   - 三个平台并行构建，通常需要 10-15 分钟
+
+2. **GitHub Releases 页面**：
+   - 访问：https://github.com/3202336152/llmctl-desktop/releases
+   - 下载各平台安装包
+   - 查看版本更新说明
+
+3. **版本检查 API**：
+   ```
+   https://api.github.com/repos/3202336152/llmctl-desktop/releases/latest
+   ```
+
+### 📦 安装包下载
+
+用户可以从 GitHub Releases 页面下载：
+- **Windows**: `LLMctl-Setup-x.x.x.exe`
+- **macOS**: `LLMctl-x.x.x.dmg`
+- **Linux**: `LLMctl-x.x.x.AppImage`
+
+---
+
+## 🗄️ 后端部署（CentOS + Docker + 外部数据库）
 
 ### 第一步：本地打包 JAR
 
@@ -240,6 +302,7 @@ docker-compose logs -f app
 
 ---
 
-**版本**: v2.0.4
-**部署方式**: Docker + 外部 MySQL
-**更新日期**: 2025-10-11
+**版本**: v2.1.3
+**前端构建**: GitHub Actions 自动构建发布
+**后端部署**: Docker + 外部 MySQL
+**更新日期**: 2025-10-15
