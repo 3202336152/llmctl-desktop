@@ -95,7 +95,6 @@ public class ProviderServiceImpl implements ProviderService {
         provider.setBaseUrl(request.getBaseUrl());
         provider.setModelName(request.getModelName());
         provider.setMaxTokens(request.getMaxTokens());
-        provider.setMaxOutputTokens(request.getMaxOutputTokens());
         provider.setTemperature(request.getTemperature());
         provider.setExtraHeaders(request.getExtraHeaders());
 
@@ -170,9 +169,6 @@ public class ProviderServiceImpl implements ProviderService {
         }
         if (request.getMaxTokens() != null) {
             existingProvider.setMaxTokens(request.getMaxTokens());
-        }
-        if (request.getMaxOutputTokens() != null) {
-            existingProvider.setMaxOutputTokens(request.getMaxOutputTokens());
         }
         if (request.getTemperature() != null) {
             existingProvider.setTemperature(request.getTemperature());
@@ -294,7 +290,6 @@ public class ProviderServiceImpl implements ProviderService {
         dto.setBaseUrl(provider.getBaseUrl());
         dto.setModelName(provider.getModelName());
         dto.setMaxTokens(provider.getMaxTokens());
-        dto.setMaxOutputTokens(provider.getMaxOutputTokens());
         dto.setTemperature(provider.getTemperature());
         dto.setExtraHeaders(provider.getExtraHeaders());
         dto.setIsActive(provider.getIsActive());

@@ -14,7 +14,6 @@
         <result column="base_url" property="baseUrl" jdbcType="VARCHAR"/>
         <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
         <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
-        <result column="max_output_tokens" property="maxOutputTokens" jdbcType="INTEGER"/>
         <result column="temperature" property="temperature" jdbcType="DECIMAL"/>
         <result column="extra_headers" property="extraHeaders" jdbcType="VARCHAR"/>
         <result column="token_strategy_type" property="tokenStrategyType"
@@ -27,7 +26,7 @@
 
     <!-- 基础列 -->
     <sql id="Base_Column_List">
-        id, user_id, name, description, type, base_url, model_name, max_tokens, max_output_tokens,
+        id, user_id, name, description, type, base_url, model_name, max_tokens,
         temperature, extra_headers, token_strategy_type, token_fallback_on_error, is_active,
         created_at, updated_at
     </sql>
@@ -70,12 +69,12 @@
     <insert id="insert" parameterType="com.llmctl.entity.Provider">
         INSERT INTO providers (
             id, user_id, name, description, type, base_url, model_name,
-            max_tokens, max_output_tokens, temperature, extra_headers,
+            max_tokens, temperature, extra_headers,
             token_strategy_type, token_fallback_on_error, is_active, created_at, updated_at
         )
         VALUES (
             #{id}, #{userId}, #{name}, #{description}, #{type}, #{baseUrl}, #{modelName},
-            #{maxTokens}, #{maxOutputTokens}, #{temperature}, #{extraHeaders},
+            #{maxTokens}, #{temperature}, #{extraHeaders},
             #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
             #{tokenFallbackOnError}, #{isActive}, #{createdAt}, #{updatedAt}
         )
@@ -90,7 +89,6 @@
             base_url = #{baseUrl},
             model_name = #{modelName},
             max_tokens = #{maxTokens},
-            max_output_tokens = #{maxOutputTokens},
             temperature = #{temperature},
             extra_headers = #{extraHeaders},
             token_strategy_type = #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},

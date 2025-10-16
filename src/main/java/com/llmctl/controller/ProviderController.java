@@ -161,10 +161,10 @@ public class ProviderController {
 
         ProviderStatistics statistics = new ProviderStatistics();
         statistics.setTotal(providerService.countProviders());
-        statistics.setAnthropicCount(providerService.countProvidersByType("anthropic"));
-        statistics.setOpenaiCount(providerService.countProvidersByType("openai"));
-        statistics.setQwenCount(providerService.countProvidersByType("qwen"));
+        statistics.setClaudeCodeCount(providerService.countProvidersByType("claude code"));
+        statistics.setCodexCount(providerService.countProvidersByType("codex"));
         statistics.setGeminiCount(providerService.countProvidersByType("gemini"));
+        statistics.setQoderCount(providerService.countProvidersByType("qoder"));
 
         ApiResponse<ProviderStatistics> response = ApiResponse.success(statistics);
         return ResponseEntity.ok(response);
@@ -194,25 +194,25 @@ public class ProviderController {
      */
     public static class ProviderStatistics {
         private long total;
-        private long anthropicCount;
-        private long openaiCount;
-        private long qwenCount;
+        private long claudeCodeCount;
+        private long codexCount;
         private long geminiCount;
+        private long qoderCount;
 
         // Getters and Setters
         public long getTotal() { return total; }
         public void setTotal(long total) { this.total = total; }
 
-        public long getAnthropicCount() { return anthropicCount; }
-        public void setAnthropicCount(long anthropicCount) { this.anthropicCount = anthropicCount; }
+        public long getClaudeCodeCount() { return claudeCodeCount; }
+        public void setClaudeCodeCount(long claudeCodeCount) { this.claudeCodeCount = claudeCodeCount; }
 
-        public long getOpenaiCount() { return openaiCount; }
-        public void setOpenaiCount(long openaiCount) { this.openaiCount = openaiCount; }
-
-        public long getQwenCount() { return qwenCount; }
-        public void setQwenCount(long qwenCount) { this.qwenCount = qwenCount; }
+        public long getCodexCount() { return codexCount; }
+        public void setCodexCount(long codexCount) { this.codexCount = codexCount; }
 
         public long getGeminiCount() { return geminiCount; }
         public void setGeminiCount(long geminiCount) { this.geminiCount = geminiCount; }
+
+        public long getQoderCount() { return qoderCount; }
+        public void setQoderCount(long qoderCount) { this.qoderCount = qoderCount; }
     }
 }

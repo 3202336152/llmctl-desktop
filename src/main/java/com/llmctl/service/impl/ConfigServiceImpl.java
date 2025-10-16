@@ -6,20 +6,22 @@ import com.llmctl.entity.Provider;
 import com.llmctl.entity.Token;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.TokenMapper;
-import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.IConfigService;
+import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.ProviderService;
 import com.llmctl.service.TokenService;
 import com.llmctl.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -639,7 +641,7 @@ public class ConfigServiceImpl implements IConfigService {
         String tokenValue = token.getValue(); // 这里应该解密Token值
 
         switch (provider.getType().toLowerCase()) {
-            case "anthropic":
+            case "claude code":
                 envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
                 if (provider.getBaseUrl() != null) {
                     envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
@@ -647,35 +649,47 @@ public class ConfigServiceImpl implements IConfigService {
                 if (provider.getModelName() != null) {
                     envVars.put("ANTHROPIC_MODEL", provider.getModelName());
                 }
-                break;
-
-            case "openai":
-                envVars.put("OPENAI_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("OPENAI_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("OPENAI_MODEL", provider.getModelName());
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
                 }
                 break;
 
-            case "qwen":
-                envVars.put("DASHSCOPE_API_KEY", tokenValue);
+            case "codex":
+                envVars.put("CODEX_API_KEY", tokenValue);
                 if (provider.getBaseUrl() != null) {
-                    envVars.put("DASHSCOPE_BASE_URL", provider.getBaseUrl());
+                    envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
                 }
                 if (provider.getModelName() != null) {
-                    envVars.put("QWEN_MODEL", provider.getModelName());
+                    envVars.put("CODEX_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("CODEX_MAX_TOKENS", provider.getMaxTokens().toString());
                 }
                 break;
 
             case "gemini":
-                envVars.put("GOOGLE_API_KEY", tokenValue);
+                envVars.put("GEMINI_API_KEY", tokenValue);
                 if (provider.getBaseUrl() != null) {
-                    envVars.put("GOOGLE_BASE_URL", provider.getBaseUrl());
+                    envVars.put("GEMINI_BASE_URL", provider.getBaseUrl());
                 }
                 if (provider.getModelName() != null) {
                     envVars.put("GEMINI_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("GEMINI_MAX_TOKENS", provider.getMaxTokens().toString());
+                }
+                break;
+
+            case "qoder":
+                envVars.put("QODER_API_KEY", tokenValue);
+                if (provider.getBaseUrl() != null) {
+                    envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                }
+                if (provider.getModelName() != null) {
+                    envVars.put("QODER_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("QODER_MAX_TOKENS", provider.getMaxTokens().toString());
                 }
                 break;
         }

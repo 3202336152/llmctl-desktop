@@ -415,21 +415,37 @@ ipcMain.handle('terminal-resize', (_event, data: { sessionId: string; cols: numb
 /**
  * 打开外部终端
  */
-ipcMain.handle('open-external-terminal', async (_event, options: { workingDirectory: string; command: string }) => {
+ipcMain.handle('open-external-terminal', async (_event, options: { workingDirectory: string; command: string; env?: Record<string, string> }) => {
   try {
     console.log('[IPC] open-external-terminal:', options);
 
     // Windows: 使用 cmd.exe 打开新窗口
     if (process.platform === 'win32') {
+      // ✅ 构建环境变量设置命令
+      let envSetupCommands = '';
+      if (options.env && Object.keys(options.env).length > 0) {
+        console.log('[IPC] 设置环境变量:', options.env);
+        // 为每个环境变量生成 set 命令
+        for (const [key, value] of Object.entries(options.env)) {
+          // 跳过 CHCP 变量，因为这是内部使用的
+          if (key === 'CHCP') continue;
+
+          // 转义特殊字符
+          const escapedValue = value.replace(/"/g, '\\"');
+          envSetupCommands += `set "${key}=${escapedValue}" && `;
+        }
+      }
+
       // 使用 start 命令打开新的 CMD 窗口
       // /K 保持窗口打开，/D 设置工作目录
-      const command = `start "LLMctl Terminal" /D "${options.workingDirectory}" cmd /K ${options.command}`;
+      // 先设置环境变量，然后执行命令
+      const command = `start "LLMctl Terminal" /D "${options.workingDirectory}" cmd /K "${envSetupCommands}${options.command}"`;
 
       child_process.exec(command, (error) => {
         if (error) {
           console.error('[IPC] 打开外部终端失败:', error);
         } else {
-          console.log('[IPC] ✅ 外部终端已成功打开');
+          console.log('[IPC] ✅ 外部终端已成功打开（已设置环境变量）');
         }
       });
 
@@ -438,9 +454,20 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
     }
     // macOS: 使用 Terminal.app
     else if (process.platform === 'darwin') {
+      // ✅ 构建环境变量设置命令
+      let envSetupCommands = '';
+      if (options.env && Object.keys(options.env).length > 0) {
+        console.log('[IPC] 设置环境变量:', options.env);
+        for (const [key, value] of Object.entries(options.env)) {
+          if (key === 'CHCP') continue;
+          const escapedValue = value.replace(/'/g, "'\\''"); // 转义单引号
+          envSetupCommands += `export ${key}='${escapedValue}'; `;
+        }
+      }
+
       const script = `
         tell application "Terminal"
-          do script "cd '${options.workingDirectory}' && ${options.command}"
+          do script "cd '${options.workingDirectory}' && ${envSetupCommands}${options.command}"
           activate
         end tell
       `;
@@ -448,7 +475,7 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
         if (error) {
           console.error('[IPC] 打开外部终端失败:', error);
         } else {
-          console.log('[IPC] ✅ 外部终端已成功打开 (macOS)');
+          console.log('[IPC] ✅ 外部终端已成功打开 (macOS，已设置环境变量)');
         }
       });
 
@@ -457,13 +484,24 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
     }
     // Linux: 使用 gnome-terminal 或其他终端
     else {
-      const command = `gnome-terminal --working-directory="${options.workingDirectory}" -- bash -c "${options.command}; exec bash"`;
+      // ✅ 构建环境变量设置命令
+      let envSetupCommands = '';
+      if (options.env && Object.keys(options.env).length > 0) {
+        console.log('[IPC] 设置环境变量:', options.env);
+        for (const [key, value] of Object.entries(options.env)) {
+          if (key === 'CHCP') continue;
+          const escapedValue = value.replace(/'/g, "'\\''"); // 转义单引号
+          envSetupCommands += `export ${key}='${escapedValue}'; `;
+        }
+      }
+
+      const command = `gnome-terminal --working-directory="${options.workingDirectory}" -- bash -c "${envSetupCommands}${options.command}; exec bash"`;
 
       child_process.exec(command, (error) => {
         if (error) {
           console.error('[IPC] 打开外部终端失败:', error);
         } else {
-          console.log('[IPC] ✅ 外部终端已成功打开 (Linux)');
+          console.log('[IPC] ✅ 外部终端已成功打开 (Linux，已设置环境变量)');
         }
       });
 

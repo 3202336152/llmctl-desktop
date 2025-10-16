@@ -8,7 +8,7 @@ import java.util.List;
  * 用户服务接口
  *
  * @author Liu Yifan
- * @version 2.1.4
+ * @version 2.1.5
  * @since 2025-10-15
  */
 public interface IUserService {

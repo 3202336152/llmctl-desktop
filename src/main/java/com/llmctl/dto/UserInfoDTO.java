@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * 用户信息DTO（用于列表展示）
  *
  * @author Liu Yifan
- * @version 2.1.4
+ * @version 2.1.5
  * @since 2025-10-15
  */
 @Data

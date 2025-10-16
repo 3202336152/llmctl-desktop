@@ -5,6 +5,200 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.5] - 2025-10-16
+
+### Changed 🔄
+- **Provider 类型重构** - 从 API 服务商改为 CLI 工具类型分类
+  - **新的 Provider 类型支持**：
+    - `claude code` - Claude Code CLI 工具
+    - `codex` - Codex CLI 工具
+    - `gemini` - Google Gemini CLI 工具
+    - `qoder` - Qoder CLI 工具
+  - **移除的旧类型**：
+    - `anthropic` - 已合并到 `claude code`
+    - `openai` - 已合并到 `codex`
+    - `qwen` - 已移除（不支持对应的 CLI 工具）
+
+### 🔧 环境变量命名规则统一
+- **Claude Code 环境变量**：
+  ```bash
+  ANTHROPIC_AUTH_TOKEN=your_token
+  ANTHROPIC_BASE_URL=https://api.anthropic.com
+  ANTHROPIC_MODEL=claude-3-sonnet-20240229
+  CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096
+  ```
+
+- **Codex 环境变量**：
+  ```bash
+  CODEX_API_KEY=your_token
+  CODEX_BASE_URL=https://api.openai.com
+  CODEX_MODEL=code-davinci-002
+  CODEX_MAX_TOKENS=4096
+  CODEX_TEMPERATURE=0.7
+  ```
+
+- **Gemini 环境变量**：
+  ```bash
+  GOOGLE_API_KEY=your_token
+  GOOGLE_BASE_URL=https://generativelanguage.googleapis.com
+  GEMINI_MODEL=gemini-pro
+  GEMINI_MAX_TOKENS=4096
+  GEMINI_TEMPERATURE=0.7
+  ```
+
+- **Qoder 环境变量**：
+  ```bash
+  QODER_API_KEY=your_token
+  QODER_BASE_URL=https://api.qoder.com
+  QODER_MODEL=qoder-latest
+  QODER_MAX_TOKENS=4096
+  QODER_TEMPERATURE=0.7
+  ```
+
+### 🏗️ 数据库和后端修改
+- **数据库表结构**：
+  - `providers` 表注释更新为新的 CLI 工具类型
+  - 移除 `max_output_tokens` 字段（已删除）
+
+- **后端验证规则**：
+  - `CreateProviderRequest.java` - 更新正则表达式：`^(claude code|codex|gemini|qoder)$`
+  - 错误消息更新：`Provider类型必须是：claude code, codex, gemini, qoder 之一`
+
+- **统计功能更新**：
+  - `ProviderController.java` - 统计接口更新为新的类型计数
+  - `ProviderStatistics` 类字段更新：
+    - `claudeCodeCount` 替代 `anthropicCount`
+    - `codexCount` 替代 `openaiCount`
+    - `qoderCount` 替代 `qwenCount`
+    - `geminiCount` 保持不变
+
+- **环境变量构建逻辑统一**：
+  - `ConfigServiceImpl.java` - 导出配置时使用新的环境变量规则
+  - `SessionServiceImpl.java` - 会话启动时使用统一的环境变量命名
+  - 两个 Service 中的环境变量命名规则完全一致
+
+### 🎨 前端界面更新
+- **类型定义更新**：
+  - `types/index.ts` - Provider 接口类型更新为 `'claude code' | 'codex' | 'gemini' | 'qoder'`
+
+- **UI 组件更新**：
+  - `ProviderManager.tsx` - 类型选项和颜色映射更新
+  - 类型标签颜色：`claude code`(蓝色)、`codex`(绿色)、`gemini`(紫色)、`qoder`(橙色)
+
+- **帮助文档同步**：
+  - `Help.tsx` - 更新支持的 Provider 类型和功能描述
+  - 关键词更新为：`['provider', '服务商', '配置', 'claude code', 'codex', 'gemini', 'qoder']`
+
+### 🔄 实体类和 DTO 更新
+- **删除的文件**：
+  - `ProviderTemplate.java` - Provider模板实体类
+  - `ProviderTemplateMapper.java` - Provider模板数据访问接口
+  - `ProviderTemplateMapper.xml` - Provider模板 XML 映射文件
+  - `ProviderTemplateServiceImpl.java` - Provider模板服务实现
+  - `IProviderTemplateService.java` - Provider模板服务接口
+  - `ProviderTemplateController.java` - Provider模板控制器
+  - `ProviderTemplateDTO.java` - Provider模板数据传输对象
+
+- **保留的数据库结构**：
+  - `provider_templates` 表结构保留（未删除），以备将来需要重新实现模板功能
+
+### ⚠️ 破坏性变更
+- **配置兼容性**：现有的 Provider 配置需要手动更新类型
+- **环境变量**：CLI 工具需要使用新的环境变量名称
+- **API 接口**：创建 Provider 时必须使用新的类型值
+
+### 📋 修改文件清单
+#### **数据库文件**：
+- `src/main/resources/db/schema.sql` - 更新 providers 表注释
+
+#### **后端 Java 文件**：
+- `src/main/java/com/llmctl/entity/Provider.java` - 更新类型注释
+- `src/main/java/com/llmctl/dto/CreateProviderRequest.java` - 更新验证规则
+- `src/main/java/com/llmctl/dto/UpdateProviderRequest.java` - 更新验证规则
+- `src/main/java/com/llmctl/dto/ProviderDTO.java` - 更新类型注释
+- `src/main/java/com/llmctl/controller/ProviderController.java` - 更新统计方法
+- `src/main/java/com/llmctl/service/impl/ConfigServiceImpl.java` - 更新环境变量构建
+- `src/main/java/com/llmctl/service/impl/SessionServiceImpl.java` - 更新环境变量构建
+- `src/main/resources/mapper/ProviderMapper.xml` - 移除 `max_output_tokens` 字段映射
+
+#### **前端 TypeScript 文件**：
+- `electron-app/src/renderer/types/index.ts` - 更新 Provider 接口类型
+
+#### **前端 React 文件**：
+- `electron-app/src/renderer/components/Provider/ProviderManager.tsx` - 更新类型选项和颜色映射
+
+#### **文档文件**：
+- `electron-app/src/renderer/components/Help/Help.tsx` - 更新支持的 Provider 类型
+
+### 🎯 技术目标
+- **CLI 工具导向**：Provider 类型分类更符合实际 CLI 工具使用场景
+- **环境变量标准化**：每个 CLI 工具使用其官方推荐的环境变量命名
+- **类型安全**：前后端类型定义完全一致，避免类型错误
+- **向后兼容**：保留数据库表结构，为将来的模板功能预留空间
+
+### 🔍 测试建议
+- 创建新的 Provider 测试所有 4 种类型
+- 验证环境变量导出功能是否正确
+- 确认会话启动时环境变量传递正常
+- 检查统计功能是否准确反映新的类型分布
+
+## [2.1.5] - 2025-10-16
+
+### Added 🎉
+- **外部终端环境变量传递功能** - 完整的配置同步体验
+  - **环境变量自动获取**：
+    - 外部终端打开时自动获取当前会话的环境变量
+    - 包含 Provider 配置的 `ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL` 等
+    - 通过 `/sessions/{sessionId}/environment` API 接口获取
+    - 支持所有 Provider 类型（Anthropic、OpenAI、Qwen、Gemini）
+
+  - **跨平台环境变量注入**：
+    - **Windows**: 使用 `set "变量名=值" &&` 语法设置环境变量
+    - **macOS/Linux**: 使用 `export 变量名="值" &&` 语法设置环境变量
+    - 自动转义特殊字符，防止命令注入
+    - 确保外部终端使用与内部终端相同的配置
+
+  - **错误容错机制**：
+    - 获取环境变量失败时仍能正常打开外部终端
+    - 友好的用户提示，告知使用系统默认配置
+    - 完整的错误日志记录，便于问题排查
+
+### Changed 🎨
+- **终端重启逻辑优化** - 彻底解决黑屏和卡死问题
+  - **根本原因修复**：
+    - 重新激活会话时删除旧会话记录，创建全新会话
+    - 避免 terminalManager 误判为 `/resume` 操作
+    - 确保 sessionId 唯一性，防止状态混乱
+  - **用户体验提升**：
+    - 重启后终端界面正常显示，无黑屏
+    - 终端响应正常，无系统卡死
+    - 会话状态管理更加稳定可靠
+
+### Technical Details 🔧
+- **前端修改文件**：
+  - `TerminalManager.tsx` - 新增环境变量获取逻辑（299-312行）
+  - `SessionManager.tsx` - 优化重启逻辑，删除旧会话创建新会话
+  - `preload.ts` - 更新 `openExternalTerminal` 接口类型定义
+
+- **后端修改文件**：
+  - `main.ts` - 更新 IPC 处理器，支持环境变量参数注入（197-235行）
+  - `SessionController.java` - 提供环境变量获取接口
+  - `ConfigServiceImpl.java` - `buildEnvironmentVariables` 方法构建 Provider 环境变量
+
+- **API 接口变更**：
+  - `GET /sessions/{sessionId}/environment` - 获取会话环境变量
+  - `open-external-terminal` IPC 支持 `env?: Record<string, string>` 参数
+
+### Security 🔐
+- **环境变量安全处理**：
+  - 特殊字符自动转义，防止命令注入攻击
+  - 跳过内部变量（如 `CHCP`），仅传递业务相关变量
+  - 完整的类型检查，确保参数安全性
+
+### Documentation 📖
+- 更新 `CHANGELOG.md` - 记录外部终端环境变量功能实现
+- 更新 `CLAUDE.md` - 添加新功能说明和技术细节
+
 ## [2.1.4] - 2025-10-16
 
 ### Added 🎉

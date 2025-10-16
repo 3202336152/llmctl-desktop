@@ -43,21 +43,13 @@ public class UpdateProviderRequest {
      * 最大Token数
      */
     @Min(value = 1, message = "最大Token数必须大于0")
-    @Max(value = 100000, message = "最大Token数不能超过100000")
     private Integer maxTokens;
-
-    /**
-     * 最大输出Token数
-     */
-    @Min(value = 1, message = "最大输出Token数必须大于0")
-    @Max(value = 50000, message = "最大输出Token数不能超过50000")
-    private Integer maxOutputTokens;
 
     /**
      * 温度参数
      */
     @DecimalMin(value = "0.0", message = "温度参数必须大于等于0.0")
-    @DecimalMax(value = "2.0", message = "温度参数必须小于等于2.0")
+    @DecimalMax(value = "1.0", message = "温度参数必须小于等于2.0")
     private BigDecimal temperature;
 
     /**

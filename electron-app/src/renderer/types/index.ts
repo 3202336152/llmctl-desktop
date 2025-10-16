@@ -11,7 +11,7 @@ export interface Provider {
   id: string;
   name: string;
   description?: string;
-  type: 'anthropic' | 'openai' | 'qwen' | 'gemini';
+  type: 'claude code' | 'codex' | 'gemini' | 'qoder';
   baseUrl: string;
   modelName: string;
   maxTokens?: number;
@@ -141,41 +141,6 @@ export interface DailyStatistics {
   errors: number;
 }
 
-// Provider Template 相关类型
-export interface ProviderTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  type: string;
-  defaultBaseUrl?: string;
-  defaultModelName?: string;
-  envVarsTemplate?: Record<string, any>;
-  setupPrompts?: Record<string, any>;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateTemplateRequest {
-  name: string;
-  description?: string;
-  type: string;
-  defaultBaseUrl?: string;
-  defaultModelName?: string;
-  envVarsTemplate?: Record<string, any>;
-  setupPrompts?: Record<string, any>;
-  isActive?: boolean;
-}
-
-export interface ProviderConfigFromTemplate {
-  name?: string;
-  description?: string;
-  type: string;
-  baseUrl?: string;
-  modelName?: string;
-  token?: string;
-  environmentVariables?: Record<string, string>;
-}
 
 // UI State 类型
 export interface LoadingState {

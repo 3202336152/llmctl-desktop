@@ -39,7 +39,7 @@ public class Provider {
     private String description;
 
     /**
-     * Provider类型: anthropic, openai, qwen, gemini
+     * Provider类型: claude code, codex, gemini, qoder
      */
     private String type;
 
@@ -57,11 +57,6 @@ public class Provider {
      * 最大Token数
      */
     private Integer maxTokens;
-
-    /**
-     * 最大输出Token数
-     */
-    private Integer maxOutputTokens;
 
     /**
      * 温度参数 (0.0-1.0)

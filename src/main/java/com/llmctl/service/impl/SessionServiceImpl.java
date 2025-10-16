@@ -351,7 +351,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         switch (provider.getType().toLowerCase()) {
-            case "anthropic":
+            case "claude code":
                 envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
                 if (provider.getBaseUrl() != null) {
                     envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
@@ -360,42 +360,23 @@ public class SessionServiceImpl implements ISessionService {
                     envVars.put("ANTHROPIC_MODEL", provider.getModelName());
                 }
                 if (provider.getMaxTokens() != null) {
-                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", String.valueOf(provider.getMaxTokens()));
-                }
-                if (provider.getTemperature() != null) {
-                    envVars.put("CLAUDE_CODE_TEMPERATURE", provider.getTemperature().toString());
+                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
                 }
                 break;
 
-            case "openai":
-                envVars.put("OPENAI_API_KEY", tokenValue);
+            case "codex":
+                envVars.put("CODEX_API_KEY", tokenValue);
                 if (provider.getBaseUrl() != null) {
-                    envVars.put("OPENAI_BASE_URL", provider.getBaseUrl());
+                    envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
                 }
                 if (provider.getModelName() != null) {
-                    envVars.put("OPENAI_MODEL", provider.getModelName());
+                    envVars.put("CODEX_MODEL", provider.getModelName());
                 }
                 if (provider.getMaxTokens() != null) {
-                    envVars.put("OPENAI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    envVars.put("CODEX_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
                 }
                 if (provider.getTemperature() != null) {
-                    envVars.put("OPENAI_TEMPERATURE", provider.getTemperature().toString());
-                }
-                break;
-
-            case "qwen":
-                envVars.put("DASHSCOPE_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("DASHSCOPE_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("QWEN_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("QWEN_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
-                }
-                if (provider.getTemperature() != null) {
-                    envVars.put("QWEN_TEMPERATURE", provider.getTemperature().toString());
+                    envVars.put("CODEX_TEMPERATURE", provider.getTemperature().toString());
                 }
                 break;
 
@@ -412,6 +393,22 @@ public class SessionServiceImpl implements ISessionService {
                 }
                 if (provider.getTemperature() != null) {
                     envVars.put("GEMINI_TEMPERATURE", provider.getTemperature().toString());
+                }
+                break;
+
+            case "qoder":
+                envVars.put("QODER_API_KEY", tokenValue);
+                if (provider.getBaseUrl() != null) {
+                    envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                }
+                if (provider.getModelName() != null) {
+                    envVars.put("QODER_MODEL", provider.getModelName());
+                }
+                if (provider.getMaxTokens() != null) {
+                    envVars.put("QODER_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                }
+                if (provider.getTemperature() != null) {
+                    envVars.put("QODER_TEMPERATURE", provider.getTemperature().toString());
                 }
                 break;
 

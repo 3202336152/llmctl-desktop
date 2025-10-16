@@ -27,6 +27,7 @@ import { fetchProviders } from '../../store/slices/providerSlice';
 import {
   setSessions,
   addSession,
+  removeSession,
   updateSession,
   setLoading,
   setError,
@@ -228,20 +229,35 @@ const SessionManager: React.FC = () => {
           console.log('终端进程已终止或不存在:', error);
         }
 
-        // 3. 调用后端 API 重新激活会话（更新数据库状态）
-        await sessionAPI.reactivateSession(sessionId);
+        // 3. ✅ 删除旧会话记录（避免 terminalManager 误判为 resume）
+        await sessionAPI.deleteSession(sessionId);
+        dispatch(removeSession(sessionId));
 
-        // 4. 重新加载会话列表
-        await loadSessions();
+        // 4. ✅ 创建全新的会话（使用相同的配置）
+        const newSessionRequest: StartSessionRequest = {
+          providerId: session.providerId,
+          workingDirectory: session.workingDirectory,
+          command: session.command,
+        };
 
-        message.success('会话已重新激活');
+        const response = await sessionAPI.startSession(newSessionRequest);
+        if (response.data) {
+          dispatch(addSession(response.data));
+          // 打开新会话的终端
+          dispatch(openTerminal(response.data.id));
+          // 跳转到 Terminals 页面
+          navigate('/terminals');
+          message.success('会话已重新启动');
+        } else {
+          message.error('创建新会话失败');
+        }
       } catch (error) {
         message.error(`重新激活会话失败: ${error}`);
-        return;
       }
+      return;
     }
 
-    // 打开终端（会创建新的终端实例和进程）
+    // 如果会话是 active 状态，直接打开终端
     dispatch(openTerminal(sessionId));
 
     // 跳转到 Terminals 页面

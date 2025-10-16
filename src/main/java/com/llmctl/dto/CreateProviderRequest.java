@@ -32,8 +32,8 @@ public class CreateProviderRequest {
      * Provider类型
      */
     @NotBlank(message = "Provider类型不能为空")
-    @Pattern(regexp = "^(anthropic|openai|qwen|gemini)$",
-             message = "Provider类型必须是：anthropic, openai, qwen, gemini 之一")
+    @Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
+             message = "Provider类型必须是：claude code, codex, gemini, qoder 之一")
     private String type;
 
     /**
@@ -67,13 +67,6 @@ public class CreateProviderRequest {
     @Min(value = 1, message = "最大Token数必须大于0")
     @Max(value = 100000, message = "最大Token数不能超过100000")
     private Integer maxTokens;
-
-    /**
-     * 最大输出Token数
-     */
-    @Min(value = 1, message = "最大输出Token数必须大于0")
-    @Max(value = 50000, message = "最大输出Token数不能超过50000")
-    private Integer maxOutputTokens;
 
     /**
      * 温度参数

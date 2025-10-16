@@ -51,8 +51,12 @@ export interface ElectronAPI {
   // 监听 Token 切换要求
   onTokenSwitchRequired(callback: (data: { sessionId: string; errorMessage: string }) => void): () => void;
 
-  // 打开外部终端
-  openExternalTerminal(options: { workingDirectory: string; command: string }): Promise<{ success: boolean }>;
+  // 打开外部终端（支持环境变量传递）
+  openExternalTerminal(options: {
+    workingDirectory: string;
+    command: string;
+    env?: Record<string, string>; // ✅ 可选的环境变量参数
+  }): Promise<{ success: boolean }>;
 
   // ==================== 配置导入导出 ====================
   // 监听导入配置消息

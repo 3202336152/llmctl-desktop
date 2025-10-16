@@ -149,10 +149,10 @@ const ProviderManager: React.FC = () => {
       align: 'center' as const,
       render: (type: string) => {
         const typeColors: Record<string, string> = {
-          anthropic: 'blue',
-          openai: 'green',
-          qwen: 'orange',
-          gemini: 'purple',
+          'claude code': 'blue',
+          'codex': 'green',
+          'gemini': 'purple',
+          'qoder': 'orange',
         };
         return <Tag color={typeColors[type] || 'default'}>{type.toUpperCase()}</Tag>;
       },
@@ -281,10 +281,10 @@ const ProviderManager: React.FC = () => {
               rules={[{ required: true, message: t('providers.typeRequired') }]}
             >
               <Select placeholder={t('providers.typePlaceholder')}>
-                <Option value="anthropic">Anthropic</Option>
-                <Option value="openai">OpenAI</Option>
-                <Option value="qwen">通义千问</Option>
+                <Option value="claude code">Claude Code</Option>
+                <Option value="codex">Codex</Option>
                 <Option value="gemini">Google Gemini</Option>
+                <Option value="qoder">Qoder</Option>
               </Select>
             </Form.Item>
           )}

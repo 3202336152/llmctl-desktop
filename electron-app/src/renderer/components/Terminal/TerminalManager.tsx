@@ -185,17 +185,31 @@ const TerminalManager: React.FC = () => {
         try {
           message.loading({ content: '正在打开外部终端...', key: 'external-terminal', duration: 0 });
 
-          // 1. 打开外部终端（传递工作目录和命令）
+          // 1. ✅ 获取会话的环境变量
+          let envVars: Record<string, string> = {};
+          try {
+            const envResponse = await sessionAPI.getSessionEnvironment(activeTabKey);
+            if (envResponse.data) {
+              envVars = envResponse.data;
+              console.log('[TerminalManager] ✅ 获取到会话环境变量:', envVars);
+            }
+          } catch (error) {
+            console.error('[TerminalManager] 获取环境变量失败:', error);
+            message.warning('获取环境变量失败，外部终端将使用系统默认配置');
+          }
+
+          // 2. 打开外部终端（传递工作目录、命令和环境变量）
           const result = await window.electronAPI.openExternalTerminal({
             workingDirectory: currentSession.workingDirectory,
             command: currentSession.command || 'claude',
+            env: envVars, // ✅ 传递环境变量
           });
 
           if (!result.success) {
             throw new Error('打开外部终端失败');
           }
 
-          // 2. 关闭当前内置终端（这会自动将会话状态改为 inactive）
+          // 3. 关闭当前内置终端（这会自动将会话状态改为 inactive）
           await handleCloseTerminal(activeTabKey);
 
           message.success({

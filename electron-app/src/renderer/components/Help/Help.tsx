@@ -254,17 +254,17 @@ const Help: React.FC = () => {
       id: 'providers',
       title: 'Provider 管理',
       category: 'features',
-      keywords: ['provider', '服务商', '配置', 'claude', 'openai'],
+      keywords: ['provider', '服务商', '配置', 'claude code', 'codex', 'gemini', 'qoder'],
       content: (
         <div>
           <Title level={4}>Provider 配置指南</Title>
 
           <Title level={5}>支持的 Provider</Title>
           <div style={{ marginBottom: 16 }}>
-            <Tag color="blue">Claude (Anthropic)</Tag>
-            <Tag color="green">OpenAI</Tag>
-            <Tag color="orange">Qwen (阿里云)</Tag>
+            <Tag color="blue">Claude Code</Tag>
+            <Tag color="green">Codex</Tag>
             <Tag color="purple">Gemini (Google)</Tag>
+            <Tag color="orange">Qoder</Tag>
             <Tag color="red">自定义 Provider</Tag>
           </div>
 
@@ -535,7 +535,7 @@ const Help: React.FC = () => {
 
           <Title level={5}>版本信息</Title>
           <Paragraph>
-            当前版本：v2.1.4<br />
+            当前版本：v2.1.5<br />
             更新日期：2025年10月<br />
             开发团队：LLMctl Team
           </Paragraph>
@@ -545,7 +545,7 @@ const Help: React.FC = () => {
             <li>🔐 用户认证系统 - JWT认证、BCrypt加密、邮箱验证注册、多用户数据隔离</li>
             <li>👤 用户资料管理 - 个人信息编辑、头像上传、密码修改、邮箱绑定</li>
             <li>🔔 实时通知系统 - SSE推送、通知中心、优先级管理</li>
-            <li>🎯 多 Provider 支持 - Claude、OpenAI、Qwen、Gemini 等</li>
+            <li>🎯 多 Provider 支持 - Claude Code、Codex、Gemini、Qoder 等</li>
             <li>🔑 智能 Token 管理 - 多种轮询策略，自动故障切换，手动切换Token</li>
             <li>🛡️ 企业级加密 - AES-256-GCM加密存储Token</li>
             <li>💻 强大终端功能 - 多标签页、全屏模式、字体缩放、快捷键、外部终端</li>

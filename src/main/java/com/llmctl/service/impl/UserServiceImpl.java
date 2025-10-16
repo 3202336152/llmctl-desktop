@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * 用户服务实现
  *
  * @author Liu Yifan
- * @version 2.1.4
+ * @version 2.1.5
  * @since 2025-10-15
  */
 @Slf4j

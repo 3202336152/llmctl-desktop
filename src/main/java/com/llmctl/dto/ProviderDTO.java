@@ -53,11 +53,6 @@ public class ProviderDTO {
     private Integer maxTokens;
 
     /**
-     * 最大输出Token数
-     */
-    private Integer maxOutputTokens;
-
-    /**
      * 温度参数
      */
     private BigDecimal temperature;
