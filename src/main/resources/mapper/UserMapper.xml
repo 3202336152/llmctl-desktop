@@ -160,4 +160,22 @@
         ORDER BY id ASC
     </select>
 
+    <!-- 更新密码 -->
+    <update id="updatePassword">
+        UPDATE users
+        SET
+            password_hash = #{passwordHash},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 更新头像URL -->
+    <update id="updateAvatarUrl">
+        UPDATE users
+        SET
+            avatar_url = #{avatarUrl},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
 </mapper>

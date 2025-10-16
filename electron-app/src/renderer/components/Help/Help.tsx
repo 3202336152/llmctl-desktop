@@ -91,7 +91,7 @@ const Help: React.FC = () => {
       id: 'user-auth',
       title: '用户认证系统',
       category: 'features',
-      keywords: ['认证', '登录', '注册', 'JWT', '安全'],
+      keywords: ['认证', '登录', '注册', 'JWT', '安全', '邮箱验证'],
       content: (
         <div>
           <Title level={4}>用户认证与安全</Title>
@@ -104,9 +104,21 @@ const Help: React.FC = () => {
               <li>用户名：<Text code>admin</Text></li>
               <li>密码：<Text code>admin123</Text></li>
             </ul>
-            3. 或点击"注册"标签创建新账户<br />
+            3. 或点击"注册"标签创建新账户（需要邮箱验证）<br />
             4. 登录成功后进入主应用
           </Paragraph>
+
+          <Title level={5}>邮箱验证注册</Title>
+          <Paragraph>
+            系统支持通过邮箱验证码注册新账户：
+          </Paragraph>
+          <ul>
+            <li>📧 <Text strong>支持邮箱</Text> - QQ邮箱（@qq.com）和163邮箱（@163.com）</li>
+            <li>🔢 <Text strong>验证码</Text> - 6位数字验证码，5分钟有效期，一次性使用</li>
+            <li>⏱️ <Text strong>防滥发</Text> - 60秒倒计时防止验证码滥发</li>
+            <li>🔑 <Text strong>灵活登录</Text> - 支持用户名或邮箱地址登录</li>
+            <li>🔓 <Text strong>忘记密码</Text> - 登录页面提供找回密码入口</li>
+          </ul>
 
           <Title level={5}>安全特性</Title>
           <ul>
@@ -121,12 +133,67 @@ const Help: React.FC = () => {
           <Title level={5}>常见问题</Title>
           <Paragraph>
             <Text strong>Q: 忘记密码怎么办？</Text><br />
-            A: 联系系统管理员重置密码，或使用其他账户登录。
+            A: 登录页面点击"忘记密码？"链接，按提示联系管理员重置。
           </Paragraph>
           <Paragraph>
             <Text strong>Q: 为什么需要登录？</Text><br />
             A: 确保数据安全和用户隔离，防止未授权访问敏感配置。
           </Paragraph>
+          <Paragraph>
+            <Text strong>Q: 收不到验证码邮件？</Text><br />
+            A: 检查邮箱地址是否正确、垃圾邮件箱、邮件服务器配置是否正常。
+          </Paragraph>
+        </div>
+      )
+    },
+    {
+      id: 'user-profile',
+      title: '用户资料管理',
+      category: 'features',
+      keywords: ['资料', '头像', '密码', '邮箱', '个人信息'],
+      content: (
+        <div>
+          <Title level={4}>个人信息管理</Title>
+
+          <Title level={5}>访问个人资料</Title>
+          <Paragraph>
+            点击顶部导航栏右上角头像 → 选择"个人信息"菜单项进入资料管理页面。
+          </Paragraph>
+
+          <Title level={5}>功能特性</Title>
+          <ul>
+            <li>👤 <Text strong>个人信息编辑</Text> - 修改显示名称（昵称）、绑定/更新邮箱</li>
+            <li>🖼️ <Text strong>头像上传</Text> - 支持JPG/PNG/GIF格式，2MB以内，实时预览</li>
+            <li>🔑 <Text strong>密码修改</Text> - 邮箱验证码验证，三层安全检查</li>
+            <li>📧 <Text strong>邮箱绑定</Text> - 绑定邮箱后可用于密码修改验证</li>
+            <li>💾 <Text strong>实时更新</Text> - 修改后自动更新界面显示和本地存储</li>
+          </ul>
+
+          <Title level={5}>头像上传要求</Title>
+          <ul>
+            <li>支持格式：JPG、JPEG、PNG、GIF</li>
+            <li>文件大小：最大2MB</li>
+            <li>自动生成唯一文件名，防止覆盖</li>
+            <li>上传后实时显示在导航栏</li>
+          </ul>
+
+          <Title level={5}>修改密码流程</Title>
+          <Paragraph>
+            1. <Text strong>绑定邮箱</Text> - 必须先在个人信息中绑定邮箱<br />
+            2. <Text strong>发送验证码</Text> - 点击"修改密码"，输入已绑定的邮箱发送验证码<br />
+            3. <Text strong>验证码验证</Text> - 输入6位验证码（5分钟有效期）<br />
+            4. <Text strong>输入新密码</Text> - 设置新密码并确认<br />
+            5. <Text strong>完成修改</Text> - 密码修改成功后自动跳转到登录页面
+          </Paragraph>
+
+          <Title level={5}>安全提示</Title>
+          <Alert
+            message="密码安全"
+            description="密码采用BCrypt加密存储，修改密码需要邮箱验证码验证，确保账户安全。"
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
         </div>
       )
     },
@@ -314,8 +381,18 @@ const Help: React.FC = () => {
           <Paragraph>
             • <Text keyboard>Ctrl+K</Text> - 打开命令面板<br />
             • <Text keyboard>F11</Text> - 切换全屏模式<br />
+            • <Text keyboard>Ctrl+1/2/3</Text> - 快速切换终端标签页（最多支持9个标签）<br />
+            • <Text keyboard>Ctrl+W</Text> - 快速关闭当前终端标签页<br />
             • <Text keyboard>Ctrl+C/V</Text> - 复制粘贴<br />
-            • <Text keyboard>Ctrl+滚轮</Text> - 调整字体大小
+            • <Text keyboard>右键点击</Text> - 直接粘贴剪贴板内容<br />
+            • <Text keyboard>Ctrl+滚轮</Text> - 调整字体大小（8px-30px）
+          </Paragraph>
+
+          <Title level={5}>高级功能</Title>
+          <Paragraph>
+            • <Text strong>手动切换Token：</Text>终端标签栏"切换 Token"按钮，支持手动触发Token切换<br />
+            • <Text strong>外部终端：</Text>一键切换到系统原生终端（Windows CMD/macOS Terminal/Linux Terminal）<br />
+            • <Text strong>自动执行命令：</Text>终端打开后自动执行会话配置的命令，无需手动输入
           </Paragraph>
         </div>
       )
@@ -347,8 +424,11 @@ const Help: React.FC = () => {
           <Title level={5}>终端快捷键</Title>
           <List
             dataSource={[
+              { key: 'Ctrl+1/2/3', desc: '快速切换终端标签页（最多9个）' },
+              { key: 'Ctrl+W', desc: '快速关闭当前终端' },
               { key: 'Ctrl+C', desc: '复制' },
               { key: 'Ctrl+V', desc: '粘贴' },
+              { key: '右键点击', desc: '直接粘贴剪贴板内容' },
               { key: 'Ctrl+滚轮', desc: '调整字体大小 (8px-30px)' }
             ]}
             renderItem={(item: ShortcutItem) => (
@@ -455,19 +535,21 @@ const Help: React.FC = () => {
 
           <Title level={5}>版本信息</Title>
           <Paragraph>
-            当前版本：v2.1.0<br />
+            当前版本：v2.1.4<br />
             更新日期：2025年10月<br />
             开发团队：LLMctl Team
           </Paragraph>
 
           <Title level={5}>功能特性</Title>
           <ul>
-            <li>🔐 用户认证系统 - JWT认证、BCrypt加密、多用户数据隔离</li>
+            <li>🔐 用户认证系统 - JWT认证、BCrypt加密、邮箱验证注册、多用户数据隔离</li>
+            <li>👤 用户资料管理 - 个人信息编辑、头像上传、密码修改、邮箱绑定</li>
             <li>🔔 实时通知系统 - SSE推送、通知中心、优先级管理</li>
             <li>🎯 多 Provider 支持 - Claude、OpenAI、Qwen、Gemini 等</li>
-            <li>🔑 智能 Token 管理 - 多种轮询策略，自动故障切换</li>
+            <li>🔑 智能 Token 管理 - 多种轮询策略，自动故障切换，手动切换Token</li>
             <li>🛡️ 企业级加密 - AES-256-GCM加密存储Token</li>
-            <li>💻 强大终端功能 - 多标签页、全屏模式、字体缩放</li>
+            <li>💻 强大终端功能 - 多标签页、全屏模式、字体缩放、快捷键、外部终端</li>
+            <li>⌨️ 终端快捷键 - Ctrl+1/2/3切换标签、Ctrl+W关闭、右键粘贴</li>
             <li>🌐 国际化支持 - 中英文双语界面</li>
             <li>📊 会话管理 - 实时监控、状态管理、自动重启</li>
             <li>🔧 配置管理 - 导入导出、备份恢复</li>

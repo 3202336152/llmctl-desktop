@@ -59,7 +59,7 @@ const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
   const { t, i18n } = useTranslation();
   const { modal } = AntApp.useApp(); // 使用 useApp hook
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true); // 默认收起侧边栏
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false);
   const { sessions, createdTerminalSessions, openTerminalSessions, activeTabKey, terminalSessionData, isTerminalFullscreen } = useAppSelector((state: RootState) => state.session);
   const { providers } = useAppSelector((state: RootState) => state.provider);
@@ -393,6 +393,8 @@ const AppContent: React.FC = () => {
             style={{
               overflow: 'hidden',
               whiteSpace: 'nowrap',
+              margin: collapsed ? '16px 8px' : '16px 16px', // 收起时减小左右边距
+              fontSize: collapsed ? '14px' : '18px', // 收起时减小字体
             }}
           >
             {collapsed ? 'CTL' : 'LLMctl'}
@@ -402,7 +404,7 @@ const AppContent: React.FC = () => {
             selectedKeys={[location.pathname]}
             items={menuItems}
             onClick={({ key }: { key: string }) => handleMenuClick(key)}
-            style={{ height: 'calc(100% - 64px)', borderRight: 0 }}
+            style={{ height: 'calc(100% - 96px)', borderRight: 0 }} // 调整高度以匹配新的Logo高度
           />
         </ResizableSider>
       )}

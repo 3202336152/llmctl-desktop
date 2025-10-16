@@ -124,4 +124,22 @@ public interface UserMapper {
      * @return 所有用户列表
      */
     java.util.List<User> findAll();
+
+    /**
+     * 更新密码
+     *
+     * @param userId 用户ID
+     * @param passwordHash 新密码哈希
+     * @return 影响的行数
+     */
+    int updatePassword(@Param("userId") Long userId, @Param("passwordHash") String passwordHash);
+
+    /**
+     * 更新头像URL
+     *
+     * @param userId 用户ID
+     * @param avatarUrl 头像URL
+     * @return 影响的行数
+     */
+    int updateAvatarUrl(@Param("userId") Long userId, @Param("avatarUrl") String avatarUrl);
 }

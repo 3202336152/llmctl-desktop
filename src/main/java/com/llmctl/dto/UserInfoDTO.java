@@ -31,7 +31,7 @@ public class UserInfoDTO {
     private String username;
 
     /**
-     * 显示名称
+     * 昵称
      */
     private String displayName;
 
@@ -54,4 +54,9 @@ public class UserInfoDTO {
      * 最后登录时间
      */
     private LocalDateTime lastLoginAt;
+
+    /**
+     * 头像URL
+     */
+    private String avatarUrl;
 }

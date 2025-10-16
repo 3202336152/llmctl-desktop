@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, message, Avatar, Divider, Space, Typography } from 'antd';
-import { UserOutlined, MailOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Button, message, Avatar, Divider, Space, Typography, Upload } from 'antd';
+import { UserOutlined, MailOutlined, LockOutlined, EditOutlined, CameraOutlined } from '@ant-design/icons';
 import { authStorage } from '../../utils/authStorage';
 import apiClient from '../../services/httpClient';
 
@@ -12,20 +12,34 @@ const UserProfile: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [editing, setEditing] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
+    const [sendingCode, setSendingCode] = useState(false);
+    const [countdown, setCountdown] = useState(0);
     const [userInfo, setUserInfo] = useState<any>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
     // 加载用户信息
     useEffect(() => {
         loadUserInfo();
     }, []);
 
+    // 倒计时效果
+    useEffect(() => {
+        if (countdown > 0) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [countdown]);
+
     const loadUserInfo = () => {
         const currentUser = authStorage.getCurrentUser();
         if (currentUser) {
             setUserInfo(currentUser);
+            setAvatarUrl(currentUser.avatarUrl || '');
             form.setFieldsValue({
                 username: currentUser.username,
                 displayName: currentUser.displayName,
+                email: currentUser.email,
             });
         }
     };
@@ -44,13 +58,44 @@ const UserProfile: React.FC = () => {
             if (response.data && response.data.code === 200) {
                 message.success('个人信息更新成功！');
                 setEditing(false);
+
+                // 更新本地存储的用户信息
+                const updatedUser = response.data.data;
+                authStorage.setCurrentUser(updatedUser);
                 loadUserInfo();
             }
         } catch (error: any) {
             console.error('更新失败:', error);
-            message.error(error.message || '更新失败');
+            message.error(error.response?.data?.message || '更新失败');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // 发送验证码
+    const handleSendVerificationCode = async () => {
+        try {
+            const email = passwordForm.getFieldValue('email');
+            if (!email) {
+                message.error('请先输入邮箱');
+                return;
+            }
+
+            setSendingCode(true);
+            const response = await apiClient.post('/auth/send-verification-code', {
+                email,
+                purpose: 'CHANGE_PASSWORD',
+            });
+
+            if (response.data && response.data.code === 200) {
+                message.success('验证码已发送到您的邮箱！');
+                setCountdown(60); // 60秒倒计时
+            }
+        } catch (error: any) {
+            console.error('发送验证码失败:', error);
+            message.error(error.response?.data?.message || '发送验证码失败');
+        } finally {
+            setSendingCode(false);
         }
     };
 
@@ -61,21 +106,78 @@ const UserProfile: React.FC = () => {
             const values = await passwordForm.validateFields();
 
             const response = await apiClient.put('/auth/change-password', {
-                oldPassword: values.oldPassword,
+                email: values.email,
+                verificationCode: values.verificationCode,
                 newPassword: values.newPassword,
             });
 
             if (response.data && response.data.code === 200) {
-                message.success('密码修改成功！');
+                message.success('密码修改成功！请重新登录');
                 setChangingPassword(false);
                 passwordForm.resetFields();
+
+                // 清除登录状态，跳转到登录页
+                setTimeout(() => {
+                    authStorage.clearAuth();
+                    window.location.reload();
+                }, 2000);
             }
         } catch (error: any) {
             console.error('修改密码失败:', error);
-            message.error(error.message || '修改密码失败');
+            message.error(error.response?.data?.message || '修改密码失败');
         } finally {
             setLoading(false);
         }
+    };
+
+    // 上传头像
+    const handleAvatarUpload = async (file: File) => {
+        // 验证文件类型
+        const isImage = file.type.startsWith('image/');
+        if (!isImage) {
+            message.error('只能上传图片文件！');
+            return false;
+        }
+
+        // 验证文件大小（5MB）
+        const isLt5M = file.size / 1024 / 1024 < 5;
+        if (!isLt5M) {
+            message.error('图片大小不能超过5MB！');
+            return false;
+        }
+
+        try {
+            setUploadingAvatar(true);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await apiClient.post('/auth/upload-avatar', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data && response.data.code === 200) {
+                const newAvatarUrl = response.data.data;
+                setAvatarUrl(newAvatarUrl);
+                message.success('头像上传成功！');
+
+                // 更新本地用户信息
+                const currentUser = authStorage.getCurrentUser();
+                if (currentUser) {
+                    currentUser.avatarUrl = newAvatarUrl;
+                    authStorage.setCurrentUser(currentUser);
+                }
+            }
+        } catch (error: any) {
+            console.error('上传头像失败:', error);
+            message.error(error.response?.data?.message || '上传头像失败');
+        } finally {
+            setUploadingAvatar(false);
+        }
+
+        return false; // 阻止自动上传
     };
 
     return (
@@ -83,7 +185,34 @@ const UserProfile: React.FC = () => {
             {/* 用户基本信息卡片 */}
             <Card>
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <Avatar size={80} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                        {avatarUrl ? (
+                            <Avatar size={80} src={avatarUrl} />
+                        ) : (
+                            <Avatar size={80} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                        )}
+
+                        <Upload
+                            showUploadList={false}
+                            beforeUpload={handleAvatarUpload}
+                            accept="image/*"
+                        >
+                            <Button
+                                type="primary"
+                                shape="circle"
+                                icon={<CameraOutlined />}
+                                size="small"
+                                loading={uploadingAvatar}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: -5,
+                                    right: -5,
+                                }}
+                                title="更换头像"
+                            />
+                        </Upload>
+                    </div>
+
                     <Title level={4} style={{ marginTop: 16, marginBottom: 4 }}>
                         {userInfo?.displayName || userInfo?.username}
                     </Title>
@@ -112,11 +241,11 @@ const UserProfile: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item
-                        label="显示名称"
+                        label="昵称"
                         name="displayName"
-                        rules={[{ required: true, message: '请输入显示名称' }]}
+                        rules={[{ required: true, message: '请输入昵称' }]}
                     >
-                        <Input prefix={<UserOutlined />} placeholder="请输入显示名称" />
+                        <Input prefix={<UserOutlined />} placeholder="请输入昵称" />
                     </Form.Item>
 
                     <Form.Item
@@ -153,7 +282,15 @@ const UserProfile: React.FC = () => {
                         <Button
                             type="link"
                             icon={<EditOutlined />}
-                            onClick={() => setChangingPassword(true)}
+                            onClick={() => {
+                                // 检查是否已绑定邮箱
+                                if (!userInfo?.email) {
+                                    message.warning('修改密码需要先绑定邮箱，请先在个人信息中绑定邮箱');
+                                    setEditing(true);
+                                    return;
+                                }
+                                setChangingPassword(true);
+                            }}
                             style={{ float: 'right' }}
                         >
                             修改
@@ -164,11 +301,42 @@ const UserProfile: React.FC = () => {
                 {changingPassword ? (
                     <Form form={passwordForm} layout="vertical">
                         <Form.Item
-                            label="当前密码"
-                            name="oldPassword"
-                            rules={[{ required: true, message: '请输入当前密码' }]}
+                            label="绑定邮箱"
+                            name="email"
+                            initialValue={userInfo?.email}
+                            rules={[
+                                { required: true, message: '请输入邮箱' },
+                                { type: 'email', message: '请输入有效的邮箱地址' },
+                            ]}
+                            help="验证码将发送到此邮箱"
                         >
-                            <Input.Password prefix={<LockOutlined />} placeholder="请输入当前密码" />
+                            <Input prefix={<MailOutlined />} disabled />
+                        </Form.Item>
+
+                        <Form.Item
+                            label="验证码"
+                            name="verificationCode"
+                            rules={[
+                                { required: true, message: '请输入验证码' },
+                                { len: 6, message: '验证码为6位数字' },
+                            ]}
+                        >
+                            <Input
+                                prefix={<MailOutlined />}
+                                placeholder="请输入验证码"
+                                maxLength={6}
+                                suffix={
+                                    <Button
+                                        type="link"
+                                        size="small"
+                                        onClick={handleSendVerificationCode}
+                                        loading={sendingCode}
+                                        disabled={countdown > 0}
+                                    >
+                                        {countdown > 0 ? `${countdown}秒后重试` : '发送验证码'}
+                                    </Button>
+                                }
+                            />
                         </Form.Item>
 
                         <Form.Item
@@ -176,7 +344,7 @@ const UserProfile: React.FC = () => {
                             name="newPassword"
                             rules={[
                                 { required: true, message: '请输入新密码' },
-                                { min: 6, message: '密码至少6个字符' },
+                                { min: 6, max: 32, message: '密码长度必须在6-32位之间' },
                             ]}
                         >
                             <Input.Password prefix={<LockOutlined />} placeholder="请输入新密码" />
@@ -209,6 +377,7 @@ const UserProfile: React.FC = () => {
                                 <Button onClick={() => {
                                     setChangingPassword(false);
                                     passwordForm.resetFields();
+                                    setCountdown(0);
                                 }}>
                                     取消
                                 </Button>
@@ -216,7 +385,7 @@ const UserProfile: React.FC = () => {
                         </Form.Item>
                     </Form>
                 ) : (
-                    <Text type="secondary">密码设置为安全信息，请妥善保管</Text>
+                    <Text type="secondary">密码设置为安全信息，请妥善保管。修改密码需要邮箱验证码。</Text>
                 )}
             </Card>
         </div>

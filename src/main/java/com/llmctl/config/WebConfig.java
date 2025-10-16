@@ -2,10 +2,14 @@ package com.llmctl.config;
 
 import com.llmctl.interceptor.JwtAuthInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
 
 /**
  * Web MVC配置类
@@ -19,6 +23,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthInterceptor jwtAuthInterceptor;
+
+    @Value("${avatar.upload.path:uploads/avatars/}")
+    private String avatarUploadPath;
 
     /**
      * 配置跨域请求
@@ -52,6 +59,7 @@ public class WebConfig implements WebMvcConfigurer {
                     "/favicon.ico",                   // 网站图标
                     "/static/**",                     // 静态资源
                     "/public/**",                     // 公共资源
+                    "/uploads/**",                    // 上传文件（头像等）
                     "/*.html",                        // HTML文件
                     "/*.js",                          // JS文件
                     "/*.css",                         // CSS文件
@@ -59,5 +67,23 @@ public class WebConfig implements WebMvcConfigurer {
                     "/*.map",                          // Source map文件
                     "/users/ids"
                 );
+    }
+
+    /**
+     * 配置静态资源处理器（用于访问上传的文件）
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 将 /uploads/** 映射到实际的文件系统路径
+        File uploadDirFile = new File(avatarUploadPath);
+        if (!uploadDirFile.isAbsolute()) {
+            uploadDirFile = new File(System.getProperty("user.dir"), avatarUploadPath);
+        }
+
+        String uploadDirPath = "file:" + uploadDirFile.getAbsolutePath() + File.separator;
+
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations(uploadDirPath)
+                .setCachePeriod(3600);  // 缓存1小时
     }
 }

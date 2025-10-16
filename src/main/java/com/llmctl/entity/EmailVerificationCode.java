@@ -26,7 +26,8 @@ public class EmailVerificationCode {
     public enum Purpose {
         REGISTER("REGISTER"),
         LOGIN("LOGIN"),
-        RESET_PASSWORD("RESET_PASSWORD");
+        RESET_PASSWORD("RESET_PASSWORD"),
+        CHANGE_PASSWORD("CHANGE_PASSWORD");
 
         private final String value;
 

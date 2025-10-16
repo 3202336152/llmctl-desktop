@@ -21,6 +21,14 @@ import {
   DownloadOutlined,
   FileOutlined,
   GithubOutlined,
+  UploadOutlined,
+  RocketOutlined,
+  HeartOutlined,
+  SafetyCertificateOutlined,
+  BugOutlined,
+  BookOutlined,
+  SyncOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { configAPI } from '../../services/api';
@@ -34,10 +42,14 @@ const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
   const [exportContent, setExportContent] = useState<string>('');
+  const [importContent, setImportContent] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
+  const [importFormat, setImportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
 
   // 加载设置
   useEffect(() => {
@@ -158,6 +170,37 @@ const Settings: React.FC = () => {
     message.success(t('settings.configDownloaded'));
   };
 
+  // 打开导入配置Modal
+  const handleOpenImportModal = (format: 'bash' | 'powershell' | 'cmd' | 'json') => {
+    setImportFormat(format);
+    setImportContent('');
+    setImportModalVisible(true);
+  };
+
+  // 导入配置
+  const handleImportConfig = async () => {
+    if (!importContent.trim()) {
+      message.error(t('settings.importContentEmpty'));
+      return;
+    }
+
+    try {
+      setImportLoading(true);
+      await configAPI.importConfig({
+        format: importFormat,
+        data: importContent,
+        overwrite: true,
+      });
+      message.success(t('settings.importSuccess'));
+      setImportModalVisible(false);
+      setImportContent('');
+    } catch (error) {
+      message.error(`${t('settings.importFailed')}: ${error}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   // 打开项目主页
   const handleOpenProjectPage = () => {
     window.electronAPI?.openExternal('https://github.com/3202336152/llmctl-desktop');
@@ -221,41 +264,71 @@ const Settings: React.FC = () => {
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <div>
           <h4>
-            <FileOutlined /> {t('settings.configImportExport')}
+            <FileOutlined /> {t('settings.importConfig')}
           </h4>
           <Text type="secondary">
-            <div>{t('settings.configImportExportDesc')}</div>
-            <div style={{ marginTop: 8 }}>{t('settings.configImportExportDesc2')}</div>
+            <div>{t('settings.importConfigDesc')}</div>
           </Text>
+          <div style={{ marginTop: 16 }}>
+            <Space wrap>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenImportModal('json')}
+                loading={importLoading}
+              >
+                {t('settings.importJsonConfig')}
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenImportModal('bash')}
+                loading={importLoading}
+              >
+                {t('settings.importBashScript')}
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenImportModal('powershell')}
+                loading={importLoading}
+              >
+                {t('settings.importPowershellScript')}
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenImportModal('cmd')}
+                loading={importLoading}
+              >
+                {t('settings.importCmdScript')}
+              </Button>
+            </Space>
+          </div>
         </div>
 
         <Divider />
 
         <div>
-          <h4>{t('settings.viewExportConfig')}</h4>
-          <Text type="secondary">{t('settings.viewExportConfigDesc')}</Text>
+          <h4>{t('settings.exportConfig')}</h4>
+          <Text type="secondary">{t('settings.exportConfigDesc')}</Text>
           <div style={{ marginTop: 16 }}>
             <Space wrap>
               <Button
                 icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('json')}
                 loading={exportLoading}
-                type="primary"
               >
-                {t('settings.viewJsonConfig')}
+                {t('settings.exportJsonConfig')}
               </Button>
               <Button icon={<ExportOutlined />} onClick={() => handleExportConfig('bash')} loading={exportLoading}>
-                {t('settings.viewBashScript')}
+                {t('settings.exportBashScript')}
               </Button>
               <Button
                 icon={<ExportOutlined />}
                 onClick={() => handleExportConfig('powershell')}
                 loading={exportLoading}
               >
-                {t('settings.viewPowershellScript')}
+                {t('settings.exportPowershellScript')}
               </Button>
               <Button icon={<ExportOutlined />} onClick={() => handleExportConfig('cmd')} loading={exportLoading}>
-                {t('settings.viewCmdScript')}
+                {t('settings.exportCmdScript')}
               </Button>
             </Space>
           </div>
@@ -290,61 +363,110 @@ const Settings: React.FC = () => {
   const aboutInfo = (
     <Card title={t('settings.aboutLlmctl')}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Text strong>{t('settings.appName')}：</Text>
-              <Text>{t('settings.appNameValue')}</Text>
-            </Col>
-            <Col span={12}>
-              <Text strong>{t('settings.version')}：</Text>
-              <Text>2.0.0</Text>
-            </Col>
-          </Row>
-        </div>
+        {/* 版本信息卡片 */}
+        <Row gutter={16}>
+          <Col span={6}>
+            <Card
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+              }}
+            >
+              <div style={{ textAlign: 'center', color: 'white' }}>
+                <RocketOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>v2.1.4</div>
+                <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.version')}</div>
+              </div>
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card
+              style={{
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                border: 'none',
+              }}
+            >
+              <div style={{ textAlign: 'center', color: 'white' }}>
+                <HeartOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>Liu Yifan</div>
+                <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.author')}</div>
+              </div>
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card
+              style={{
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                border: 'none',
+              }}
+            >
+              <div style={{ textAlign: 'center', color: 'white' }}>
+                <SafetyCertificateOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>MIT</div>
+                <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.license')}</div>
+              </div>
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card
+              style={{
+                background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                border: 'none',
+              }}
+            >
+              <div style={{ textAlign: 'center', color: 'white' }}>
+                <CheckCircleOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>Stable</div>
+                <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.status')}</div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
+        <Divider />
+
+        {/* 快速链接 */}
         <div>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Text strong>{t('settings.author')}：</Text>
-              <Text>{t('settings.authorName')}</Text>
-            </Col>
-            <Col span={12}>
-              <Text strong>{t('settings.license')}：</Text>
-              <Text>MIT</Text>
-            </Col>
-          </Row>
+          <h4>
+            <BookOutlined /> {t('settings.quickLinks')}
+          </h4>
+          <Space wrap style={{ marginTop: 16 }}>
+            <Button type="primary" icon={<GithubOutlined />} onClick={handleOpenProjectPage}>
+              {t('settings.viewProjectPage')}
+            </Button>
+            <Button
+              icon={<BugOutlined />}
+              onClick={() =>
+                window.electronAPI?.openExternal('https://github.com/3202336152/llmctl-desktop/issues')
+              }
+            >
+              {t('settings.reportIssue')}
+            </Button>
+            <Button
+              icon={<BookOutlined />}
+              onClick={() =>
+                window.electronAPI?.openExternal('https://github.com/3202336152/llmctl-desktop/blob/master/README.md')
+              }
+            >
+              {t('settings.viewDocumentation')}
+            </Button>
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => {
+                window.electronAPI?.send('check-for-updates');
+                message.info(t('settings.checkingUpdates'));
+              }}
+            >
+              {t('settings.checkUpdates')}
+            </Button>
+          </Space>
         </div>
 
         <Divider />
 
+        {/* 项目信息 */}
         <div>
-          <h4>{t('settings.techStack')}</h4>
-          <ul>
-            <li>{t('settings.techStackFrontend')}</li>
-            <li>{t('settings.techStackBackend')}</li>
-            <li>{t('settings.techStackState')}</li>
-            <li>{t('settings.techStackHttp')}</li>
-          </ul>
-        </div>
-
-        <Divider />
-
-        <div>
-          <h4>{t('settings.features')}</h4>
-          <ul>
-            <li>{t('settings.featureMultiProvider')}</li>
-            <li>{t('settings.featureTokenPolling')}</li>
-            <li>{t('settings.featureSessionManagement')}</li>
-            <li>{t('settings.featureConfigManagement')}</li>
-            <li>{t('settings.featureStatistics')}</li>
-          </ul>
-        </div>
-
-        <div>
-          <Button type="primary" icon={<GithubOutlined />} onClick={handleOpenProjectPage}>
-            {t('settings.viewProjectPage')}
-          </Button>
+          <Text type="secondary">{t('settings.projectDescription')}</Text>
         </div>
       </Space>
     </Card>
@@ -363,6 +485,33 @@ const Settings: React.FC = () => {
           {aboutInfo}
         </TabPane>
       </Tabs>
+
+      {/* 导入配置Modal */}
+      <Modal
+        title={t('settings.importConfigTitle', { format: importFormat.toUpperCase() })}
+        open={importModalVisible}
+        onCancel={() => setImportModalVisible(false)}
+        width={800}
+        footer={[
+          <Button key="close" onClick={() => setImportModalVisible(false)}>
+            {t('common.cancel')}
+          </Button>,
+          <Button key="import" type="primary" icon={<UploadOutlined />} onClick={handleImportConfig} loading={importLoading}>
+            {t('settings.confirmImport')}
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">{t('settings.importConfigHint')}</Text>
+        </div>
+        <TextArea
+          value={importContent}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setImportContent(e.target.value)}
+          placeholder={t('settings.importConfigPlaceholder')}
+          rows={15}
+          style={{ fontFamily: 'monospace' }}
+        />
+      </Modal>
 
       {/* 导出配置Modal */}
       <Modal

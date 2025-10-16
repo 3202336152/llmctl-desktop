@@ -23,7 +23,6 @@ const menuTranslations = {
     statistics: '统计信息',
     systemSettings: '系统设置',
     view: '视图',
-    reload: '重新加载',
     forceReload: '强制重新加载',
     actualSize: '实际大小',
     zoomIn: '放大',
@@ -73,7 +72,6 @@ const menuTranslations = {
     statistics: 'Statistics',
     systemSettings: 'System Settings',
     view: 'View',
-    reload: 'Reload',
     forceReload: 'Force Reload',
     actualSize: 'Actual Size',
     zoomIn: 'Zoom In',
@@ -300,7 +298,6 @@ export function createMenu(): Menu {
     {
       label: t('view'),
       submenu: [
-        { role: 'reload', label: t('reload') },
         { role: 'forceReload', label: t('forceReload') },
         { type: 'separator' },
         { role: 'resetZoom', label: t('actualSize') },

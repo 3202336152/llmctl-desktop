@@ -49,7 +49,17 @@ public class LoginResponse {
     private String username;
 
     /**
-     * 显示名称
+     * 昵称
      */
     private String displayName;
+
+    /**
+     * 邮箱
+     */
+    private String email;
+
+    /**
+     * 头像URL
+     */
+    private String avatarUrl;
 }

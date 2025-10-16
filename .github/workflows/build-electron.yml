@@ -51,6 +51,8 @@ jobs:
           npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 仅在 tag 推送时发布，生成 latest.yml
+          PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
@@ -60,11 +62,20 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Upload Windows Portable
+      - name: Upload Windows Portable (ZIP)
         uses: actions/upload-artifact@v4
         with:
           name: LLMctl-Windows-Portable
-          path: electron-app/release/win-unpacked/
+          path: electron-app/release/LLMctl-*.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload latest.yml for Auto-Update
+        uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: LLMctl-Windows-Update-Info
+          path: electron-app/release/latest.yml
           retention-days: 30
           if-no-files-found: warn
 
@@ -183,6 +194,19 @@ jobs:
           name: LLMctl-Windows-Installer
           path: ./artifacts/windows/
 
+      - name: Download Windows Portable
+        uses: actions/download-artifact@v4
+        with:
+          name: LLMctl-Windows-Portable
+          path: ./artifacts/windows/
+
+      - name: Download Windows Update Info
+        uses: actions/download-artifact@v4
+        with:
+          name: LLMctl-Windows-Update-Info
+          path: ./artifacts/windows/
+        continue-on-error: true
+
       - name: Download macOS Installer
         uses: actions/download-artifact@v4
         with:
@@ -204,9 +228,17 @@ jobs:
             ## 🎉 LLMctl ${{ github.ref_name }} 发布
 
             ### 📦 下载链接
-            - **Windows**: LLMctl-Setup.exe
-            - **macOS**: LLMctl.dmg
-            - **Linux**: LLMctl.AppImage
+            - **Windows 安装版**: `LLMctl Setup.exe` - 需要安装到系统
+            - **Windows 便携版**: `LLMctl-xxx-win.zip` - 解压即用，无需安装
+            - **macOS**: `LLMctl.dmg` - DMG 镜像文件
+            - **Linux**: `LLMctl.AppImage` - AppImage 可执行文件
+            - **自动更新配置**: `latest.yml` - 用于应用内自动更新检测
+
+            ### 🚀 Windows 便携版使用方法
+            1. 下载 `LLMctl-xxx-win.zip` 文件
+            2. 解压到任意目录
+            3. 双击 `LLMctl.exe` 即可运行
+            4. 无需安装，可直接复制到U盘使用
 
             ### 🔧 构建信息
             - **触发方式**: ${{ github.event_name }}
@@ -218,13 +250,15 @@ jobs:
 
             ### 📋 安装说明
             1. 下载对应平台的安装包
-            2. Windows: 双击 .exe 文件安装
-            3. macOS: 打开 .dmg 文件拖拽到 Applications
-            4. Linux: 给 AppImage 添加执行权限后运行
+            2. **Windows 安装版**: 双击 .exe 文件安装
+            3. **Windows 便携版**: 解压 .zip 文件后运行 LLMctl.exe
+            4. **macOS**: 打开 .dmg 文件拖拽到 Applications
+            5. **Linux**: 给 AppImage 添加执行权限后运行
 
             ### ⚠️ 注意事项
             - 首次安装可能需要允许应用运行
             - Windows 可能需要关闭安全软件警告
+            - 便携版数据存储在用户目录，卸载时不会自动删除
 
             ---
 
@@ -232,6 +266,8 @@ jobs:
             📖 [使用文档](https://github.com/3202336152/llmctl-desktop/wiki)
           files: |
             ./artifacts/windows/LLMctl Setup *.exe
+            ./artifacts/windows/LLMctl-*.zip
+            ./artifacts/windows/latest.yml
             ./artifacts/macos/LLMctl-*.dmg
             ./artifacts/linux/LLMctl-*.AppImage
           draft: false

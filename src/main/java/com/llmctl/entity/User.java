@@ -32,7 +32,7 @@ public class User {
     private String passwordHash;
 
     /**
-     * 显示名称
+     * 昵称
      */
     private String displayName;
 

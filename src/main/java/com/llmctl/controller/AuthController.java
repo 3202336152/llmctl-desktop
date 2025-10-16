@@ -162,6 +162,76 @@ public class AuthController {
     }
 
     /**
+     * 更新个人信息
+     *
+     * PUT /auth/profile
+     * {
+     *   "displayName": "新名称",
+     *   "email": "new@example.com"
+     * }
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<UserInfoDTO>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        log.info("更新个人信息请求");
+
+        // 从Token中提取用户ID
+        String token = authHeader.substring(7); // 去掉"Bearer "
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        UserInfoDTO updatedUser = authService.updateProfile(userId, request);
+
+        return ResponseEntity.ok(ApiResponse.success(updatedUser, "个人信息更新成功"));
+    }
+
+    /**
+     * 修改密码（需要邮箱验证码）
+     *
+     * PUT /auth/change-password
+     * {
+     *   "email": "user@qq.com",
+     *   "verificationCode": "123456",
+     *   "newPassword": "newPass123"
+     * }
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        log.info("修改密码请求: email={}", request.getEmail());
+
+        // 从Token中提取用户ID
+        String token = authHeader.substring(7); // 去掉"Bearer "
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        authService.changePassword(userId, request);
+
+        return ResponseEntity.ok(ApiResponse.success(null, "密码修改成功"));
+    }
+
+    /**
+     * 上传头像
+     *
+     * POST /auth/upload-avatar
+     * 支持multipart/form-data文件上传
+     */
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<ApiResponse<String>> uploadAvatar(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestHeader("Authorization") String authHeader) throws java.io.IOException {
+        log.info("上传头像请求: filename={}, size={}", file.getOriginalFilename(), file.getSize());
+
+        // 从Token中提取用户ID
+        String token = authHeader.substring(7); // 去掉"Bearer "
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        String avatarUrl = authService.uploadAvatar(userId, file);
+
+        return ResponseEntity.ok(ApiResponse.success(avatarUrl, "头像上传成功"));
+    }
+
+    /**
      * 获取客户端IP地址
      */
     private String getClientIP(HttpServletRequest request) {

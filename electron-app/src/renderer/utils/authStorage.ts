@@ -18,6 +18,14 @@ export class AuthStorage {
             localStorage.setItem('displayName', loginResponse.displayName || loginResponse.username);
             localStorage.setItem('expiresAt', String(expiresAt));
 
+            // 保存邮箱和头像（如果有）
+            if (loginResponse.email) {
+                localStorage.setItem('email', loginResponse.email);
+            }
+            if (loginResponse.avatarUrl) {
+                localStorage.setItem('avatarUrl', loginResponse.avatarUrl);
+            }
+
             console.log('[AuthStorage] 登录信息已保存');
 
             // 通知主进程登录状态已更新
@@ -56,11 +64,13 @@ export class AuthStorage {
     /**
      * 获取当前用户信息
      */
-    getCurrentUser(): { userId: number; username: string; displayName: string } | null {
+    getCurrentUser(): { userId: number; username: string; displayName: string; email?: string; avatarUrl?: string } | null {
         try {
             const userIdStr = localStorage.getItem('userId');
             const username = localStorage.getItem('username');
             const displayName = localStorage.getItem('displayName');
+            const email = localStorage.getItem('email');
+            const avatarUrl = localStorage.getItem('avatarUrl');
 
             if (!userIdStr || !username) {
                 return null;
@@ -69,11 +79,40 @@ export class AuthStorage {
             return {
                 userId: parseInt(userIdStr),
                 username,
-                displayName: displayName || username
+                displayName: displayName || username,
+                email: email || undefined,
+                avatarUrl: avatarUrl || undefined
             };
         } catch (error) {
             console.error('[AuthStorage] 获取当前用户信息失败:', error);
             return null;
+        }
+    }
+
+    /**
+     * 更新当前用户信息
+     */
+    setCurrentUser(userInfo: { userId?: number; username?: string; displayName?: string; email?: string; avatarUrl?: string }): void {
+        try {
+            if (userInfo.userId !== undefined) {
+                localStorage.setItem('userId', String(userInfo.userId));
+            }
+            if (userInfo.username !== undefined) {
+                localStorage.setItem('username', userInfo.username);
+            }
+            if (userInfo.displayName !== undefined) {
+                localStorage.setItem('displayName', userInfo.displayName);
+            }
+            if (userInfo.email !== undefined) {
+                localStorage.setItem('email', userInfo.email);
+            }
+            if (userInfo.avatarUrl !== undefined) {
+                localStorage.setItem('avatarUrl', userInfo.avatarUrl);
+            }
+
+            console.log('[AuthStorage] 用户信息已更新');
+        } catch (error) {
+            console.error('[AuthStorage] 更新用户信息失败:', error);
         }
     }
 
@@ -141,6 +180,8 @@ export class AuthStorage {
             localStorage.removeItem('userId');
             localStorage.removeItem('username');
             localStorage.removeItem('displayName');
+            localStorage.removeItem('email');
+            localStorage.removeItem('avatarUrl');
             localStorage.removeItem('expiresAt');
 
             console.log('[AuthStorage] 登录信息已清除');

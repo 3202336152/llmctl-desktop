@@ -50,9 +50,18 @@ apiClient.interceptors.request.use(
       }
     }
 
-    // 为所有请求添加JWT Token (排除认证接口)
-    const isAuthEndpoint = config.url?.startsWith('/auth/');
-    if (!isAuthEndpoint) {
+    // 为所有请求添加JWT Token (仅排除公开的认证接口)
+    // 公开接口：登录、注册、刷新token、发送验证码、验证验证码
+    const publicEndpoints = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/refresh',
+      '/auth/send-verification-code',
+      '/auth/verify-code'
+    ];
+    const isPublicEndpoint = publicEndpoints.some(endpoint => config.url?.startsWith(endpoint));
+
+    if (!isPublicEndpoint) {
       const token = authStorage.getAccessToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

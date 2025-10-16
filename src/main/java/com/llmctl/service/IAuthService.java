@@ -1,8 +1,7 @@
 package com.llmctl.service;
 
-import com.llmctl.dto.LoginRequest;
-import com.llmctl.dto.LoginResponse;
-import com.llmctl.dto.RegisterRequest;
+import com.llmctl.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 认证服务接口
@@ -42,4 +41,31 @@ public interface IAuthService {
      * @param userId 用户ID
      */
     void logout(Long userId);
+
+    /**
+     * 更新个人信息
+     *
+     * @param userId 用户ID
+     * @param request 更新请求
+     * @return 更新后的用户信息
+     */
+    UserInfoDTO updateProfile(Long userId, UpdateProfileRequest request);
+
+    /**
+     * 修改密码（需要邮箱验证码）
+     *
+     * @param userId 用户ID
+     * @param request 修改密码请求
+     */
+    void changePassword(Long userId, ChangePasswordRequest request);
+
+    /**
+     * 上传头像
+     *
+     * @param userId 用户ID
+     * @param file 头像文件
+     * @return 头像URL
+     * @throws java.io.IOException 文件IO异常
+     */
+    String uploadAvatar(Long userId, MultipartFile file) throws java.io.IOException;
 }

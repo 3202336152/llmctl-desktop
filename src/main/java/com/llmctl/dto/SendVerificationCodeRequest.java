@@ -21,6 +21,6 @@ public class SendVerificationCodeRequest {
     private String email;
 
     @NotBlank(message = "验证码用途不能为空")
-    @Pattern(regexp = "REGISTER|LOGIN|RESET_PASSWORD", message = "无效的验证码用途")
+    @Pattern(regexp = "REGISTER|LOGIN|RESET_PASSWORD|CHANGE_PASSWORD", message = "无效的验证码用途")
     private String purpose;
 }

@@ -5,6 +5,195 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.4] - 2025-10-16
+
+### Added 🎉
+- **用户资料管理功能** - 完整的个人信息编辑和头像上传
+  - **个人信息编辑**：
+    - 支持修改显示名称（displayName）
+    - 支持绑定/更新邮箱地址（email）
+    - 实时显示当前登录用户信息
+    - 修改后自动更新本地存储和界面显示
+
+  - **头像上传功能**：
+    - 支持上传 JPG、JPEG、PNG、GIF 格式图片
+    - 文件大小限制 2MB
+    - 自动生成唯一文件名（时间戳+原文件名）
+    - 跨平台路径处理（Windows开发/Linux生产）
+    - 头像实时预览和更新
+    - 完整的错误提示和上传状态显示
+
+  - **密码修改功能**：
+    - 邮箱验证码验证机制（需先绑定邮箱）
+    - 三层安全验证：邮箱绑定检查 → 邮箱一致性验证 → 验证码验证
+    - 支持新增的 `CHANGE_PASSWORD` 验证码用途
+    - 详细的错误提示和用户引导
+    - 修改成功后自动跳转到登录页面
+
+### Changed 🎨
+- **登录响应优化** - 返回完整用户信息
+  - `LoginResponse` 新增 `email` 和 `avatarUrl` 字段
+  - 登录和刷新 Token 接口同步返回用户资料
+  - 前端自动保存到本地存储，减少额外查询
+
+- **术语优化：将"显示名称"改为"昵称"**
+  - 更符合中文用户习惯的表述
+  - 涉及文件：
+    - `UserProfile.tsx` - UI 标签文本
+    - `User.java`, `LoginResponse.java`, `RegisterRequest.java`, `UpdateProfileRequest.java`, `UserInfoDTO.java` - Java 注释
+    - `schema.sql` - 数据库字段注释
+
+- **菜单项优化：移除"重新加载(Ctrl+R)"**
+  - 问题：该快捷键过于容易误触，导致用户体验下降
+  - 保留"强制重新加载"功能
+  - 涉及文件：`menu.ts` - 删除 reload 菜单项和翻译
+
+- **静态资源配置** - 支持头像文件HTTP访问
+  - 新增 `WebConfig` 静态资源处理器
+  - 开发环境：`/uploads/**` 映射到项目 `uploads/avatars/` 目录
+  - 生产环境：通过环境变量配置绝对路径
+  - 公开访问（不需要JWT认证）
+  - 缓存时间 1 小时
+
+- **JWT拦截器优化** - 精确控制公开接口
+  - `/uploads/**` 路径排除在JWT验证之外
+  - 其他 `/auth/*` 接口仍需要认证
+  - 公开接口白名单：login, register, refresh, send-verification-code, verify-code
+
+### Fixed 🐛
+- **修复 Authorization Header 缺失问题**
+  - 问题：`/auth/profile` 等接口无法获取 JWT Token
+  - 原因：httpClient.ts 错误地排除了所有 `/auth/*` 路径
+  - 修复：改为白名单机制，只排除真正的公开接口
+  - 涉及文件：`httpClient.ts`
+
+- **修复邮箱不显示问题**
+  - 问题：个人信息页面邮箱字段为空
+  - 原因：后端登录接口未返回 `email` 和 `avatarUrl`
+  - 修复：`LoginResponse` 新增字段，登录时返回完整信息
+  - 涉及文件：`LoginResponse.java`, `AuthServiceImpl.java`
+
+- **修复头像不实时更新问题**
+  - 问题：上传头像后，TopBar 右上角头像不更新
+  - 原因：TopBar 使用 const currentUser，未监听 localStorage 变化
+  - 修复：
+    - 改用 useState 管理 currentUser 状态
+    - 添加 storage 事件监听器
+    - 添加 0.5s 轮询检测作为 fallback
+    - Avatar 组件使用 avatarUrl 作为 src
+  - 涉及文件：`TopBar.tsx:7-50`
+
+- **修复修改密码逻辑：未绑定邮箱时应先提示绑定邮箱**
+  - 问题：用户未绑定邮箱时，仍可输入任意邮箱发送验证码
+  - 原因：缺少邮箱绑定状态的前置检查
+  - 修复：
+    - 点击"修改"按钮时检查 `userInfo?.email` 是否存在
+    - 未绑定邮箱时，提示"请先在个人信息中绑定邮箱"并自动切换到编辑模式
+    - 修改密码表单的邮箱字段设置为 disabled，防止输入错误邮箱
+  - 涉及文件：`UserProfile.tsx:286-291`
+
+- **修复验证码用途验证失败**
+  - 问题：发送修改密码验证码时报错"无效的验证码用途"
+  - 原因：`CHANGE_PASSWORD` 未添加到枚举和验证规则
+  - 修复：
+    - `SendVerificationCodeRequest.java` - 添加 CHANGE_PASSWORD 到验证规则
+    - `EmailVerificationCode.java` - 添加 CHANGE_PASSWORD 枚举值
+    - `schema.sql` - 更新数据库表定义
+    - **数据库迁移**：创建 `add_change_password_purpose.sql` 迁移脚本
+
+- **修复文件上传路径问题**
+  - 问题：Windows 开发环境无法识别 Linux 绝对路径格式
+  - 原因：路径处理未考虑跨平台兼容性
+  - 修复：
+    - 使用 `File.isAbsolute()` 检测路径类型
+    - 相对路径自动转换为项目相对路径
+    - 绝对路径直接使用（生产环境）
+    - 使用 `Files.copy()` 替代 `transferTo()` 提升兼容性
+  - 涉及文件：`AuthServiceImpl.java`, `WebConfig.java`
+
+- **修复 /resume 命令后历史错误仍被检测的问题** ⭐
+  - 问题：使用 `/resume` 恢复历史会话时，历史错误消息（如"Insufficient credits"）仍会触发 Token 切换提示
+  - 根本原因：
+    - `/resume` 命令执行后，终端输出历史会话内容
+    - 历史错误消息被添加到 `timedOutputBuffer` 缓冲区
+    - 3秒后错误检测逻辑检测到这些历史错误，误判为新错误
+  - 解决方案：
+    - **阻止历史输出进入缓冲区**：在 `/resume` 完成检测期间（`resumeDetectionActive && !resumeCompletionDetected`），直接返回，不添加任何内容到缓冲区
+    - **完成检测机制**：检测到 resume 完成标记（如 `Continue this conversation?`, `[Y/n]`, 命令提示符等）后，启用错误检测
+    - **重置错误标记**：检测到完成后，重置 `errorDetected = false`，允许检测新的真实错误
+  - 技术实现：
+    - `sendInput()` - 检测 `/resume` 命令，清空缓冲区并启动完成检测
+    - `detectTokenError()` - 在完成检测期间跳过所有输出，不添加到缓冲区
+    - 使用 `RESUME_COMPLETION_PATTERNS` 匹配命令完成标记
+    - 添加详细调试日志便于追踪问题
+  - 涉及文件：`terminalManager.ts:347-370`
+
+### Technical Details 🔧
+- **后端新增/修改文件**：
+  - `AuthController.java` - 新增个人资料、修改密码、上传头像接口
+  - `AuthServiceImpl.java` - 实现业务逻辑，优化跨平台路径处理
+  - `LoginResponse.java` - 新增 email 和 avatarUrl 字段
+  - `UpdateProfileRequest.java` - 个人资料更新请求DTO（新增）
+  - `ChangePasswordRequest.java` - 修改密码请求DTO（新增）
+  - `SendVerificationCodeRequest.java` - 添加 CHANGE_PASSWORD 验证
+  - `EmailVerificationCode.java` - 添加 CHANGE_PASSWORD 枚举
+  - `WebConfig.java` - 配置静态资源处理器和JWT拦截器排除规则
+  - `application.yml` - 新增头像上传配置
+
+- **前端新增/修改文件**：
+  - `Profile.tsx` - 完整的个人资料编辑页面（新增）
+  - `httpClient.ts` - 修复 JWT Token 附加逻辑
+  - `authStorage.ts` - 扩展用户信息存储，新增 setCurrentUser() 方法
+  - `TopBar.tsx` - 新增"个人信息"菜单项
+
+- **数据库变更**：
+  - 创建迁移脚本：`src/main/resources/db/migration/add_change_password_purpose.sql`
+  - 更新 `email_verification_codes` 表的 `purpose` 字段枚举值
+
+- **环境变量配置**：
+  - `AVATAR_UPLOAD_PATH` - 头像文件存储路径
+    - 开发环境默认：`uploads/avatars/`（项目相对路径）
+    - 生产环境：`/var/www/llmctl/downloads/llmctl/images/avatar/`（绝对路径）
+  - `AVATAR_BASE_URL` - 头像访问URL前缀
+    - 开发环境默认：`http://localhost:8080/llmctl/uploads/`
+    - 生产环境：`http://117.72.200.2/downloads/llmctl/images/avatar/`
+
+### Security 🔐
+- **头像上传安全**：
+  - 文件类型白名单验证（仅允许图片格式）
+  - 文件大小限制 2MB
+  - 唯一文件名生成，防止覆盖和路径遍历
+  - 安全的文件路径处理
+
+- **密码修改安全**：
+  - 必须先绑定邮箱才能修改密码
+  - 邮箱一致性验证（输入邮箱必须与绑定邮箱一致）
+  - 邮箱验证码验证（5分钟有效期，一次性使用）
+  - BCrypt 密码哈希存储
+
+- **认证安全增强**：
+  - JWT Token 验证覆盖所有需要认证的接口
+  - 公开资源（头像）不暴露服务器路径信息
+  - 静态资源独立配置，与业务逻辑隔离
+
+### Deployment 🚀
+- **Docker 环境配置更新**：
+  - `deploy/.env.template` - 添加头像相关环境变量
+  - `deploy/docker-compose.yml` - 添加环境变量和 volume 挂载
+  - 生产环境需配置 Nginx 提供静态文件服务
+
+- **数据库迁移**：
+  ```bash
+  # 执行迁移脚本（生产环境）
+  mysql -u huanyu -p llmctl < src/main/resources/db/migration/add_change_password_purpose.sql
+  ```
+
+### Documentation 📖
+- 更新 `.env.template` - 添加头像上传配置说明
+- 更新 `docker-compose.yml` - 添加环境变量和卷挂载
+- 更新 `CHANGELOG.md` - 记录本版本所有变更
+- 更新 `README.md` - 添加用户资料管理功能说明
+
 ## [2.1.3] - 2025-10-15
 
 ### Added 🎉

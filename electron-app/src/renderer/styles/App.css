@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 16px;
+  margin: 16px 16px; /* 上下16px，左右16px */
   border-radius: 8px;
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   font-size: 18px;
@@ -33,6 +33,7 @@
   overflow: hidden;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+  transition: all 0.2s ease; /* 平滑过渡 */
 }
 
 /* ==================== 菜单样式 ==================== */

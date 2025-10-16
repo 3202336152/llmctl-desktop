@@ -1,8 +1,6 @@
 package com.llmctl.service.impl;
 
-import com.llmctl.dto.LoginRequest;
-import com.llmctl.dto.LoginResponse;
-import com.llmctl.dto.RegisterRequest;
+import com.llmctl.dto.*;
 import com.llmctl.entity.LoginLog;
 import com.llmctl.entity.User;
 import com.llmctl.exception.AuthenticationException;
@@ -10,15 +8,25 @@ import com.llmctl.exception.BusinessException;
 import com.llmctl.mapper.LoginLogMapper;
 import com.llmctl.mapper.UserMapper;
 import com.llmctl.service.IAuthService;
+import com.llmctl.service.IVerificationCodeService;
 import com.llmctl.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 认证服务实现
@@ -35,10 +43,19 @@ public class AuthServiceImpl implements IAuthService {
     private final UserMapper userMapper;
     private final LoginLogMapper loginLogMapper;
     private final JwtUtil jwtUtil;
+    private final IVerificationCodeService verificationCodeService;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Value("${avatar.upload.path:/downloads/llmctl/images/avatar/}")
+    private String avatarUploadPath;
+
+    @Value("${avatar.base.url:http://117.72.200.2/downloads/llmctl/images/avatar/}")
+    private String avatarBaseUrl;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_DURATION_MINUTES = 30;
+    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     @Override
     @Transactional
@@ -101,6 +118,8 @@ public class AuthServiceImpl implements IAuthService {
                 .userId(user.getId())
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
+                .email(user.getEmail())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 
@@ -175,6 +194,8 @@ public class AuthServiceImpl implements IAuthService {
                     .userId(userId)
                     .username(username)
                     .displayName(user.getDisplayName())
+                    .email(user.getEmail())
+                    .avatarUrl(user.getAvatarUrl())
                     .build();
 
         } catch (Exception e) {
@@ -282,5 +303,163 @@ public class AuthServiceImpl implements IAuthService {
             log.debug("通过用户名找到用户: {}", usernameOrEmail);
         }
         return user;
+    }
+
+    @Override
+    @Transactional
+    public UserInfoDTO updateProfile(Long userId, UpdateProfileRequest request) {
+        log.info("更新个人信息: userId={}", userId);
+
+        // 1. 查询用户
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 2. 如果邮箱有变化，检查新邮箱是否已被使用
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            User existingUser = userMapper.findByEmail(request.getEmail());
+            if (existingUser != null && !existingUser.getId().equals(userId)) {
+                throw new BusinessException("邮箱已被其他用户使用");
+            }
+        }
+
+        // 3. 更新用户信息
+        user.setDisplayName(request.getDisplayName());
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        userMapper.update(user);
+
+        log.info("个人信息更新成功: userId={}", userId);
+
+        // 4. 返回更新后的用户信息
+        return UserInfoDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .displayName(user.getDisplayName())
+                .email(user.getEmail())
+                .avatarUrl(user.getAvatarUrl())
+                .status(getUserStatus(user))
+                .createdAt(user.getCreatedAt())
+                .lastLoginAt(user.getLastLoginAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        log.info("修改密码: userId={}, email={}", userId, request.getEmail());
+
+        // 1. 查询用户
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 2. 验证用户是否绑定了邮箱
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new BusinessException("您尚未绑定邮箱，请先在个人信息中绑定邮箱后再修改密码");
+        }
+
+        // 3. 验证用户输入的邮箱是否与绑定的邮箱一致
+        if (!user.getEmail().equals(request.getEmail())) {
+            throw new BusinessException("输入的邮箱与账户绑定的邮箱不一致");
+        }
+
+        // 4. 验证邮箱验证码
+        boolean codeValid = verificationCodeService.verifyCode(
+                request.getEmail(),
+                request.getVerificationCode(),
+                "CHANGE_PASSWORD"
+        );
+        if (!codeValid) {
+            throw new BusinessException("验证码无效或已过期");
+        }
+
+        // 5. 更新密码
+        String newPasswordHash = passwordEncoder.encode(request.getNewPassword());
+        userMapper.updatePassword(userId, newPasswordHash);
+
+        // 6. 清除所有Refresh Token（强制重新登录）
+        userMapper.clearRefreshToken(userId);
+
+        log.info("密码修改成功: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public String uploadAvatar(Long userId, MultipartFile file) throws IOException {
+        log.info("上传头像: userId={}, filename={}, size={}", userId, file.getOriginalFilename(), file.getSize());
+
+        // 1. 验证文件是否为空
+        if (file.isEmpty()) {
+            throw new BusinessException("上传文件不能为空");
+        }
+
+        // 2. 验证文件大小
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException("文件大小不能超过5MB");
+        }
+
+        // 3. 验证文件类型
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new BusinessException("无效的文件名");
+        }
+
+        String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+            throw new BusinessException("只支持图片格式：jpg, jpeg, png, gif, webp");
+        }
+
+        // 4. 生成唯一文件名：{timestamp}_{userId}.{extension}
+        long timestamp = System.currentTimeMillis();
+        String filename = timestamp + "_" + userId + "." + extension;
+
+        // 5. 确保上传目录存在（使用绝对路径）
+        // 如果是相对路径，转换为绝对路径
+        File uploadDirFile = new File(avatarUploadPath);
+        if (!uploadDirFile.isAbsolute()) {
+            // 如果是相对路径，转换为项目根目录下的绝对路径
+            uploadDirFile = new File(System.getProperty("user.dir"), avatarUploadPath);
+        }
+
+        if (!uploadDirFile.exists()) {
+            boolean created = uploadDirFile.mkdirs();
+            if (!created) {
+                throw new BusinessException("无法创建上传目录: " + uploadDirFile.getAbsolutePath());
+            }
+            log.info("创建头像上传目录: {}", uploadDirFile.getAbsolutePath());
+        }
+
+        // 6. 保存文件（使用输入流方式，兼容性更好）
+        File targetFile = new File(uploadDirFile, filename);
+        try (var inputStream = file.getInputStream()) {
+            Files.copy(inputStream, targetFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+        log.info("头像文件已保存: {}", targetFile.getAbsolutePath());
+
+        // 7. 生成访问URL
+        String avatarUrl = avatarBaseUrl + filename;
+
+        // 8. 更新数据库
+        userMapper.updateAvatarUrl(userId, avatarUrl);
+
+        log.info("头像上传成功: userId={}, url={}", userId, avatarUrl);
+        return avatarUrl;
+    }
+
+    /**
+     * 获取用户状态
+     */
+    private String getUserStatus(User user) {
+        if (user.getIsLocked()) {
+            return "LOCKED";
+        } else if (!user.getIsActive()) {
+            return "DISABLED";
+        } else {
+            return "ACTIVE";
+        }
     }
 }

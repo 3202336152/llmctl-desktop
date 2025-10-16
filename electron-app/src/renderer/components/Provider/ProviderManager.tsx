@@ -289,7 +289,11 @@ const ProviderManager: React.FC = () => {
             </Form.Item>
           )}
 
-          <Form.Item label={t('providers.baseUrl')} name="baseUrl">
+          <Form.Item
+            label={t('providers.baseUrl')}
+            name="baseUrl"
+            rules={[{ required: true, message: t('providers.baseUrlRequired') }]}
+          >
             <Input placeholder={t('providers.baseUrlPlaceholder')} />
           </Form.Item>
 

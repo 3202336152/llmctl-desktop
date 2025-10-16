@@ -31,7 +31,7 @@ public class RegisterRequest {
     private String password;
 
     /**
-     * 显示名称（可选）
+     * 昵称（可选）
      */
     private String displayName;
 

@@ -43,9 +43,39 @@ const TopBar: React.FC<TopBarProps> = ({
   showSearch = false,
 }) => {
   const navigate = useNavigate();
-  const currentUser = authStorage.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(authStorage.getCurrentUser());
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  // ==================== 监听用户信息变化 ====================
+  useEffect(() => {
+    // 监听 localStorage 变化事件
+    const handleStorageChange = (e: StorageEvent) => {
+      // 如果是用户相关的字段变化，重新加载用户信息
+      if (e.key === 'avatarUrl' || e.key === 'displayName' || e.key === 'email') {
+        const latestUser = authStorage.getCurrentUser();
+        setCurrentUser(latestUser);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // 同时也使用定期检查作为补充（因为同一窗口的 localStorage 变化不会触发 storage 事件）
+    const intervalId = setInterval(() => {
+      const latestUser = authStorage.getCurrentUser();
+      const currentUserStr = JSON.stringify(currentUser);
+      const latestUserStr = JSON.stringify(latestUser);
+
+      if (currentUserStr !== latestUserStr) {
+        setCurrentUser(latestUser);
+      }
+    }, 500); // 每0.5秒检查一次
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
+  }, [currentUser]);
 
   // ==================== 自动更新功能 ====================
   useEffect(() => {
@@ -270,7 +300,12 @@ const TopBar: React.FC<TopBarProps> = ({
         {/* 用户下拉菜单 */}
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
           <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
-            <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+            <Avatar
+              size={32}
+              src={currentUser?.avatarUrl}
+              icon={!currentUser?.avatarUrl ? <UserOutlined /> : undefined}
+              style={{ backgroundColor: currentUser?.avatarUrl ? 'transparent' : '#1890ff' }}
+            />
             <span style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>
               {currentUser?.displayName || currentUser?.username || '用户'}
             </span>

@@ -53,6 +53,10 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       cursorBlink: true,
       fontSize: fontSize,
       fontFamily: 'Consolas, "Courier New", monospace',
+      // ✅ 设置字符编码为 UTF-8，避免中文乱码
+      convertEol: true,
+      // ✅ Windows PowerShell 模式禁用（使用 CMD）
+      windowsMode: false,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',

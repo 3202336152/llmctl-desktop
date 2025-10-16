@@ -115,8 +115,8 @@ export interface ConfigExportResponse {
 }
 
 export interface ConfigImportRequest {
-  format: 'json' | 'env' | 'yaml';
-  data: string;  // JSON字符串
+  format: 'bash' | 'powershell' | 'cmd' | 'json';
+  data: string;  // 配置内容字符串
   overwrite?: boolean;
 }
 
