@@ -103,8 +103,13 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon-1024.png",
+      "icon": "assets/icon-1024.png"
+    },
+    "nsis": {
       "artifactName": "${productName}.Setup.${version}.${ext}"
+    },
+    "zip": {
+      "artifactName": "${productName}.${version}.win.${ext}"
     },
     "mac": {
       "category": "public.app-category.developer-tools",
