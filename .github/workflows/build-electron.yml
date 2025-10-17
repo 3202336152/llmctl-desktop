@@ -58,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LLMctl-Windows-Installer
-          path: electron-app/release/LLMctl Setup *.exe
+          path: electron-app/release/LLMctl.Setup.*.exe
           retention-days: 30
           if-no-files-found: error
 
@@ -265,7 +265,7 @@ jobs:
             🔗 [项目主页](https://github.com/3202336152/llmctl-desktop)
             📖 [使用文档](https://github.com/3202336152/llmctl-desktop/wiki)
           files: |
-            ./artifacts/windows/LLMctl Setup *.exe
+            ./artifacts/windows/LLMctl.Setup.*.exe
             ./artifacts/windows/LLMctl-*.zip
             ./artifacts/windows/latest.yml
             ./artifacts/macos/LLMctl-*.dmg

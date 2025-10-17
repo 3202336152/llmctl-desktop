@@ -55,7 +55,7 @@ public class AuthServiceImpl implements IAuthService {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_DURATION_MINUTES = 30;
     private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     @Override
     @Transactional
@@ -399,7 +399,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // 2. 验证文件大小
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BusinessException("文件大小不能超过5MB");
+            throw new BusinessException("文件大小不能超过10MB");
         }
 
         // 3. 验证文件类型

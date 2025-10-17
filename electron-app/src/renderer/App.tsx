@@ -272,6 +272,29 @@ const AppContent: React.FC = () => {
     };
   }, [sessions, dispatch]);
 
+  // 监听菜单栏的检查更新事件
+  useEffect(() => {
+    const handleTriggerCheckUpdates = async () => {
+      console.log('[App] 收到菜单栏的检查更新请求');
+      message.info(t('settings.checkingUpdates'));
+      try {
+        const result = await window.electronAPI?.checkForUpdates();
+        if (!result?.success && result?.message) {
+          message.warning(result.message);
+        }
+      } catch (error) {
+        console.error('[App] 检查更新失败:', error);
+        message.error(`检查更新失败: ${error}`);
+      }
+    };
+
+    const unsubscribe = window.electronAPI.onTriggerCheckUpdates(handleTriggerCheckUpdates);
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // 全局快捷键支持
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

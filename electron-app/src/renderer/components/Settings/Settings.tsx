@@ -452,9 +452,16 @@ const Settings: React.FC = () => {
             </Button>
             <Button
               icon={<SyncOutlined />}
-              onClick={() => {
-                window.electronAPI?.send('check-for-updates');
+              onClick={async () => {
                 message.info(t('settings.checkingUpdates'));
+                try {
+                  const result = await window.electronAPI?.checkForUpdates();
+                  if (!result?.success && result?.message) {
+                    message.warning(result.message);
+                  }
+                } catch (error) {
+                  message.error(`检查更新失败: ${error}`);
+                }
               }}
             >
               {t('settings.checkUpdates')}

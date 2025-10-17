@@ -103,7 +103,8 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon-1024.png"
+      "icon": "assets/icon-1024.png",
+      "artifactName": "${productName}.Setup.${version}.${ext}"
     },
     "mac": {
       "category": "public.app-category.developer-tools",

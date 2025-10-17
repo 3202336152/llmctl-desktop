@@ -139,10 +139,10 @@ const UserProfile: React.FC = () => {
             return false;
         }
 
-        // 验证文件大小（5MB）
-        const isLt5M = file.size / 1024 / 1024 < 5;
-        if (!isLt5M) {
-            message.error('图片大小不能超过5MB！');
+        // 验证文件大小（10MB）
+        const isLt10M = file.size / 1024 / 1024 < 10;
+        if (!isLt10M) {
+            message.error('图片大小不能超过10MB！');
             return false;
         }
 
