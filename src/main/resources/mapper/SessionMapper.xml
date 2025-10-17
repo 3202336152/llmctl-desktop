@@ -234,4 +234,12 @@
         WHERE user_id = #{userId} AND status = 'active'
     </update>
 
+    <!-- 批量删除指定用户的所有非活跃会话（一键清除功能）
+         原因：清理冗余的非活跃会话记录，释放存储空间 -->
+    <delete id="deleteInactiveSessionsByUserId">
+        DELETE s FROM sessions s
+        INNER JOIN providers p ON s.provider_id = p.id
+        WHERE p.user_id = #{userId} AND s.status = 'inactive'
+    </delete>
+
 </mapper>

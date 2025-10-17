@@ -110,7 +110,7 @@ CREATE TABLE `providers` (
                              `user_id` bigint NOT NULL,
                              `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider名称',
                              `description` text COLLATE utf8mb4_general_ci COMMENT 'Provider描述',
-                             `type` varchar(20) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider类型: claude code, codex, gemini, qoder',
+                             `type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider类型: claude code, codex, gemini, qoder',
                              `base_url` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'API基础URL',
                              `model_name` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模型名称',
                              `max_tokens` int DEFAULT '4096' COMMENT '最大Token数',

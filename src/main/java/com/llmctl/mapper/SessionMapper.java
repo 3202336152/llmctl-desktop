@@ -201,4 +201,13 @@ public interface SessionMapper {
      * @return 影响的行数
      */
     int deactivateUserActiveSessions(@Param("userId") Long userId);
+
+    /**
+     * 批量删除指定用户的所有非活跃会话（一键清除功能）
+     * 原因：清理冗余的非活跃会话记录，释放存储空间
+     *
+     * @param userId 用户ID
+     * @return 删除的会话数量
+     */
+    int deleteInactiveSessionsByUserId(@Param("userId") Long userId);
 }

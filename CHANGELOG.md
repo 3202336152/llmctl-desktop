@@ -5,6 +5,131 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.6] - 2025-10-17
+
+### Added 🎉
+- **会话表格优化** - 全面提升 Sessions 页面用户体验
+  - **会话名称优化**：
+    - 显示格式改为 `Provider名 - 项目名 #序号`
+    - 自动从工作目录提取项目名（最后一个文件夹名）
+    - 同项目单个会话时不显示序号
+    - 同项目多个会话时按时间顺序自动编号
+    - Tooltip 显示完整会话ID和命令信息
+
+  - **时间信息增强**：
+    - 相对时间显示：刚刚、N分钟前、N小时前、昨天、N天前、N周前、N月前、N年前
+    - 持续时间计算：显示会话运行时长（天、小时、分钟）
+    - Tooltip 显示完整时间信息（开始时间、最后活动、持续时间）
+
+  - **工作目录优化**：
+    - 显示格式：`项目名 (路径层级)`
+    - 智能路径提示：显示最后3层路径或完整路径
+    - Tooltip 显示完整工作目录路径
+
+  - **表格列优化**：
+    - 删除 Provider 列（已集成到会话名称）
+    - 删除命令列（已集成到会话名称 Tooltip）
+    - 合并时间列为单一"时间信息"列
+    - 更紧凑的表格布局，信息密度更高
+
+- **快捷操作功能** - 便捷的会话管理
+  - **右键菜单**：
+    - 打开终端 / 重新启动（根据状态自适应）
+    - 复制会话ID
+    - 复制工作目录
+    - 在文件管理器中打开（跨平台支持：Windows资源管理器/macOS Finder/Linux文件管理器）
+    - 终止会话 / 删除会话（根据状态自适应）
+  - **双击打开终端**：双击任意会话行即可打开终端
+
+- **命令选择优化** - 更安全的命令输入
+  - 将命令输入框改为下拉选择框
+  - 提供 4 个 CLI 命令选项：
+    - `claude` - Claude Code CLI
+    - `codex` - Codex CLI
+    - `gemini` - Gemini CLI
+    - `qoder` - Qoder CLI
+  - 添加必填验证，确保用户必须选择命令
+  - 保持与 Provider 选择的自动联动（自动填充对应命令）
+
+- **刷新按钮** - 手动刷新会话列表
+  - 在卡片顶部添加刷新按钮
+  - 显示加载状态
+  - 一键更新所有会话信息
+
+### Changed 🎨
+- **Sessions 页面交互优化**：
+  - 更直观的会话名称显示，易于区分不同项目和会话
+  - 更友好的时间信息展示，一目了然掌握会话状态
+  - 更紧凑的表格布局，提升信息浏览效率
+  - 更便捷的快捷操作，减少操作步骤
+
+- **命令输入安全性提升**：
+  - 避免用户输入错误的命令名称
+  - 标准化 CLI 命令选项
+  - 统一的下拉选择交互方式
+
+### Fixed 🐛
+- **修复右键菜单"在文件管理器中打开"报错**
+  - 问题：使用 `openExternal` 打开文件夹在 Windows 上失败
+  - 原因：`openExternal` 不支持 `file://` 协议打开本地文件夹
+  - 修复：
+    - 在 preload.ts 中新增 `openPath(path: string)` API
+    - 在 main.ts 中添加 `ipcMain.handle('open-path')` 处理器
+    - 使用 Electron 的 `shell.openPath()` API（跨平台支持）
+  - 涉及文件：`preload.ts:22,91`、`main.ts:260-270`、`SessionManager.tsx:483`
+
+### Technical Details 🔧
+- **前端修改文件**：
+  - `SessionManager.tsx` - 核心优化文件
+    - 新增常量：`PROVIDER_COMMAND_MAP` - Provider 到命令的映射
+    - 新增函数：`extractProjectName()` - 提取项目名
+    - 新增函数：`getSessionNumber()` - 计算会话序号
+    - 新增函数：`getSessionDisplayName()` - 生成会话显示名称
+    - 新增函数：`getRelativeTime()` - 计算相对时间
+    - 新增函数：`getSessionDuration()` - 计算会话持续时间
+    - 新增函数：`formatWorkingDirectory()` - 格式化工作目录显示
+    - 新增函数：`copyToClipboard()` - 复制到剪贴板
+    - 新增函数：`getContextMenu()` - 生成右键菜单
+    - 优化：重写 `columns` 定义，删除冗余列，优化信息展示
+    - 优化：修改命令输入为 Select 下拉选择框
+    - 优化：添加 `onRow` 双击处理器
+
+  - `preload.ts` - 新增 openPath API
+    - 类型定义：`openPath(path: string): Promise<void>`
+    - IPC 调用：`ipcRenderer.invoke('open-path', pathToOpen)`
+
+- **后端修改文件**：
+  - `main.ts` - 新增 IPC 处理器
+    - `ipcMain.handle('open-path')` - 在文件管理器中打开路径
+    - 使用 `shell.openPath(path)` 实现跨平台支持
+
+- **跨平台支持**：
+  - `shell.openPath()` API 在所有平台均可正常工作
+  - Windows: 在文件资源管理器中打开
+  - macOS: 在 Finder 中打开
+  - Linux: 在默认文件管理器中打开
+
+### User Experience 🌟
+- **信息浏览效率提升**：
+  - 会话名称更有意义，快速识别项目和序号
+  - 时间信息更直观，相对时间 + 持续时间双重展示
+  - 工作目录更简洁，突出项目名和路径层级
+
+- **操作便捷性提升**：
+  - 右键菜单集成常用操作，无需记忆快捷键
+  - 双击打开终端，减少点击次数
+  - 下拉选择命令，避免输入错误
+
+- **视觉体验优化**：
+  - 表格布局更紧凑，信息密度适中
+  - Tooltip 提供详细信息，保持界面简洁
+  - 图标和颜色标识，提升可读性
+
+### Documentation 📖
+- 更新 `CHANGELOG.md` - 记录 v2.1.6 所有变更
+- 更新 `README.md` - 添加新功能说明
+- 更新 `CLAUDE.md` - 同步项目版本信息
+
 ## [2.1.5] - 2025-10-16
 
 ### Changed 🔄

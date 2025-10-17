@@ -301,6 +301,22 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
+     * 批量删除当前用户的所有非活跃会话（一键清除功能）
+     * 原因：清理冗余的非活跃会话记录，释放存储空间
+     */
+    @Override
+    public int deleteInactiveSessions(Long userId) {
+        log.info("一键清除非活跃会话，用户ID: {}", userId);
+        int count = sessionMapper.deleteInactiveSessionsByUserId(userId);
+        if (count > 0) {
+            log.info("成功删除用户 {} 的 {} 个非活跃会话", userId, count);
+        } else {
+            log.info("用户 {} 无非活跃会话需要清除", userId);
+        }
+        return count;
+    }
+
+    /**
      * 获取会话对应的环境变量（供Electron前端使用）
      *
      * @param sessionId 会话ID

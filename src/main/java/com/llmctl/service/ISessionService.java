@@ -112,12 +112,21 @@ public interface ISessionService {
 
     /**
      * 用户登出时调用：将指定用户的所有活跃会话设置为非活跃状态
-     * 原因：用户登出后，其会话应被清理，避免资源泄漏和状态混乱
+     * 原因：用户登出后,其会话应被清理，避免资源泄漏和状态混乱
      *
      * @param userId 用户ID
      * @return 影响的行数
      */
     int deactivateUserActiveSessions(Long userId);
+
+    /**
+     * 批量删除当前用户的所有非活跃会话（一键清除功能）
+     * 原因：清理冗余的非活跃会话记录，释放存储空间
+     *
+     * @param userId 用户ID
+     * @return 删除的会话数量
+     */
+    int deleteInactiveSessions(Long userId);
 
     /**
      * 会话统计信息

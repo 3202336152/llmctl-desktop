@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -14,6 +14,8 @@ import {
   Tag,
   Tooltip,
   App as AntApp,
+  Row,
+  Col,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,6 +24,8 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   ApiOutlined,
+  SearchOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders, createProvider, updateProvider, deleteProvider } from '../../store/slices/providerSlice';
@@ -31,6 +35,7 @@ import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { Search } = Input;
 
 const ProviderManager: React.FC = () => {
   const { t } = useTranslation();
@@ -41,9 +46,40 @@ const ProviderManager: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [form] = Form.useForm();
 
+  // 筛选和搜索状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(undefined);
+
   useEffect(() => {
     dispatch(fetchProviders());
   }, [dispatch]);
+
+  // 筛选后的数据
+  const filteredProviders = useMemo(() => {
+    return providers.filter((provider) => {
+      // 搜索关键词筛选（名称、描述、模型名称）
+      const matchesSearch = !searchKeyword ||
+        provider.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        provider.description?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        provider.modelName?.toLowerCase().includes(searchKeyword.toLowerCase());
+
+      // 类型筛选
+      const matchesType = !typeFilter || provider.type === typeFilter;
+
+      // 状态筛选
+      const matchesStatus = statusFilter === undefined || provider.isActive === statusFilter;
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [providers, searchKeyword, typeFilter, statusFilter]);
+
+  // 重置筛选条件
+  const handleResetFilters = () => {
+    setSearchKeyword('');
+    setTypeFilter(undefined);
+    setStatusFilter(undefined);
+  };
 
   const handleCreateProvider = () => {
     setEditingProvider(null);
@@ -158,10 +194,15 @@ const ProviderManager: React.FC = () => {
       },
     },
     {
-      title: t('providers.model'),
-      dataIndex: 'modelName',
-      key: 'modelName',
+      title: t('providers.description'),
+      dataIndex: 'description',
+      key: 'description',
       align: 'center' as const,
+      render: (description: string) => (
+        <Tooltip title={description}>
+          <span>{description && description.length > 40 ? `${description.substring(0, 40)}...` : description || '-'}</span>
+        </Tooltip>
+      ),
     },
     {
       title: t('providers.baseUrl'),
@@ -173,18 +214,6 @@ const ProviderManager: React.FC = () => {
           <span>{url.length > 30 ? `${url.substring(0, 30)}...` : url}</span>
         </Tooltip>
       ),
-    },
-    {
-      title: t('providers.maxTokens'),
-      dataIndex: 'maxTokens',
-      key: 'maxTokens',
-      align: 'center' as const,
-    },
-    {
-      title: t('providers.temperature'),
-      dataIndex: 'temperature',
-      key: 'temperature',
-      align: 'center' as const,
     },
     {
       title: t('providers.status'),
@@ -233,9 +262,59 @@ const ProviderManager: React.FC = () => {
           </Button>
         }
       >
+        {/* 搜索和筛选栏 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={24} md={8}>
+            <Search
+              placeholder="搜索名称、描述或模型"
+              allowClear
+              enterButton={<SearchOutlined />}
+              value={searchKeyword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchKeyword(e.target.value)}
+              onSearch={(value: string) => setSearchKeyword(value)}
+            />
+          </Col>
+          <Col xs={12} sm={12} md={5}>
+            <Select
+              placeholder="选择类型"
+              allowClear
+              style={{ width: '100%' }}
+              value={typeFilter}
+              onChange={(value: string) => setTypeFilter(value)}
+            >
+              <Option value="claude code">Claude Code</Option>
+              <Option value="codex">Codex</Option>
+              <Option value="gemini">Google Gemini</Option>
+              <Option value="qoder">Qoder</Option>
+            </Select>
+          </Col>
+          <Col xs={12} sm={12} md={5}>
+            <Select
+              placeholder="选择状态"
+              allowClear
+              style={{ width: '100%' }}
+              value={statusFilter}
+              onChange={(value: boolean) => setStatusFilter(value)}
+            >
+              <Option value={true}>启用</Option>
+              <Option value={false}>禁用</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={24} md={6}>
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={handleResetFilters}>
+                重置
+              </Button>
+              <span style={{ color: '#8c8c8c' }}>
+                共 {filteredProviders.length} 条记录
+              </span>
+            </Space>
+          </Col>
+        </Row>
+
         <Table
           columns={columns}
-          dataSource={providers}
+          dataSource={filteredProviders}
           rowKey="id"
           loading={loading}
           pagination={{

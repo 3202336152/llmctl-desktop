@@ -3,7 +3,7 @@
 # LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.1.5-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.1.6-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -455,6 +455,33 @@ LLMctl/
 ---
 
 ## 🔄 最新更新
+
+### v2.1.6 (2025-10-17)
+
+#### 🎉 新功能
+- ✅ **会话表格优化** - 全面提升 Sessions 页面用户体验
+  - **会话名称优化**：显示格式改为 `Provider名 - 项目名 #序号`，自动从工作目录提取项目名
+  - **时间信息增强**：相对时间显示（刚刚、N分钟前、N小时前等）+ 持续时间计算
+  - **工作目录优化**：显示格式 `项目名 (路径层级)`，智能路径提示
+  - **表格列优化**：删除冗余列（Provider、命令），合并时间列，更紧凑的布局
+- ✅ **快捷操作功能** - 便捷的会话管理
+  - **右键菜单**：打开终端/重新启动、复制会话ID、复制工作目录、在文件管理器中打开、终止/删除会话
+  - **双击打开终端**：双击任意会话行即可打开终端
+- ✅ **命令选择优化** - 更安全的命令输入
+  - 将命令输入框改为下拉选择框，提供 4 个 CLI 命令选项（claude、codex、gemini、qoder）
+  - 添加必填验证，确保用户必须选择命令
+- ✅ **刷新按钮** - 手动刷新会话列表
+
+#### 🐛 Bug修复
+- ✅ **修复右键菜单"在文件管理器中打开"报错**
+  - 问题：使用 `openExternal` 打开文件夹在 Windows 上失败
+  - 原因：`openExternal` 不支持 `file://` 协议打开本地文件夹
+  - 修复：使用 Electron 的 `shell.openPath()` API（跨平台支持）
+
+#### 🎨 用户体验优化
+- ✅ **信息浏览效率提升**：会话名称更有意义，快速识别项目和序号
+- ✅ **操作便捷性提升**：右键菜单集成常用操作，双击打开终端，下拉选择命令
+- ✅ **视觉体验优化**：表格布局更紧凑，Tooltip 提供详细信息，保持界面简洁
 
 ### v2.1.5 (2025-10-16)
 

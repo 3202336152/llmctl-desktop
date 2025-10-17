@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -12,7 +12,12 @@ import {
   Tag,
   Tabs,
   App as AntApp,
+  Row,
+  Col,
+  Tooltip,
+  Dropdown,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   PlusOutlined,
   StopOutlined,
@@ -21,6 +26,12 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  ClearOutlined,
+  CopyOutlined,
+  FolderOpenOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchProviders } from '../../store/slices/providerSlice';
@@ -40,6 +51,15 @@ import type { RootState } from '../../store';
 import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
+const { Search } = Input;
+
+// Provider 类型到 CLI 命令的映射
+const PROVIDER_COMMAND_MAP: Record<string, string> = {
+  'Claude Code': 'claude',
+  'Codex': 'codex',
+  'Gemini': 'gemini',
+  'Qoder': 'qoder',
+};
 
 const SessionManager: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -51,6 +71,11 @@ const SessionManager: React.FC = () => {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
+
+  // 搜索和筛选状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [providerFilter, setProviderFilter] = useState<string | undefined>(undefined);
+  const [timeRangeFilter, setTimeRangeFilter] = useState<string>('all');
 
   useEffect(() => {
     dispatch(fetchProviders());
@@ -70,6 +95,112 @@ const SessionManager: React.FC = () => {
     }
   };
 
+  /**
+   * 从工作目录路径中提取项目名（最后一个文件夹名）
+   */
+  const extractProjectName = (workingDirectory: string): string => {
+    const path = workingDirectory.replace(/\\/g, '/'); // 统一使用正斜杠
+    const segments = path.split('/').filter(seg => seg.length > 0);
+    return segments[segments.length - 1] || 'Unknown';
+  };
+
+  /**
+   * 计算同一项目的会话序号
+   * 根据工作目录和开始时间排序，按时间顺序编号
+   */
+  const getSessionNumber = (session: Session): number => {
+    const projectSessions = sessions
+      .filter(s => s.workingDirectory === session.workingDirectory)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    const index = projectSessions.findIndex(s => s.id === session.id);
+    return index + 1;
+  };
+
+  /**
+   * 生成会话显示名称：Provider名 - 项目名 (#序号)
+   * 如果同项目只有一个会话，不显示序号
+   */
+  const getSessionDisplayName = (session: Session): string => {
+    const projectName = extractProjectName(session.workingDirectory);
+    const providerName = session.providerName || 'Unknown';
+
+    // 统计同项目会话数量
+    const projectSessionCount = sessions.filter(
+      s => s.workingDirectory === session.workingDirectory
+    ).length;
+
+    // 如果同项目只有一个会话，不显示序号
+    if (projectSessionCount === 1) {
+      return `${providerName} - ${projectName}`;
+    }
+
+    // 多个会话时显示序号
+    const sessionNumber = getSessionNumber(session);
+    return `${providerName} - ${projectName} #${sessionNumber}`;
+  };
+
+  /**
+   * 计算相对时间显示（如"2小时前"、"昨天"）
+   */
+  const getRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (diffHours < 24) return `${diffHours}小时前`;
+    if (diffDays === 1) return '昨天';
+    if (diffDays < 7) return `${diffDays}天前`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}月前`;
+    return `${Math.floor(diffDays / 365)}年前`;
+  };
+
+  /**
+   * 计算会话持续时间
+   */
+  const getSessionDuration = (session: Session): string => {
+    const startTime = new Date(session.startTime);
+    const endTime = session.endTime ? new Date(session.endTime) : new Date();
+    const diffMs = endTime.getTime() - startTime.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays}天${diffHours % 24}小时`;
+    if (diffHours > 0) return `${diffHours}小时${diffMins % 60}分钟`;
+    if (diffMins > 0) return `${diffMins}分钟`;
+    return '不到1分钟';
+  };
+
+  /**
+   * 格式化工作目录显示：项目名 (路径层级)
+   */
+  const formatWorkingDirectory = (path: string): { display: string; full: string } => {
+    const projectName = extractProjectName(path);
+    const normalizedPath = path.replace(/\\/g, '/');
+    const segments = normalizedPath.split('/').filter(seg => seg.length > 0);
+
+    // 显示最后3层路径
+    let pathHint = '';
+    if (segments.length > 3) {
+      pathHint = `.../${segments.slice(-3, -1).join('/')}`;
+    } else if (segments.length > 1) {
+      pathHint = segments.slice(0, -1).join('/');
+    }
+
+    return {
+      display: pathHint ? `${projectName} (${pathHint})` : projectName,
+      full: path
+    };
+  };
+
   const handleStartSession = () => {
     // 从 localStorage 读取上次选择的 Provider ID 和工作目录
     const lastSelectedProviderId = localStorage.getItem('lastSelectedSessionProviderId');
@@ -78,14 +209,23 @@ const SessionManager: React.FC = () => {
     // 重置表单
     form.resetFields();
 
-    // 设置默认的 Provider
+    // 设置默认的 Provider 和命令
     if (lastSelectedProviderId && providers.some(p => p.id === lastSelectedProviderId && p.isActive)) {
       form.setFieldsValue({ providerId: lastSelectedProviderId });
+      // 自动填充命令
+      const provider = providers.find(p => p.id === lastSelectedProviderId);
+      if (provider) {
+        const command = PROVIDER_COMMAND_MAP[provider.type] || 'claude';
+        form.setFieldsValue({ command });
+      }
     } else if (providers.length > 0) {
       // 否则选择第一个激活的Provider
       const firstActiveProvider = providers.find(p => p.isActive);
       if (firstActiveProvider) {
         form.setFieldsValue({ providerId: firstActiveProvider.id });
+        // 自动填充命令
+        const command = PROVIDER_COMMAND_MAP[firstActiveProvider.type] || 'claude';
+        form.setFieldsValue({ command });
       }
     }
 
@@ -95,6 +235,17 @@ const SessionManager: React.FC = () => {
     }
 
     setModalVisible(true);
+  };
+
+  /**
+   * Provider 选择变化时，自动填充对应的 CLI 命令
+   */
+  const handleProviderChange = (providerId: string) => {
+    const provider = providers.find(p => p.id === providerId);
+    if (provider) {
+      const command = PROVIDER_COMMAND_MAP[provider.type] || 'claude';
+      form.setFieldsValue({ command });
+    }
   };
 
   const handleSelectDirectory = async () => {
@@ -290,48 +441,105 @@ const SessionManager: React.FC = () => {
     }
   };
 
+  /**
+   * 复制文本到剪贴板
+   */
+  const copyToClipboard = (text: string, successMessage: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      message.success(successMessage);
+    }).catch(() => {
+      message.error('复制失败');
+    });
+  };
+
+  /**
+   * 生成右键菜单项
+   */
+  const getContextMenu = (record: Session) => ({
+    items: [
+      {
+        key: 'open',
+        label: record.status === 'active' ? '打开终端' : '重新启动',
+        icon: <CodeOutlined />,
+        onClick: () => handleOpenTerminal(record.id),
+      },
+      {
+        key: 'copyId',
+        label: '复制会话ID',
+        icon: <CopyOutlined />,
+        onClick: () => copyToClipboard(record.id, '已复制会话ID'),
+      },
+      {
+        key: 'copyPath',
+        label: '复制工作目录',
+        icon: <CopyOutlined />,
+        onClick: () => copyToClipboard(record.workingDirectory, '已复制工作目录'),
+      },
+      {
+        key: 'openFolder',
+        label: '在文件管理器中打开',
+        icon: <FolderOpenOutlined />,
+        onClick: () => {
+          window.electronAPI.openPath(record.workingDirectory);
+        },
+      },
+      { type: 'divider' },
+      record.status === 'active' ? {
+        key: 'terminate',
+        label: '终止会话',
+        icon: <StopOutlined />,
+        danger: true,
+        onClick: () => handleTerminateSession(record.id),
+      } : {
+        key: 'delete',
+        label: '删除会话',
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => handleDeleteSession(record.id),
+      },
+    ],
+  });
+
   const columns = [
     {
-      title: '会话ID',
+      title: '会话名称',
       dataIndex: 'id',
       key: 'id',
       align: 'center' as const,
-      render: (text: string) => (
-        <Space>
-          <DesktopOutlined />
-          <code style={{ background: 'transparent', color: '#1890ff', padding: 0 }}>{text.substring(0, 8)}...</code>
-        </Space>
-      ),
-    },
-    {
-      title: 'Provider',
-      dataIndex: 'providerName',
-      key: 'providerName',
-      align: 'center' as const,
-      render: (text: string, record: Session) => text || record.providerId,
+      width: 280,
+      render: (text: string, record: Session) => {
+        const displayName = getSessionDisplayName(record);
+        return (
+          <Tooltip title={`完整ID: ${text}\n命令: ${record.command || '-'}`} placement="topLeft">
+            <Space>
+              <DesktopOutlined />
+              <span style={{ color: '#1890ff', fontWeight: 500 }}>{displayName}</span>
+            </Space>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '工作目录',
       dataIndex: 'workingDirectory',
       key: 'workingDirectory',
       align: 'center' as const,
-      render: (text: string) => (
-        <span title={text}>
-          {text.length > 30 ? `${text.substring(0, 30)}...` : text}
-        </span>
-      ),
-    },
-    {
-      title: '命令',
-      dataIndex: 'command',
-      key: 'command',
-      align: 'center' as const,
+      width: 250,
+      render: (text: string) => {
+        const formatted = formatWorkingDirectory(text);
+        return (
+          <Tooltip title={formatted.full} placement="topLeft">
+            <span style={{ color: '#666' }}>{formatted.display}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       align: 'center' as const,
+      width: 90,
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
           {getStatusText(status)}
@@ -339,37 +547,54 @@ const SessionManager: React.FC = () => {
       ),
     },
     {
-      title: '开始时间',
+      title: '时间信息',
       dataIndex: 'startTime',
-      key: 'startTime',
+      key: 'timeInfo',
       align: 'center' as const,
-      render: (text: string) => new Date(text).toLocaleString(),
-    },
-    {
-      title: '最后活动',
-      dataIndex: 'lastActivity',
-      key: 'lastActivity',
-      align: 'center' as const,
-      render: (text: string) => text ? new Date(text).toLocaleString() : '-',
+      width: 200,
+      render: (text: string, record: Session) => {
+        const relativeTime = getRelativeTime(record.lastActivity || text);
+        const duration = getSessionDuration(record);
+        const fullStartTime = new Date(text).toLocaleString();
+        const fullLastActivity = record.lastActivity ? new Date(record.lastActivity).toLocaleString() : '-';
+
+        return (
+          <Tooltip title={
+            <>
+              <div>开始时间: {fullStartTime}</div>
+              <div>最后活动: {fullLastActivity}</div>
+              <div>持续时间: {duration}</div>
+            </>
+          } placement="topLeft">
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#666', fontSize: '13px' }}>{relativeTime}</div>
+              <div style={{ color: '#999', fontSize: '12px' }}>(运行 {duration})</div>
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '操作',
       key: 'action',
       align: 'center' as const,
+      width: 120,
       render: (_: any, record: Session) => (
-        <Space size="middle">
+        <Space size="small">
           {record.status === 'active' && (
             <>
               <Button
                 type="link"
+                size="small"
                 icon={<CodeOutlined />}
                 onClick={() => handleOpenTerminal(record.id)}
                 disabled={openTerminalSessions.includes(record.id)}
               >
-                {openTerminalSessions.includes(record.id) ? '已打开' : '打开终端'}
+                {openTerminalSessions.includes(record.id) ? '已打开' : '打开'}
               </Button>
               <Button
                 type="link"
+                size="small"
                 danger
                 icon={<StopOutlined />}
                 onClick={() => handleTerminateSession(record.id)}
@@ -382,13 +607,15 @@ const SessionManager: React.FC = () => {
             <>
               <Button
                 type="link"
+                size="small"
                 icon={<CodeOutlined />}
                 onClick={() => handleOpenTerminal(record.id)}
               >
-                重新启动
+                重启
               </Button>
               <Button
                 type="link"
+                size="small"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => handleDeleteSession(record.id)}
@@ -397,6 +624,9 @@ const SessionManager: React.FC = () => {
               </Button>
             </>
           )}
+          <Dropdown menu={getContextMenu(record)} trigger={['click']}>
+            <Button type="text" size="small" icon={<MoreOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
@@ -418,7 +648,85 @@ const SessionManager: React.FC = () => {
     }
   };
 
-  const filteredSessions = getFilteredSessions();
+  // 综合筛选逻辑（状态 + 搜索 + Provider + 时间范围）
+  const filteredSessions = useMemo(() => {
+    let filtered = getFilteredSessions(); // 先按状态筛选（Tabs）
+
+    // 搜索关键词筛选
+    if (searchKeyword) {
+      filtered = filtered.filter(session =>
+        session.id.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        session.providerName?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        session.workingDirectory.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        session.command?.toLowerCase().includes(searchKeyword.toLowerCase())
+      );
+    }
+
+    // Provider 筛选
+    if (providerFilter) {
+      filtered = filtered.filter(session => session.providerId === providerFilter);
+    }
+
+    // 时间范围筛选
+    if (timeRangeFilter !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(session => {
+        const startTime = new Date(session.startTime);
+        switch (timeRangeFilter) {
+          case 'today':
+            return startTime.toDateString() === now.toDateString();
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return startTime >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return startTime >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
+  }, [sessions, searchKeyword, providerFilter, timeRangeFilter, sessionFilter]);
+
+  // 重置筛选条件
+  const handleResetFilters = () => {
+    setSearchKeyword('');
+    setProviderFilter(undefined);
+    setTimeRangeFilter('all');
+  };
+
+  // 一键清除所有非活跃会话
+  const handleCleanupInactiveSessions = () => {
+    const inactiveCount = inactiveSessions.length;
+
+    if (inactiveCount === 0) {
+      message.info('当前没有非活跃会话需要清除');
+      return;
+    }
+
+    modal.confirm({
+      title: '确定要清除所有非活跃会话吗？',
+      content: `即将删除 ${inactiveCount} 个非活跃会话，此操作不可恢复`,
+      okText: '确定清除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const response = await sessionAPI.cleanupInactiveSessions();
+          const deletedCount = response.data || 0;
+
+          // 重新加载会话列表
+          await loadSessions();
+
+          message.success(`成功清除 ${deletedCount} 个非活跃会话`);
+        } catch (error) {
+          message.error(`清除失败: ${error}`);
+        }
+      },
+    });
+  };
 
   return (
     <div>
@@ -460,15 +768,84 @@ const SessionManager: React.FC = () => {
           </Space>
         }
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleStartSession}
-          >
-            启动新会话
-          </Button>
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadSessions}
+              loading={loading}
+            >
+              刷新
+            </Button>
+            <Button
+              danger
+              icon={<ClearOutlined />}
+              onClick={handleCleanupInactiveSessions}
+              disabled={inactiveSessions.length === 0}
+            >
+              清除会话 ({inactiveSessions.length})
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleStartSession}
+            >
+              启动新会话
+            </Button>
+          </Space>
         }
       >
+        {/* 搜索和筛选栏 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={24} md={10}>
+            <Search
+              placeholder="搜索会话ID、Provider、工作目录或命令"
+              allowClear
+              enterButton={<SearchOutlined />}
+              value={searchKeyword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchKeyword(e.target.value)}
+              onSearch={(value: string) => setSearchKeyword(value)}
+            />
+          </Col>
+          <Col xs={12} sm={12} md={5}>
+            <Select
+              placeholder="选择 Provider"
+              allowClear
+              style={{ width: '100%' }}
+              value={providerFilter}
+              onChange={(value: string) => setProviderFilter(value)}
+            >
+              {providers.map(provider => (
+                <Option key={provider.id} value={provider.id}>
+                  {provider.name}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={12} sm={12} md={5}>
+            <Select
+              placeholder="时间范围"
+              style={{ width: '100%' }}
+              value={timeRangeFilter}
+              onChange={(value: string) => setTimeRangeFilter(value)}
+            >
+              <Option value="all">全部时间</Option>
+              <Option value="today">今天</Option>
+              <Option value="week">最近一周</Option>
+              <Option value="month">最近一月</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={24} md={4}>
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={handleResetFilters}>
+                重置
+              </Button>
+              <span style={{ color: '#8c8c8c' }}>
+                {filteredSessions.length} 条
+              </span>
+            </Space>
+          </Col>
+        </Row>
+
         <Tabs
           activeKey={sessionFilter}
           onChange={(key: string) => setSessionFilter(key as 'all' | 'active' | 'inactive')}
@@ -504,6 +881,9 @@ const SessionManager: React.FC = () => {
           dataSource={filteredSessions}
           rowKey="id"
           loading={loading}
+          onRow={(record: Session) => ({
+            onDoubleClick: () => handleOpenTerminal(record.id),
+          })}
           scroll={{ x: 'max-content' }}
           pagination={{
             pageSize: 10,
@@ -537,7 +917,7 @@ const SessionManager: React.FC = () => {
             name="providerId"
             rules={[{ required: true, message: '请选择Provider' }]}
           >
-            <Select placeholder="请选择Provider">
+            <Select placeholder="请选择Provider" onChange={handleProviderChange}>
               {providers
                 .filter(provider => provider.isActive)
                 .map((provider) => (
@@ -570,10 +950,15 @@ const SessionManager: React.FC = () => {
           <Form.Item
             label="命令"
             name="command"
-            tooltip="命令将在内置终端中执行，环境变量和工作目录会自动配置"
-            extra="命令将在内置终端中运行，支持交互式输入和实时输出"
+            tooltip="选择要运行的CLI工具命令"
+            rules={[{ required: true, message: '请选择命令' }]}
           >
-            <Input placeholder="请输入启动命令" />
+            <Select placeholder="请选择命令">
+              <Option value="claude">claude - Claude Code CLI</Option>
+              <Option value="codex">codex - Codex CLI</Option>
+              <Option value="gemini">gemini - Gemini CLI</Option>
+              <Option value="qoder">qoder - Qoder CLI</Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

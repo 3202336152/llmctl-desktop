@@ -61,4 +61,9 @@ export const sessionAPI = {
   getActiveSessions: (): Promise<ApiResponse<Session[]>> => {
     return httpClient.get('/sessions').then(response => response.data);
   },
+
+  // 一键清除当前用户的所有非活跃会话
+  cleanupInactiveSessions: (): Promise<ApiResponse<number>> => {
+    return httpClient.delete('/sessions/cleanup-inactive').then(response => response.data);
+  },
 };

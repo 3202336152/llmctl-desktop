@@ -258,6 +258,18 @@ ipcMain.handle('open-external', async (_event, url: string) => {
 });
 
 /**
+ * 在文件管理器中打开路径
+ */
+ipcMain.handle('open-path', async (_event, path: string) => {
+  try {
+    await shell.openPath(path);
+  } catch (error) {
+    console.error('[IPC] open-path 失败:', error);
+    throw error;
+  }
+});
+
+/**
  * 检查更新 (手动触发)
  */
 ipcMain.handle('check-for-updates', async () => {

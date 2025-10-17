@@ -241,6 +241,26 @@ public class SessionController {
     }
 
     /**
+     * 批量删除当前用户的所有非活跃会话（一键清除功能）
+     * 原因：清理冗余的非活跃会话记录，释放存储空间
+     *
+     * @return 删除的会话数量
+     */
+    @DeleteMapping("/cleanup-inactive")
+    public ResponseEntity<ApiResponse<Integer>> cleanupInactiveSessions() {
+        Long userId = UserContext.getUserId();
+        log.info("一键清除非活跃会话，用户ID: {}", userId);
+
+        int count = sessionService.deleteInactiveSessions(userId);
+        String message = count > 0
+                ? String.format("已清除 %d 个非活跃会话", count)
+                : "当前没有非活跃会话";
+        ApiResponse<Integer> response = ApiResponse.success(count, message);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 更新会话状态请求DTO
      */
     public static class UpdateSessionStatusRequest {

@@ -19,6 +19,7 @@ export interface ElectronAPI {
   // 系统功能
   showNotification(title: string, body: string): void;
   openExternal(url: string): Promise<void>;
+  openPath(path: string): Promise<void>;
   send(channel: string, data?: any): void;
 
   // 自动更新
@@ -87,6 +88,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     new Notification(title, { body });
   },
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  openPath: (pathToOpen: string) => ipcRenderer.invoke('open-path', pathToOpen),
   send: (channel: string, data?: any) => ipcRenderer.send(channel, data),
 
   // ==================== 自动更新 API ====================
