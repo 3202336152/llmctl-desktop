@@ -35,4 +35,10 @@ public class StartSessionRequest {
     @NotBlank(message = "启动命令不能为空")
     @Size(max = 200, message = "启动命令长度不能超过200字符")
     private String command;
+
+    /**
+     * CLI类型（claude code, codex, gemini, qoder）
+     */
+    @Size(max = 20, message = "CLI类型长度不能超过20字符")
+    private String type;
 }

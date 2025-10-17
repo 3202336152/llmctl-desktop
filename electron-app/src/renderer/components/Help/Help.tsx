@@ -535,7 +535,7 @@ const Help: React.FC = () => {
 
           <Title level={5}>版本信息</Title>
           <Paragraph>
-            当前版本：v2.1.5<br />
+            当前版本：v2.2.0<br />
             更新日期：2025年10月<br />
             开发团队：LLMctl Team
           </Paragraph>

@@ -112,12 +112,19 @@ apiClient.interceptors.response.use(
           errorMessage = '请求参数错误';
           break;
         case 401:
-          // Token失效或未登录，清除认证信息并跳转到登录页
-          errorMessage = '登录已过期，请重新登录';
-          authStorage.clearAuth();
-          // 使用 window.location 强制刷新到登录页
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/#/login';
+          // 区分登录失败和Token过期两种情况
+          // 如果是登录接口返回401，使用后端返回的错误消息（用户名或密码错误）
+          const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+          if (isLoginEndpoint) {
+            errorMessage = data?.message || data?.error || '用户名或密码错误';
+          } else {
+            // Token失效或未登录，清除认证信息并跳转到登录页
+            errorMessage = '登录已过期，请重新登录';
+            authStorage.clearAuth();
+            // 使用 window.location 强制刷新到登录页
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/#/login';
+            }
           }
           break;
         case 403:

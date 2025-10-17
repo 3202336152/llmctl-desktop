@@ -116,6 +116,9 @@ const Settings: React.FC = () => {
       await configAPI.setBatchGlobalConfigs(configs);
       message.success(t('settings.settingsSaved'));
 
+      // 触发设置变更事件，通知 App 组件重新加载配置
+      window.dispatchEvent(new Event('settings-changed'));
+
       // 应用语言切换
       if (values.language && values.language !== i18n.language) {
         i18n.changeLanguage(values.language);

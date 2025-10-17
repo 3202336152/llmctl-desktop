@@ -16,6 +16,7 @@ import {
   App as AntApp,
   Row,
   Col,
+  Checkbox,
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,6 +33,7 @@ import { fetchProviders, createProvider, updateProvider, deleteProvider } from '
 import { Provider, CreateProviderRequest, UpdateProviderRequest } from '../../types';
 import type { RootState } from '../../store';
 import { useTranslation } from 'react-i18next';
+import './ProviderManager.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -44,6 +46,7 @@ const ProviderManager: React.FC = () => {
   const { providers, loading, error } = useAppSelector((state: RootState) => state.provider);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
+  const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
 
   // 筛选和搜索状态
@@ -64,8 +67,8 @@ const ProviderManager: React.FC = () => {
         provider.description?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
         provider.modelName?.toLowerCase().includes(searchKeyword.toLowerCase());
 
-      // 类型筛选
-      const matchesType = !typeFilter || provider.type === typeFilter;
+      // 类型筛选（检查 types 数组是否包含筛选类型）
+      const matchesType = !typeFilter || provider.types.includes(typeFilter as any);
 
       // 状态筛选
       const matchesStatus = statusFilter === undefined || provider.isActive === statusFilter;
@@ -92,7 +95,7 @@ const ProviderManager: React.FC = () => {
     form.setFieldsValue({
       name: provider.name,
       description: provider.description,
-      type: provider.type,
+      types: provider.types,
       baseUrl: provider.baseUrl,
       modelName: provider.modelName,
       maxTokens: provider.maxTokens,
@@ -121,7 +124,13 @@ const ProviderManager: React.FC = () => {
   };
 
   const handleModalOk = async () => {
+    // 防止重复提交
+    if (submitting) {
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const values = await form.validateFields();
 
       if (editingProvider) {
@@ -129,6 +138,7 @@ const ProviderManager: React.FC = () => {
         const updateRequest: UpdateProviderRequest = {
           name: values.name,
           description: values.description,
+          types: values.types,
           baseUrl: values.baseUrl,
           modelName: values.modelName,
           maxTokens: values.maxTokens,
@@ -142,7 +152,7 @@ const ProviderManager: React.FC = () => {
         const createRequest: CreateProviderRequest = {
           name: values.name,
           description: values.description,
-          type: values.type,
+          types: values.types,
           baseUrl: values.baseUrl,
           modelName: values.modelName,
           token: values.token,
@@ -157,6 +167,8 @@ const ProviderManager: React.FC = () => {
       form.resetFields();
     } catch (error) {
       message.error(`操作失败: ${error}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -180,17 +192,25 @@ const ProviderManager: React.FC = () => {
     },
     {
       title: t('providers.type'),
-      dataIndex: 'type',
-      key: 'type',
+      dataIndex: 'types',
+      key: 'types',
       align: 'center' as const,
-      render: (type: string) => {
+      render: (types: string[]) => {
         const typeColors: Record<string, string> = {
           'claude code': 'blue',
           'codex': 'green',
           'gemini': 'purple',
           'qoder': 'orange',
         };
-        return <Tag color={typeColors[type] || 'default'}>{type.toUpperCase()}</Tag>;
+        return (
+          <Space wrap>
+            {types.map((type) => (
+              <Tag key={type} color={typeColors[type] || 'default'}>
+                {type.toUpperCase()}
+              </Tag>
+            ))}
+          </Space>
+        );
       },
     },
     {
@@ -331,6 +351,7 @@ const ProviderManager: React.FC = () => {
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
+        confirmLoading={submitting}
         width={600}
         destroyOnHidden
       >
@@ -353,20 +374,102 @@ const ProviderManager: React.FC = () => {
             <TextArea rows={3} placeholder={t('providers.descriptionPlaceholder')} />
           </Form.Item>
 
-          {!editingProvider && (
-            <Form.Item
-              label={t('providers.type')}
-              name="type"
-              rules={[{ required: true, message: t('providers.typeRequired') }]}
-            >
-              <Select placeholder={t('providers.typePlaceholder')}>
-                <Option value="claude code">Claude Code</Option>
-                <Option value="codex">Codex</Option>
-                <Option value="gemini">Google Gemini</Option>
-                <Option value="qoder">Qoder</Option>
-              </Select>
-            </Form.Item>
-          )}
+          <Form.Item
+            label={t('providers.type')}
+            name="types"
+            rules={[{ required: true, message: '请至少选择一个Provider类型' }]}
+          >
+            <Checkbox.Group style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <Row gutter={[16, 16]} style={{ maxWidth: '380px', margin: '0 auto' }}>
+                  <Col span={12}>
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '42px',
+                      }}
+                      className="provider-type-item"
+                    >
+                      <Checkbox value="claude code" style={{ fontWeight: 500, margin: 0 }}>
+                        Claude Code
+                      </Checkbox>
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '42px',
+                      }}
+                      className="provider-type-item"
+                    >
+                      <Checkbox value="codex" style={{ fontWeight: 500, margin: 0 }}>
+                        Codex
+                      </Checkbox>
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '42px',
+                      }}
+                      className="provider-type-item"
+                    >
+                      <Checkbox value="gemini" style={{ fontWeight: 500, margin: 0 }}>
+                        Google Gemini
+                      </Checkbox>
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '42px',
+                      }}
+                      className="provider-type-item"
+                    >
+                      <Checkbox value="qoder" style={{ fontWeight: 500, margin: 0 }}>
+                        Qoder
+                      </Checkbox>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            </Checkbox.Group>
+          </Form.Item>
 
           <Form.Item
             label={t('providers.baseUrl')}

@@ -3,7 +3,7 @@
 # LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.1.6-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.1.7-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -25,6 +25,7 @@
 - 🔄 **自动故障恢复** - Token失效自动检测，一键切换到健康Token（v2.0.2）
 - 🖥️ **会话管理** - CLI进程监控、工作目录记录、实时状态更新、会话重启（v2.0.3）
 - 🌍 **国际化支持** - 支持中英文切换，语言配置持久化（v2.0.3）
+- 🎨 **暗色主题** - 完整的深色模式支持，保护眼睛，个性化定制（v2.1.7）
 - 📊 **统计分析** - 详细的使用统计和数据可视化
 - ⚙️ **配置管理** - 支持导入导出配置，方便迁移和备份
 - 📖 **帮助中心** - 完整的使用文档和常见问题解答（v2.1.0）
@@ -455,6 +456,36 @@ LLMctl/
 ---
 
 ## 🔄 最新更新
+
+### v2.1.7 (2025-10-17)
+
+#### 🎉 新功能
+- ✅ **暗色主题功能** - 完整的深色模式支持
+  - 完整的暗色配色方案（背景色、文字、边框、阴影）
+  - 所有组件的暗色样式覆盖（Layout、Card、Table、Input、Modal等）
+  - 在设置页面自由选择亮色/暗色主题
+  - 实时切换无需重启应用
+  - 主题偏好自动保存并跨设备同步
+
+#### 🎨 用户体验优化
+- ✅ **视觉舒适性提升**
+  - 夜间模式保护眼睛，减少蓝光刺激
+  - 暗色背景降低屏幕亮度
+  - 文字对比度适中，易于阅读
+- ✅ **个性化定制**
+  - 用户自由选择喜欢的主题
+  - 满足不同场景使用需求
+
+#### 🔧 技术实现
+- 完整的darkTheme配置（80+配置项）
+- 动态主题切换机制
+- settings-changed事件实时更新
+- ConfigProvider动态传递主题
+
+#### 🔄 向后兼容
+- 未设置主题的用户默认使用亮色主题
+- 不影响现有用户配置
+- 平滑升级无需手动调整
 
 ### v2.1.6 (2025-10-17)
 

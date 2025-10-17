@@ -4,12 +4,13 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 更新Provider请求DTO
  *
  * @author Liu Yifan
- * @version 2.0.0
+ * @version 2.1.6
  * @since 2025-09-28
  */
 @Data
@@ -26,6 +27,13 @@ public class UpdateProviderRequest {
      */
     @Size(max = 1000, message = "Provider描述长度不能超过1000字符")
     private String description;
+
+    /**
+     * Provider支持的CLI类型列表（可选，用于编辑）
+     */
+    @Size(min = 1, message = "至少选择一个Provider类型")
+    private List<@Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
+                          message = "Provider类型必须是：claude code, codex, gemini, qoder 之一") String> types;
 
     /**
      * API基础URL

@@ -294,7 +294,7 @@ public class ConfigServiceImpl implements IConfigService {
             providerConfig.put("id", provider.getId());
             providerConfig.put("name", provider.getName());
             providerConfig.put("description", provider.getDescription());
-            providerConfig.put("type", provider.getType());
+            providerConfig.put("types", provider.getTypes());
             providerConfig.put("baseUrl", provider.getBaseUrl());
             providerConfig.put("modelName", provider.getModelName());
             providerConfig.put("maxTokens", provider.getMaxTokens());
@@ -372,15 +372,25 @@ public class ConfigServiceImpl implements IConfigService {
     /**
      * 从配置导入单个Provider
      */
+    @SuppressWarnings("unchecked")
     private void importProviderFromConfig(Map<String, Object> providerConfig, Boolean overwrite, ConfigImportResult result) {
         Long userId = com.llmctl.context.UserContext.getUserId();
         String providerId = (String) providerConfig.get("id");
         String name = (String) providerConfig.get("name");
-        String type = (String) providerConfig.get("type");
+        Object typesObj = providerConfig.get("types");
+
+        // 兼容旧格式（单个type字段）和新格式（types数组）
+        List<String> types = new ArrayList<>();
+        if (typesObj instanceof List) {
+            types = (List<String>) typesObj;
+        } else if (typesObj instanceof String) {
+            // 兼容旧版本单个type
+            types.add((String) typesObj);
+        }
 
         // 验证必需字段
-        if (DataUtils.isEmpty(providerId) || DataUtils.isEmpty(name) || DataUtils.isEmpty(type)) {
-            result.getErrors().add("Provider配置缺少必需字段: id, name, type");
+        if (DataUtils.isEmpty(providerId) || DataUtils.isEmpty(name) || types.isEmpty()) {
+            result.getErrors().add("Provider配置缺少必需字段: id, name, types");
             return;
         }
 
@@ -398,6 +408,7 @@ public class ConfigServiceImpl implements IConfigService {
             UpdateProviderRequest updateRequest = new UpdateProviderRequest();
             updateRequest.setName(name);
             updateRequest.setDescription((String) providerConfig.get("description"));
+            updateRequest.setTypes(types);
             updateRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
             updateRequest.setModelName((String) providerConfig.get("modelName"));
             updateRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
@@ -423,7 +434,7 @@ public class ConfigServiceImpl implements IConfigService {
             CreateProviderRequest createRequest = new CreateProviderRequest();
             createRequest.setName(name);
             createRequest.setDescription((String) providerConfig.get("description"));
-            createRequest.setType(type);
+            createRequest.setTypes(types);
             createRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
             createRequest.setModelName((String) providerConfig.get("modelName"));
             createRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
@@ -584,8 +595,8 @@ public class ConfigServiceImpl implements IConfigService {
             response.getErrors().add("Provider名称不能为空");
         }
 
-        if (DataUtils.isEmpty(provider.getType())) {
-            response.getErrors().add("Provider类型不能为空");
+        if (provider.getTypes() == null || provider.getTypes().isEmpty()) {
+            response.getErrors().add("Provider类型列表不能为空");
         }
 
         // 验证Token
@@ -634,64 +645,67 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     /**
-     * 构建环境变量
+     * 构建环境变量（为所有支持的CLI类型设置环境变量）
      */
     private Map<String, String> buildEnvironmentVariables(Provider provider, Token token) {
         Map<String, String> envVars = new HashMap<>();
         String tokenValue = token.getValue(); // 这里应该解密Token值
 
-        switch (provider.getType().toLowerCase()) {
-            case "claude code":
-                envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("ANTHROPIC_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
-                }
-                break;
+        // 为所有支持的CLI类型设置环境变量
+        for (String type : provider.getTypes()) {
+            switch (type.toLowerCase()) {
+                case "claude code":
+                    envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("ANTHROPIC_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
+                    }
+                    break;
 
-            case "codex":
-                envVars.put("CODEX_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("CODEX_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("CODEX_MAX_TOKENS", provider.getMaxTokens().toString());
-                }
-                break;
+                case "codex":
+                    envVars.put("CODEX_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("CODEX_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("CODEX_MAX_TOKENS", provider.getMaxTokens().toString());
+                    }
+                    break;
 
-            case "gemini":
-                envVars.put("GEMINI_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("GEMINI_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("GEMINI_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("GEMINI_MAX_TOKENS", provider.getMaxTokens().toString());
-                }
-                break;
+                case "gemini":
+                    envVars.put("GEMINI_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("GEMINI_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("GEMINI_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("GEMINI_MAX_TOKENS", provider.getMaxTokens().toString());
+                    }
+                    break;
 
-            case "qoder":
-                envVars.put("QODER_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("QODER_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("QODER_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("QODER_MAX_TOKENS", provider.getMaxTokens().toString());
-                }
-                break;
+                case "qoder":
+                    envVars.put("QODER_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("QODER_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("QODER_MAX_TOKENS", provider.getMaxTokens().toString());
+                    }
+                    break;
+            }
         }
 
         return envVars;

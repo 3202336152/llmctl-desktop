@@ -10,7 +10,8 @@
         <result column="user_id" property="userId" jdbcType="BIGINT"/>
         <result column="name" property="name" jdbcType="VARCHAR"/>
         <result column="description" property="description" jdbcType="VARCHAR"/>
-        <result column="type" property="type" jdbcType="VARCHAR"/>
+        <result column="types" property="types" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonListTypeHandler"/>
         <result column="base_url" property="baseUrl" jdbcType="VARCHAR"/>
         <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
         <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
@@ -26,7 +27,7 @@
 
     <!-- 基础列 -->
     <sql id="Base_Column_List">
-        id, user_id, name, description, type, base_url, model_name, max_tokens,
+        id, user_id, name, description, types, base_url, model_name, max_tokens,
         temperature, extra_headers, token_strategy_type, token_fallback_on_error, is_active,
         created_at, updated_at
     </sql>
@@ -48,12 +49,12 @@
         ORDER BY created_at DESC
     </select>
 
-    <!-- 根据类型和用户ID查询Provider列表 -->
+    <!-- 根据类型和用户ID查询Provider列表 (搜索JSON数组中是否包含指定类型) -->
     <select id="findByType" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM providers
-        WHERE type = #{type} AND user_id = #{userId}
+        WHERE JSON_CONTAINS(types, JSON_QUOTE(#{type})) AND user_id = #{userId}
         ORDER BY created_at DESC
     </select>
 
@@ -68,12 +69,14 @@
     <!-- 插入Provider -->
     <insert id="insert" parameterType="com.llmctl.entity.Provider">
         INSERT INTO providers (
-            id, user_id, name, description, type, base_url, model_name,
+            id, user_id, name, description, types, base_url, model_name,
             max_tokens, temperature, extra_headers,
             token_strategy_type, token_fallback_on_error, is_active, created_at, updated_at
         )
         VALUES (
-            #{id}, #{userId}, #{name}, #{description}, #{type}, #{baseUrl}, #{modelName},
+            #{id}, #{userId}, #{name}, #{description},
+            #{types, typeHandler=com.llmctl.config.JsonListTypeHandler},
+            #{baseUrl}, #{modelName},
             #{maxTokens}, #{temperature}, #{extraHeaders},
             #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
             #{tokenFallbackOnError}, #{isActive}, #{createdAt}, #{updatedAt}
@@ -86,6 +89,7 @@
         SET
             name = #{name},
             description = #{description},
+            types = #{types, typeHandler=com.llmctl.config.JsonListTypeHandler},
             base_url = #{baseUrl},
             model_name = #{modelName},
             max_tokens = #{maxTokens},
@@ -125,11 +129,11 @@
         WHERE user_id = #{userId}
     </select>
 
-    <!-- 根据类型统计指定用户的Provider数量 -->
+    <!-- 根据类型统计指定用户的Provider数量 (统计JSON数组中包含指定类型的Provider数量) -->
     <select id="countByType" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM providers
-        WHERE type = #{type} AND user_id = #{userId}
+        WHERE JSON_CONTAINS(types, JSON_QUOTE(#{type})) AND user_id = #{userId}
     </select>
 
 </mapper>

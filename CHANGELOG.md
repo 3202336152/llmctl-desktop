@@ -5,6 +5,101 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.1.7] - 2025-10-17
+
+### Added 🎉
+- **暗色主题功能** - 完整的深色模式支持
+  - **暗色主题配置**：
+    - 完整的暗色配色方案（背景色：#1f1f1f, #262626, #141414）
+    - 优化的暗色主题色（#177ddc）
+    - 适配的文字颜色（rgba(255, 255, 255, 0.85)）
+    - 所有组件的暗色样式覆盖（Layout、Card、Table、Input、Select、Modal、Menu等）
+
+  - **动态主题切换**：
+    - 在设置页面选择主题（亮色/暗色）
+    - 实时切换无需重启应用
+    - 主题偏好自动保存到数据库
+    - 登录后自动加载用户主题偏好
+
+  - **用户体验优化**：
+    - 保存设置后立即生效
+    - 全局UI自动更新
+    - 流畅的主题切换动画
+    - 所有页面统一的主题风格
+
+### Changed 🎨
+- **主题系统架构优化**：
+  - 将主题状态管理提升到 App 组件
+  - ConfigProvider 动态传递主题配置
+  - 通过 settings-changed 事件实现实时更新
+  - 前后端状态完全同步
+
+- **Settings 组件增强**：
+  - 保存设置后触发全局主题更新事件
+  - 更好的用户反馈机制
+
+### Technical Details 🔧
+- **前端修改文件**：
+  - `theme.ts` (92-208行) - 新增完整 darkTheme 配置
+  - `App.tsx` - 实现动态主题切换逻辑
+    - 新增 currentTheme 状态管理（525行）
+    - 新增主题加载逻辑（528-549行）
+    - 添加 settings-changed 事件监听器（545-554行）
+    - ConfigProvider 动态传递主题（558行）
+  - `Settings.tsx` (119-120行) - 触发 settings-changed 事件
+
+- **主题配置内容**：
+  - **Token配置**：
+    - 主题色系（primary、success、warning、error、info）
+    - 背景色系（container、elevated、layout）
+    - 文字颜色系（text、textSecondary、textTertiary）
+    - 边框颜色系（border、borderSecondary）
+    - 圆角、字体、间距、高度、阴影等
+
+  - **组件配置**：
+    - Layout（header、body、sider背景）
+    - Button（阴影效果）
+    - Card（背景、边框、阴影）
+    - Table（header、hover、边框）
+    - Input（边框、背景）
+    - Select（选项背景）
+    - Tabs（hover、selected）
+    - Modal（背景）
+    - Dropdown（背景）
+    - Menu（背景、选中、hover）
+
+- **主题切换流程**：
+  ```
+  Settings 保存 → 后端更新 app.theme 配置
+  → 触发 settings-changed 事件
+  → App 重新加载配置
+  → setCurrentTheme('dark')
+  → ConfigProvider 使用 darkTheme
+  → 全局 UI 更新
+  ```
+
+### User Experience 🌟
+- **视觉舒适性提升**：
+  - 夜间模式保护眼睛，减少蓝光刺激
+  - 暗色背景降低屏幕亮度
+  - 文字对比度适中，易于阅读
+
+- **个性化定制**：
+  - 用户自由选择喜欢的主题
+  - 主题偏好跨设备同步
+  - 满足不同场景使用需求
+
+### Compatibility 🔄
+- **向后兼容性**：
+  - 未设置主题的用户默认使用亮色主题
+  - 不影响现有用户配置
+  - 平滑升级无需手动调整
+
+### Documentation 📖
+- 更新 `CHANGELOG.md` - 记录 v2.1.7 所有变更
+- 更新 `README.md` - 添加暗色主题功能说明
+- 更新 `CLAUDE.md` - 同步项目版本信息
+
 ## [2.1.6] - 2025-10-17
 
 ### Added 🎉

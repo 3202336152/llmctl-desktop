@@ -14,12 +14,14 @@ USE `llmctl`;
 -- llmctl.global_config definition
 
 CREATE TABLE `global_config` (
-                                 `id` int NOT NULL,
+                                 `id` int NOT NULL AUTO_INCREMENT,
                                  `config_key` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置键',
                                  `config_value` text COLLATE utf8mb4_general_ci COMMENT '配置值',
                                  `description` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '配置描述',
                                  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                 `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+                                 `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                 PRIMARY KEY (`id`),
+                                 UNIQUE KEY `uk_config_key` (`config_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='全局配置表';
 
 
@@ -110,7 +112,7 @@ CREATE TABLE `providers` (
                              `user_id` bigint NOT NULL,
                              `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider名称',
                              `description` text COLLATE utf8mb4_general_ci COMMENT 'Provider描述',
-                             `type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider类型: claude code, codex, gemini, qoder',
+                             `types` json NOT NULL COMMENT 'Provider支持的CLI类型列表（JSON数组）: ["claude code", "codex", "gemini", "qoder"]',
                              `base_url` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'API基础URL',
                              `model_name` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模型名称',
                              `max_tokens` int DEFAULT '4096' COMMENT '最大Token数',
@@ -123,7 +125,7 @@ CREATE TABLE `providers` (
                              `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                              KEY `idx_user_id` (`user_id`),
                              CONSTRAINT `fk_provider_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='LLM Provider配置表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='LLM Provider配置表 - 支持多CLI类型';
 
 
 -- llmctl.sessions definition
@@ -135,12 +137,14 @@ CREATE TABLE `sessions` (
                             `pid` int DEFAULT NULL COMMENT '进程ID',
                             `working_directory` varchar(1000) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '工作目录',
                             `command` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '启动命令',
+                            `type` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'CLI类型: claude code, codex, gemini, qoder',
                             `status` enum('active','inactive','terminated') COLLATE utf8mb4_general_ci DEFAULT 'active' COMMENT '会话状态',
                             `start_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '启动时间',
                             `last_activity` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最后活动时间',
                             `end_time` timestamp NULL DEFAULT NULL COMMENT '结束时间',
                             `token_id` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Token标识',
                             KEY `idx_user_id` (`user_id`),
+                            KEY `idx_type` (`type`),
                             CONSTRAINT `fk_session_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='会话管理表';
 

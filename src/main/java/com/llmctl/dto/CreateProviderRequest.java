@@ -4,12 +4,13 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 创建Provider请求DTO
  *
  * @author Liu Yifan
- * @version 2.0.0
+ * @version 2.1.6
  * @since 2025-09-28
  */
 @Data
@@ -29,12 +30,12 @@ public class CreateProviderRequest {
     private String description;
 
     /**
-     * Provider类型
+     * Provider支持的CLI类型列表（至少选择一个）
      */
-    @NotBlank(message = "Provider类型不能为空")
-    @Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
-             message = "Provider类型必须是：claude code, codex, gemini, qoder 之一")
-    private String type;
+    @NotNull(message = "Provider类型列表不能为空")
+    @Size(min = 1, message = "至少选择一个Provider类型")
+    private List<@Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
+                          message = "Provider类型必须是：claude code, codex, gemini, qoder 之一") String> types;
 
     /**
      * API基础URL
@@ -49,7 +50,7 @@ public class CreateProviderRequest {
     private String modelName;
 
     /**
-     * Token值 (创建Provider时至少需要一个Token)
+     * Token值 (创建Provider时���少需要一个Token)
      */
     @NotBlank(message = "Token不能为空")
     @Size(max = 500, message = "Token长度不能超过500字符")
@@ -65,14 +66,14 @@ public class CreateProviderRequest {
      * 最大Token数
      */
     @Min(value = 1, message = "最大Token数必须大于0")
-    @Max(value = 100000, message = "最大Token数不能超过100000")
+    @Max(value = 1000000, message = "最大Token数不能超过1000000")
     private Integer maxTokens;
 
     /**
      * 温度参数
      */
     @DecimalMin(value = "0.0", message = "温度参数必须大于等于0.0")
-    @DecimalMax(value = "2.0", message = "温度参数必须小于等于2.0")
+    @DecimalMax(value = "1.0", message = "温度参数必须小于等于1.0")
     private BigDecimal temperature;
 
     /**

@@ -121,6 +121,7 @@ public class SessionServiceImpl implements ISessionService {
         session.setTokenId(selectedToken.getId()); // 保存选中的Token ID
         session.setWorkingDirectory(request.getWorkingDirectory());
         session.setCommand(request.getCommand());
+        session.setType(request.getType()); // 设置CLI类型
         session.setStatus(Session.SessionStatus.ACTIVE);
 
         LocalDateTime now = LocalDateTime.now();
@@ -351,6 +352,7 @@ public class SessionServiceImpl implements ISessionService {
 
     /**
      * 构建环境变量（用于启动进程）
+     * 说明：由于一个Provider可以支持多个CLI类型，需要为所有支持的类型设置对应的环境变量
      */
     private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken) {
         Map<String, String> envVars = new HashMap<>();
@@ -358,7 +360,8 @@ public class SessionServiceImpl implements ISessionService {
         // 解密Token值
         String tokenValue = encryptionService.decrypt(selectedToken.getValue());
 
-        log.debug("为Provider {} 构建环境变量，Token ID: {}", provider.getId(), selectedToken.getId());
+        log.debug("为Provider {} 构建环境变量，Token ID: {}, 支持的类型: {}",
+                  provider.getId(), selectedToken.getId(), provider.getTypes());
 
         // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
         if (System.getProperty("os.name").toLowerCase().contains("windows")) {
@@ -366,70 +369,73 @@ public class SessionServiceImpl implements ISessionService {
             log.debug("检测到 Windows 系统，已添加 UTF-8 编码设置 (CHCP=65001)");
         }
 
-        switch (provider.getType().toLowerCase()) {
-            case "claude code":
-                envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("ANTHROPIC_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
-                }
-                break;
+        // 为所有支持的CLI类型设置环境变量
+        for (String type : provider.getTypes()) {
+            switch (type.toLowerCase()) {
+                case "claude code":
+                    envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("ANTHROPIC_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
+                    }
+                    break;
 
-            case "codex":
-                envVars.put("CODEX_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("CODEX_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("CODEX_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
-                }
-                if (provider.getTemperature() != null) {
-                    envVars.put("CODEX_TEMPERATURE", provider.getTemperature().toString());
-                }
-                break;
+                case "codex":
+                    envVars.put("CODEX_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("CODEX_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("CODEX_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    }
+                    if (provider.getTemperature() != null) {
+                        envVars.put("CODEX_TEMPERATURE", provider.getTemperature().toString());
+                    }
+                    break;
 
-            case "gemini":
-                envVars.put("GOOGLE_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("GOOGLE_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("GEMINI_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("GEMINI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
-                }
-                if (provider.getTemperature() != null) {
-                    envVars.put("GEMINI_TEMPERATURE", provider.getTemperature().toString());
-                }
-                break;
+                case "gemini":
+                    envVars.put("GOOGLE_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("GOOGLE_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("GEMINI_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("GEMINI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    }
+                    if (provider.getTemperature() != null) {
+                        envVars.put("GEMINI_TEMPERATURE", provider.getTemperature().toString());
+                    }
+                    break;
 
-            case "qoder":
-                envVars.put("QODER_API_KEY", tokenValue);
-                if (provider.getBaseUrl() != null) {
-                    envVars.put("QODER_BASE_URL", provider.getBaseUrl());
-                }
-                if (provider.getModelName() != null) {
-                    envVars.put("QODER_MODEL", provider.getModelName());
-                }
-                if (provider.getMaxTokens() != null) {
-                    envVars.put("QODER_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
-                }
-                if (provider.getTemperature() != null) {
-                    envVars.put("QODER_TEMPERATURE", provider.getTemperature().toString());
-                }
-                break;
+                case "qoder":
+                    envVars.put("QODER_API_KEY", tokenValue);
+                    if (provider.getBaseUrl() != null) {
+                        envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                    }
+                    if (provider.getModelName() != null) {
+                        envVars.put("QODER_MODEL", provider.getModelName());
+                    }
+                    if (provider.getMaxTokens() != null) {
+                        envVars.put("QODER_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    }
+                    if (provider.getTemperature() != null) {
+                        envVars.put("QODER_TEMPERATURE", provider.getTemperature().toString());
+                    }
+                    break;
 
-            default:
-                log.warn("未知的Provider类型: {}", provider.getType());
+                default:
+                    log.warn("未知的Provider类型: {}", type);
+            }
         }
 
         return envVars;
@@ -450,6 +456,7 @@ public class SessionServiceImpl implements ISessionService {
         dto.setPid(session.getPid());
         dto.setWorkingDirectory(session.getWorkingDirectory());
         dto.setCommand(session.getCommand());
+        dto.setType(session.getType()); // 映射type字段
         dto.setStatus(session.getStatus() != null ? session.getStatus().getValue() : null);
         dto.setStartTime(session.getStartTime());
         dto.setLastActivity(session.getLastActivity());
@@ -490,6 +497,7 @@ public class SessionServiceImpl implements ISessionService {
         dto.setPid(session.getPid());
         dto.setWorkingDirectory(session.getWorkingDirectory());
         dto.setCommand(session.getCommand());
+        dto.setType(session.getType()); // 映射type字段
         dto.setStatus(session.getStatus() != null ? session.getStatus().getValue() : null);
         dto.setStartTime(session.getStartTime());
         dto.setLastActivity(session.getLastActivity());

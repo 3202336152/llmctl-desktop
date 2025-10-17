@@ -33,9 +33,9 @@ public class ProviderDTO {
     private String description;
 
     /**
-     * Provider类型
+     * Provider支持的CLI类型列表
      */
-    private String type;
+    private List<String> types;
 
     /**
      * API基础URL

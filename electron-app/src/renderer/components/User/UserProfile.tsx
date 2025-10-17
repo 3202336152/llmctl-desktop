@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, message, Avatar, Divider, Space, Typography, Upload } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, EditOutlined, CameraOutlined } from '@ant-design/icons';
+import ImgCrop from 'antd-img-crop';
 import { authStorage } from '../../utils/authStorage';
 import apiClient from '../../services/httpClient';
 
@@ -192,25 +193,36 @@ const UserProfile: React.FC = () => {
                             <Avatar size={80} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
                         )}
 
-                        <Upload
-                            showUploadList={false}
-                            beforeUpload={handleAvatarUpload}
-                            accept="image/*"
+                        <ImgCrop
+                            rotationSlider
+                            quality={1}
+                            aspect={1}
+                            cropShape="round"
+                            showReset
+                            modalTitle="裁剪头像"
+                            modalOk="确定"
+                            modalCancel="取消"
                         >
-                            <Button
-                                type="primary"
-                                shape="circle"
-                                icon={<CameraOutlined />}
-                                size="small"
-                                loading={uploadingAvatar}
-                                style={{
-                                    position: 'absolute',
-                                    bottom: -5,
-                                    right: -5,
-                                }}
-                                title="更换头像"
-                            />
-                        </Upload>
+                            <Upload
+                                showUploadList={false}
+                                beforeUpload={handleAvatarUpload}
+                                accept="image/*"
+                            >
+                                <Button
+                                    type="primary"
+                                    shape="circle"
+                                    icon={<CameraOutlined />}
+                                    size="small"
+                                    loading={uploadingAvatar}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: -5,
+                                        right: -5,
+                                    }}
+                                    title="更换头像"
+                                />
+                            </Upload>
+                        </ImgCrop>
                     </div>
 
                     <Title level={4} style={{ marginTop: 16, marginBottom: 4 }}>

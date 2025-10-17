@@ -91,7 +91,7 @@ public class ProviderServiceImpl implements ProviderService {
         provider.setUserId(userId);
         provider.setName(request.getName());
         provider.setDescription(request.getDescription());
-        provider.setType(request.getType());
+        provider.setTypes(request.getTypes());
         provider.setBaseUrl(request.getBaseUrl());
         provider.setModelName(request.getModelName());
         provider.setMaxTokens(request.getMaxTokens());
@@ -160,6 +160,9 @@ public class ProviderServiceImpl implements ProviderService {
         }
         if (request.getDescription() != null) {
             existingProvider.setDescription(request.getDescription());
+        }
+        if (request.getTypes() != null && !request.getTypes().isEmpty()) {
+            existingProvider.setTypes(request.getTypes());
         }
         if (StringUtils.hasText(request.getBaseUrl())) {
             existingProvider.setBaseUrl(request.getBaseUrl());
@@ -286,7 +289,7 @@ public class ProviderServiceImpl implements ProviderService {
         dto.setId(provider.getId());
         dto.setName(provider.getName());
         dto.setDescription(provider.getDescription());
-        dto.setType(provider.getType());
+        dto.setTypes(provider.getTypes());
         dto.setBaseUrl(provider.getBaseUrl());
         dto.setModelName(provider.getModelName());
         dto.setMaxTokens(provider.getMaxTokens());

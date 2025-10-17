@@ -42,7 +42,9 @@ const TokenManager: React.FC = () => {
   const [selectedProviderId, setSelectedProviderId] = useState<string>('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingToken, setEditingToken] = useState<Token | null>(null);
+  const [submitting, setSubmitting] = useState(false); // 防止Token Modal重复提交
   const [strategyModalVisible, setStrategyModalVisible] = useState(false);
+  const [strategySubmitting, setStrategySubmitting] = useState(false); // 防止策略Modal重复提交
   const [tokenStrategy, setTokenStrategy] = useState<TokenStrategy>({
     type: 'round-robin',
     fallbackOnError: true,
@@ -134,7 +136,13 @@ const TokenManager: React.FC = () => {
   const handleModalOk = async () => {
     if (!selectedProviderId) return;
 
+    // 防止重复提交
+    if (submitting) {
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const values = await form.validateFields();
 
       if (editingToken) {
@@ -169,6 +177,8 @@ const TokenManager: React.FC = () => {
       form.resetFields();
     } catch (error) {
       message.error(`操作失败: ${error}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -180,7 +190,13 @@ const TokenManager: React.FC = () => {
   const handleStrategyModalOk = async () => {
     if (!selectedProviderId) return;
 
+    // 防止重复提交
+    if (strategySubmitting) {
+      return;
+    }
+
     try {
+      setStrategySubmitting(true);
       const values = await strategyForm.validateFields();
       const strategy: TokenStrategy = {
         type: values.type,
@@ -193,6 +209,8 @@ const TokenManager: React.FC = () => {
       setStrategyModalVisible(false);
     } catch (error) {
       message.error(`设置失败: ${error}`);
+    } finally {
+      setStrategySubmitting(false);
     }
   };
 
@@ -415,6 +433,7 @@ const TokenManager: React.FC = () => {
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
+        confirmLoading={submitting}
         width={500}
         destroyOnHidden
       >
@@ -467,6 +486,7 @@ const TokenManager: React.FC = () => {
         open={strategyModalVisible}
         onOk={handleStrategyModalOk}
         onCancel={() => setStrategyModalVisible(false)}
+        confirmLoading={strategySubmitting}
         width={400}
         destroyOnHidden
       >

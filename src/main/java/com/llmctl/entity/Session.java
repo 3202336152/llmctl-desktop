@@ -52,6 +52,11 @@ public class Session {
     private String command;
 
     /**
+     * CLI类型（claude code, codex, gemini, qoder）
+     */
+    private String type;
+
+    /**
      * 会话状态
      */
     private SessionStatus status;

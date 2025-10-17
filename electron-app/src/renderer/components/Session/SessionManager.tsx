@@ -72,9 +72,13 @@ const SessionManager: React.FC = () => {
   const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
 
+  // 可用的命令选项（根据选中的Provider动态更新）
+  const [availableCommands, setAvailableCommands] = useState<string[]>([]);
+
   // 搜索和筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [providerFilter, setProviderFilter] = useState<string | undefined>(undefined);
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [timeRangeFilter, setTimeRangeFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -209,24 +213,24 @@ const SessionManager: React.FC = () => {
     // 重置表单
     form.resetFields();
 
+    let selectedProviderId: string | null = null;
+
     // 设置默认的 Provider 和命令
     if (lastSelectedProviderId && providers.some(p => p.id === lastSelectedProviderId && p.isActive)) {
+      selectedProviderId = lastSelectedProviderId;
       form.setFieldsValue({ providerId: lastSelectedProviderId });
-      // 自动填充命令
-      const provider = providers.find(p => p.id === lastSelectedProviderId);
-      if (provider) {
-        const command = PROVIDER_COMMAND_MAP[provider.type] || 'claude';
-        form.setFieldsValue({ command });
-      }
     } else if (providers.length > 0) {
       // 否则选择第一个激活的Provider
       const firstActiveProvider = providers.find(p => p.isActive);
       if (firstActiveProvider) {
+        selectedProviderId = firstActiveProvider.id;
         form.setFieldsValue({ providerId: firstActiveProvider.id });
-        // 自动填充命令
-        const command = PROVIDER_COMMAND_MAP[firstActiveProvider.type] || 'claude';
-        form.setFieldsValue({ command });
       }
+    }
+
+    // 如果选择了Provider，主动触发handleProviderChange来初始化可用命令
+    if (selectedProviderId) {
+      handleProviderChange(selectedProviderId);
     }
 
     // 设置默认的工作目录
@@ -238,13 +242,35 @@ const SessionManager: React.FC = () => {
   };
 
   /**
-   * Provider 选择变化时，自动填充对应的 CLI 命令
+   * Provider 选择变化时，自动填充对应的 CLI 命令并更新可用命令列表
    */
   const handleProviderChange = (providerId: string) => {
     const provider = providers.find(p => p.id === providerId);
     if (provider) {
-      const command = PROVIDER_COMMAND_MAP[provider.type] || 'claude';
-      form.setFieldsValue({ command });
+      // 根据Provider的types筛选可用命令
+      const commands = provider.types.map(type => {
+        switch (type.toLowerCase()) {
+          case 'claude code':
+            return 'claude';
+          case 'codex':
+            return 'codex';
+          case 'gemini':
+            return 'gemini';
+          case 'qoder':
+            return 'qoder';
+          default:
+            return '';
+        }
+      }).filter(cmd => cmd !== '');
+
+      setAvailableCommands(commands);
+
+      // 自动选择第一个可用命令
+      if (commands.length > 0) {
+        form.setFieldsValue({ command: commands[0] });
+      } else {
+        form.setFieldsValue({ command: '' });
+      }
     }
   };
 
@@ -268,10 +294,20 @@ const SessionManager: React.FC = () => {
     try {
       setSubmitting(true);
       const values = await form.validateFields();
+
+      // 根据命令推断类型
+      const commandToTypeMap: Record<string, 'claude code' | 'codex' | 'gemini' | 'qoder'> = {
+        'claude': 'claude code',
+        'codex': 'codex',
+        'gemini': 'gemini',
+        'qoder': 'qoder',
+      };
+
       const request: StartSessionRequest = {
         providerId: values.providerId,
         workingDirectory: values.workingDirectory,
-        command: values.command || 'claude',
+        command: values.command || '',
+        type: commandToTypeMap[values.command || ''],
       };
 
       // 保存当前选择的 Provider ID 和工作目录到 localStorage
@@ -389,6 +425,7 @@ const SessionManager: React.FC = () => {
           providerId: session.providerId,
           workingDirectory: session.workingDirectory,
           command: session.command,
+          type: session.type,
         };
 
         const response = await sessionAPI.startSession(newSessionRequest);
@@ -535,6 +572,29 @@ const SessionManager: React.FC = () => {
       },
     },
     {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      align: 'center' as const,
+      width: 120,
+      render: (type: string) => {
+        if (!type) return <Tag color="default">未知</Tag>;
+
+        const typeColorMap: Record<string, string> = {
+          'claude code': 'blue',
+          'codex': 'purple',
+          'gemini': 'cyan',
+          'qoder': 'orange',
+        };
+
+        return (
+          <Tag color={typeColorMap[type] || 'default'}>
+            {type.toUpperCase()}
+          </Tag>
+        );
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -648,7 +708,7 @@ const SessionManager: React.FC = () => {
     }
   };
 
-  // 综合筛选逻辑（状态 + 搜索 + Provider + 时间范围）
+  // 综合筛选逻辑（状态 + 搜索 + Provider + 类型 + 时间范围）
   const filteredSessions = useMemo(() => {
     let filtered = getFilteredSessions(); // 先按状态筛选（Tabs）
 
@@ -665,6 +725,11 @@ const SessionManager: React.FC = () => {
     // Provider 筛选
     if (providerFilter) {
       filtered = filtered.filter(session => session.providerId === providerFilter);
+    }
+
+    // 类型筛选
+    if (typeFilter) {
+      filtered = filtered.filter(session => session.type === typeFilter);
     }
 
     // 时间范围筛选
@@ -688,12 +753,13 @@ const SessionManager: React.FC = () => {
     }
 
     return filtered;
-  }, [sessions, searchKeyword, providerFilter, timeRangeFilter, sessionFilter]);
+  }, [sessions, searchKeyword, providerFilter, typeFilter, timeRangeFilter, sessionFilter]);
 
   // 重置筛选条件
   const handleResetFilters = () => {
     setSearchKeyword('');
     setProviderFilter(undefined);
+    setTypeFilter(undefined);
     setTimeRangeFilter('all');
   };
 
@@ -796,7 +862,7 @@ const SessionManager: React.FC = () => {
       >
         {/* 搜索和筛选栏 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={24} md={10}>
+          <Col xs={24} sm={24} md={8}>
             <Search
               placeholder="搜索会话ID、Provider、工作目录或命令"
               allowClear
@@ -806,7 +872,7 @@ const SessionManager: React.FC = () => {
               onSearch={(value: string) => setSearchKeyword(value)}
             />
           </Col>
-          <Col xs={12} sm={12} md={5}>
+          <Col xs={12} sm={8} md={4}>
             <Select
               placeholder="选择 Provider"
               allowClear
@@ -821,7 +887,21 @@ const SessionManager: React.FC = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={12} sm={12} md={5}>
+          <Col xs={12} sm={8} md={4}>
+            <Select
+              placeholder="选择类型"
+              allowClear
+              style={{ width: '100%' }}
+              value={typeFilter}
+              onChange={(value: string) => setTypeFilter(value)}
+            >
+              <Option value="claude code">Claude Code</Option>
+              <Option value="codex">Codex</Option>
+              <Option value="gemini">Gemini</Option>
+              <Option value="qoder">Qoder</Option>
+            </Select>
+          </Col>
+          <Col xs={12} sm={8} md={4}>
             <Select
               placeholder="时间范围"
               style={{ width: '100%' }}
@@ -908,7 +988,7 @@ const SessionManager: React.FC = () => {
           form={form}
           layout="vertical"
           initialValues={{
-            command: 'claude',
+            command: '',
           }}
           preserve={false}
         >
@@ -922,7 +1002,7 @@ const SessionManager: React.FC = () => {
                 .filter(provider => provider.isActive)
                 .map((provider) => (
                   <Option key={provider.id} value={provider.id}>
-                    {provider.name} ({provider.type})
+                    {provider.name} ({provider.types.join(', ')})
                   </Option>
                 ))}
             </Select>
@@ -953,11 +1033,19 @@ const SessionManager: React.FC = () => {
             tooltip="选择要运行的CLI工具命令"
             rules={[{ required: true, message: '请选择命令' }]}
           >
-            <Select placeholder="请选择命令">
-              <Option value="claude">claude - Claude Code CLI</Option>
-              <Option value="codex">codex - Codex CLI</Option>
-              <Option value="gemini">gemini - Gemini CLI</Option>
-              <Option value="qoder">qoder - Qoder CLI</Option>
+            <Select placeholder="请先选择Provider" disabled={availableCommands.length === 0}>
+              {availableCommands.includes('claude') && (
+                <Option value="claude">claude - Claude Code CLI</Option>
+              )}
+              {availableCommands.includes('codex') && (
+                <Option value="codex">codex - Codex CLI</Option>
+              )}
+              {availableCommands.includes('gemini') && (
+                <Option value="gemini">gemini - Gemini CLI</Option>
+              )}
+              {availableCommands.includes('qoder') && (
+                <Option value="qoder">qoder - Qoder CLI</Option>
+              )}
             </Select>
           </Form.Item>
         </Form>

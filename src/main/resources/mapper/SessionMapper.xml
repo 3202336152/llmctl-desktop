@@ -12,6 +12,7 @@
         <result column="pid" property="pid"/>
         <result column="working_directory" property="workingDirectory"/>
         <result column="command" property="command"/>
+        <result column="type" property="type"/>
         <result column="status" property="status" typeHandler="com.llmctl.config.SessionStatusTypeHandler"/>
         <result column="start_time" property="startTime"/>
         <result column="last_activity" property="lastActivity"/>
@@ -27,6 +28,7 @@
         <result column="pid" property="pid"/>
         <result column="working_directory" property="workingDirectory"/>
         <result column="command" property="command"/>
+        <result column="type" property="type"/>
         <result column="status" property="status" typeHandler="com.llmctl.config.SessionStatusTypeHandler"/>
         <result column="start_time" property="startTime"/>
         <result column="last_activity" property="lastActivity"/>
@@ -49,6 +51,7 @@
             s.pid,
             s.working_directory,
             s.command,
+            s.type,
             s.status,
             s.start_time,
             s.last_activity,
@@ -82,6 +85,7 @@
             s.pid,
             s.working_directory,
             s.command,
+            s.type,
             s.status,
             s.start_time,
             s.last_activity,
@@ -109,6 +113,7 @@
             s.pid,
             s.working_directory,
             s.command,
+            s.type,
             s.status,
             s.start_time,
             s.last_activity,
@@ -142,8 +147,8 @@
 
     <!-- 插入Session -->
     <insert id="insert" parameterType="com.llmctl.entity.Session">
-        INSERT INTO sessions (id, user_id, provider_id, token_id, pid, working_directory, command, status, start_time, last_activity, end_time)
-        VALUES (#{id}, #{userId}, #{providerId}, #{tokenId}, #{pid}, #{workingDirectory}, #{command}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
+        INSERT INTO sessions (id, user_id, provider_id, token_id, pid, working_directory, command, type, status, start_time, last_activity, end_time)
+        VALUES (#{id}, #{userId}, #{providerId}, #{tokenId}, #{pid}, #{workingDirectory}, #{command}, #{type}, #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler}, #{startTime}, #{lastActivity}, #{endTime})
     </insert>
 
     <!-- 更新Session -->
@@ -154,6 +159,7 @@
             pid = #{pid},
             working_directory = #{workingDirectory},
             command = #{command},
+            type = #{type},
             status = #{status,typeHandler=com.llmctl.config.SessionStatusTypeHandler},
             last_activity = #{lastActivity},
             end_time = #{endTime}

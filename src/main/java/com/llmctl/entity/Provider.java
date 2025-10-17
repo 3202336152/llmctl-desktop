@@ -39,9 +39,10 @@ public class Provider {
     private String description;
 
     /**
-     * Provider类型: claude code, codex, gemini, qoder
+     * Provider支持的CLI类型列表: claude code, codex, gemini, qoder
+     * 一个Provider可以支持多个CLI类型，通过不同的环境变量来区分
      */
-    private String type;
+    private List<String> types;
 
     /**
      * API基础URL

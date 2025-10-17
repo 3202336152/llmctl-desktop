@@ -11,7 +11,7 @@ export interface Provider {
   id: string;
   name: string;
   description?: string;
-  type: 'claude code' | 'codex' | 'gemini' | 'qoder';
+  types: Array<'claude code' | 'codex' | 'gemini' | 'qoder'>;
   baseUrl: string;
   modelName: string;
   maxTokens?: number;
@@ -26,7 +26,7 @@ export interface Provider {
 export interface CreateProviderRequest {
   name: string;
   description?: string;
-  type: string;
+  types: string[];
   baseUrl?: string;
   modelName?: string;
   token: string;
@@ -37,6 +37,7 @@ export interface CreateProviderRequest {
 export interface UpdateProviderRequest {
   name?: string;
   description?: string;
+  types?: string[];
   baseUrl?: string;
   modelName?: string;
   maxTokens?: number;
@@ -86,6 +87,7 @@ export interface Session {
   pid?: number;
   workingDirectory: string;
   command: string;
+  type?: 'claude code' | 'codex' | 'gemini' | 'qoder';
   status: 'active' | 'inactive' | 'terminated';
   startTime: string;
   endTime?: string;
@@ -96,6 +98,7 @@ export interface StartSessionRequest {
   providerId: string;
   workingDirectory: string;
   command?: string;
+  type?: 'claude code' | 'codex' | 'gemini' | 'qoder';
 }
 
 export interface UpdateSessionStatusRequest {

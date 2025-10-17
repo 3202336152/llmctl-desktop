@@ -6,6 +6,7 @@ const menuTranslations = {
     file: '文件',
     importConfig: '导入配置',
     exportConfig: '导出配置',
+    restart: '重启应用',
     exit: '退出',
     session: '会话',
     startNewSession: '启动新会话',
@@ -55,6 +56,7 @@ const menuTranslations = {
     file: 'File',
     importConfig: 'Import Config',
     exportConfig: 'Export Config',
+    restart: 'Restart Application',
     exit: 'Exit',
     session: 'Session',
     startNewSession: 'Start New Session',
@@ -133,6 +135,9 @@ export function translate(key: string): string {
 }
 
 export function createMenu(): Menu {
+  // 判断是否为开发环境
+  const isDev = process.env.NODE_ENV === 'development';
+
   const template: MenuItemConstructorOptions[] = [
     {
       label: t('file'),
@@ -179,14 +184,6 @@ export function createMenu(): Menu {
             if (!result.canceled && result.filePath) {
               win.webContents.send('export-config', result.filePath);
             }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: t('exit'),
-          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
-          click: () => {
-            app.quit();
           }
         }
       ]
@@ -305,8 +302,11 @@ export function createMenu(): Menu {
         { role: 'zoomOut', label: t('zoomOut') },
         { type: 'separator' },
         { role: 'togglefullscreen', label: t('fullscreen') },
-        { type: 'separator' },
-        { role: 'toggleDevTools', label: t('developerTools'), accelerator: 'F12' }
+        // 仅在开发环境显示开发者工具
+        ...(isDev ? [
+          { type: 'separator' as const },
+          { role: 'toggleDevTools' as const, label: t('developerTools'), accelerator: 'F12' }
+        ] : [])
       ]
     },
     {
@@ -355,6 +355,20 @@ export function createMenu(): Menu {
 
             // ✅ 触发检查更新事件（通过渲染进程调用 IPC）
             win.webContents.send('trigger-check-updates');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: t('restart'),
+          click: () => {
+            app.relaunch();
+            app.quit();
+          }
+        },
+        {
+          label: t('exit'),
+          click: () => {
+            app.quit();
           }
         }
       ]
