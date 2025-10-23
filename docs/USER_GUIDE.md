@@ -6,7 +6,7 @@
 
 ## 📖 简介
 
-LLMctl 是一个强大的 LLM Provider、Token 和会话管理桌面应用，帮助您轻松管理多个 AI CLI 工具（Claude Code、Codex、Gemini、Qoder）的配置和使用。
+LLMctl 是一个强大的 LLM 提供商、Token 和会话管理桌面应用，帮助您轻松管理多个 AI CLI 工具（Claude Code、Codex、Gemini、Qoder）的配置和使用。
 
 ### 核心特性
 
