@@ -374,6 +374,186 @@ ipcMain.handle('write-file', async (_event, filePath: string, content: string) =
   }
 });
 
+/**
+ * 删除目录（递归删除）
+ */
+ipcMain.handle('delete-directory', async (_event, dirPath: string) => {
+  try {
+    console.log('[IPC] delete-directory:', dirPath);
+    await fs.promises.rm(dirPath, { recursive: true, force: true });
+    console.log('[IPC] ✅ 目录删除成功:', dirPath);
+    return { success: true };
+  } catch (error) {
+    console.error('[IPC] delete-directory 失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
+ * 移动目录（重命名/移动）
+ */
+ipcMain.handle('move-directory', async (_event, sourcePath: string, destPath: string) => {
+  try {
+    console.log('[IPC] move-directory:', sourcePath, '->', destPath);
+    // 确保目标目录的父目录存在
+    await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+    // 移动目录
+    await fs.promises.rename(sourcePath, destPath);
+    console.log('[IPC] ✅ 目录移动成功:', sourcePath, '->', destPath);
+    return { success: true };
+  } catch (error) {
+    console.error('[IPC] move-directory 失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
+ * 获取目录大小（递归计算）
+ */
+ipcMain.handle('get-directory-size', async (_event, dirPath: string) => {
+  try {
+    console.log('[IPC] get-directory-size:', dirPath);
+
+    const getSize = async (dir: string): Promise<number> => {
+      let totalSize = 0;
+      try {
+        const items = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const item of items) {
+          const itemPath = path.join(dir, item.name);
+          if (item.isDirectory()) {
+            totalSize += await getSize(itemPath);
+          } else {
+            const stat = await fs.promises.stat(itemPath);
+            totalSize += stat.size;
+          }
+        }
+      } catch (error) {
+        console.warn('[IPC] 读取目录失败:', dir, error);
+      }
+      return totalSize;
+    };
+
+    const size = await getSize(dirPath);
+    console.log('[IPC] ✅ 目录大小:', size, '字节');
+    return { success: true, size };
+  } catch (error) {
+    console.error('[IPC] get-directory-size 失败:', error);
+    return { success: false, size: 0, error: (error as Error).message };
+  }
+});
+
+/**
+ * 列出归档的会话
+ */
+ipcMain.handle('list-archives', async (_event, workingDirectory: string) => {
+  try {
+    console.log('[IPC] list-archives:', workingDirectory);
+
+    const archivesDir = path.join(workingDirectory, '.codex-sessions', 'archived');
+
+    // 检查归档目录是否存在
+    try {
+      await fs.promises.access(archivesDir);
+    } catch {
+      console.log('[IPC] 归档目录不存在:', archivesDir);
+      return { success: true, archives: [] };
+    }
+
+    const archives: Array<{ sessionId: string; archivedAt: number; size: number }> = [];
+    const items = await fs.promises.readdir(archivesDir, { withFileTypes: true });
+
+    for (const item of items) {
+      if (item.isDirectory()) {
+        const archivePath = path.join(archivesDir, item.name);
+        const stat = await fs.promises.stat(archivePath);
+
+        // 递归计算目录大小
+        const getSize = async (dir: string): Promise<number> => {
+          let totalSize = 0;
+          try {
+            const subItems = await fs.promises.readdir(dir, { withFileTypes: true });
+            for (const subItem of subItems) {
+              const subPath = path.join(dir, subItem.name);
+              if (subItem.isDirectory()) {
+                totalSize += await getSize(subPath);
+              } else {
+                const subStat = await fs.promises.stat(subPath);
+                totalSize += subStat.size;
+              }
+            }
+          } catch (error) {
+            console.warn('[IPC] 计算目录大小失败:', dir, error);
+          }
+          return totalSize;
+        };
+
+        const size = await getSize(archivePath);
+
+        archives.push({
+          sessionId: item.name,
+          archivedAt: stat.mtimeMs,
+          size,
+        });
+      }
+    }
+
+    console.log('[IPC] ✅ 找到', archives.length, '个归档会话');
+    return { success: true, archives };
+  } catch (error) {
+    console.error('[IPC] list-archives 失败:', error);
+    return { success: false, archives: [], error: (error as Error).message };
+  }
+});
+
+/**
+ * 清理归档（按天数筛选，days=0表示清理所有）
+ */
+ipcMain.handle('clean-archives', async (_event, workingDirectory: string, days: number) => {
+  try {
+    console.log('[IPC] clean-archives:', workingDirectory, 'days:', days);
+
+    const archivesDir = path.join(workingDirectory, '.codex-sessions', 'archived');
+
+    // 检查归档目录是否存在
+    try {
+      await fs.promises.access(archivesDir);
+    } catch {
+      console.log('[IPC] 归档目录不存在:', archivesDir);
+      return { success: true, deletedCount: 0 };
+    }
+
+    const now = Date.now();
+    const cutoffTime = days === 0 ? Infinity : now - days * 24 * 60 * 60 * 1000;
+    let deletedCount = 0;
+
+    const items = await fs.promises.readdir(archivesDir, { withFileTypes: true });
+
+    for (const item of items) {
+      if (item.isDirectory()) {
+        const archivePath = path.join(archivesDir, item.name);
+        const stat = await fs.promises.stat(archivePath);
+
+        // days=0 表示清理所有，或者归档时间早于截止时间
+        if (days === 0 || stat.mtimeMs < cutoffTime) {
+          try {
+            await fs.promises.rm(archivePath, { recursive: true, force: true });
+            deletedCount++;
+            console.log('[IPC] ✅ 已删除归档:', item.name);
+          } catch (error) {
+            console.warn('[IPC] 删除归档失败:', item.name, error);
+          }
+        }
+      }
+    }
+
+    console.log('[IPC] ✅ 清理完成，共删除', deletedCount, '个归档');
+    return { success: true, deletedCount };
+  } catch (error) {
+    console.error('[IPC] clean-archives 失败:', error);
+    return { success: false, deletedCount: 0, error: (error as Error).message };
+  }
+});
+
 // ==================== 终端 IPC Handlers ====================
 
 ipcMain.handle('terminal-create', async (_event, options: {

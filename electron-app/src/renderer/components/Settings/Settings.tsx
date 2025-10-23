@@ -15,6 +15,10 @@ import {
   Modal,
   Typography,
   Popconfirm,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip,
 } from 'antd';
 import {
   ExportOutlined,
@@ -29,6 +33,10 @@ import {
   BookOutlined,
   SyncOutlined,
   CheckCircleOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  ClockCircleOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { configAPI } from '../../services/api';
@@ -50,6 +58,13 @@ const Settings: React.FC = () => {
   const [importContent, setImportContent] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
   const [importFormat, setImportFormat] = useState<'bash' | 'powershell' | 'cmd' | 'json'>('json');
+
+  // 归档管理状态
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveModalVisible, setArchiveModalVisible] = useState(false);
+  const [workingDirectoryForArchive, setWorkingDirectoryForArchive] = useState<string>('');
+  const [archives, setArchives] = useState<Array<{ sessionId: string; archivedAt: number; size: number }>>([]);
+  const [totalArchiveSize, setTotalArchiveSize] = useState<number>(0);
 
   // 加载设置
   useEffect(() => {
@@ -196,6 +211,135 @@ const Settings: React.FC = () => {
     }
   };
 
+  // 打开归档管理Modal
+  const handleOpenArchiveModal = async () => {
+    // 请求用户选择工作目录
+    const result = await window.electronAPI?.selectDirectory();
+    if (result.canceled || !result.path) {
+      return;
+    }
+
+    let workingDir = result.path;
+
+    // ✅ 智能检测：如果用户选择的是归档目录本身，自动修正为项目根目录
+    if (workingDir.endsWith('.codex-sessions\\archived') || workingDir.endsWith('.codex-sessions/archived')) {
+      // 移除末尾的 /.codex-sessions/archived
+      workingDir = workingDir.replace(/[\/\\]\.codex-sessions[\/\\]archived$/, '');
+      message.info(`已自动修正为项目根目录: ${workingDir}`);
+    } else if (workingDir.endsWith('.codex-sessions')) {
+      // 移除末尾的 /.codex-sessions
+      workingDir = workingDir.replace(/[\/\\]\.codex-sessions$/, '');
+      message.info(`已自动修正为项目根目录: ${workingDir}`);
+    }
+
+    setWorkingDirectoryForArchive(workingDir);
+    setArchiveModalVisible(true);
+    loadArchives(workingDir);
+  };
+
+  // 加载归档列表
+  const loadArchives = async (workingDirectory: string) => {
+    try {
+      setArchiveLoading(true);
+      const result = await window.electronAPI?.listArchives(workingDirectory);
+      if (result?.success) {
+        setArchives(result.archives || []);
+        // 计算总大小
+        const totalSize = result.archives.reduce((sum, archive) => sum + archive.size, 0);
+        setTotalArchiveSize(totalSize);
+      } else {
+        message.error(`加载归档失败: ${result?.error}`);
+      }
+    } catch (error) {
+      message.error(`加载归档失败: ${error}`);
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  // 清理归档
+  const handleCleanArchives = async (days: number) => {
+    Modal.confirm({
+      title: '确定要清理归档吗？',
+      content: days === 0 ? '将删除所有归档会话，此操作不可恢复！' : `将删除 ${days} 天前的归档会话，此操作不可恢复！`,
+      okText: '确定清理',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const result = await window.electronAPI?.cleanArchives(workingDirectoryForArchive, days);
+          if (result?.success) {
+            message.success(`成功清理 ${result.deletedCount} 个归档`);
+            // 重新加载归档列表
+            loadArchives(workingDirectoryForArchive);
+          } else {
+            message.error(`清理归档失败: ${result?.error}`);
+          }
+        } catch (error) {
+          message.error(`清理归档失败: ${error}`);
+        }
+      },
+    });
+  };
+
+  // 格式化文件大小
+  const formatSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+  };
+
+  // 格式化日期
+  const formatDate = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // 归档表格列定义
+  const archiveColumns = [
+    {
+      title: '会话ID',
+      dataIndex: 'sessionId',
+      key: 'sessionId',
+      width: 300,
+      render: (text: string) => (
+        <Tooltip title={text}>
+          <span style={{ fontFamily: 'monospace' }}>{text.substring(0, 16)}...</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '归档时间',
+      dataIndex: 'archivedAt',
+      key: 'archivedAt',
+      width: 180,
+      render: (timestamp: number) => formatDate(timestamp),
+    },
+    {
+      title: '大小',
+      dataIndex: 'size',
+      key: 'size',
+      width: 120,
+      render: (size: number) => formatSize(size),
+    },
+    {
+      title: '天数',
+      key: 'days',
+      width: 100,
+      render: (_: any, record: { archivedAt: number }) => {
+        const days = Math.floor((Date.now() - record.archivedAt) / (1000 * 60 * 60 * 24));
+        return <Tag color={days > 30 ? 'red' : days > 10 ? 'orange' : 'green'}>{days} 天前</Tag>;
+      },
+    },
+  ];
+
   // 打开项目主页
   const handleOpenProjectPage = () => {
     window.electronAPI?.openExternal('https://github.com/3202336152/llmctl-desktop');
@@ -337,6 +481,27 @@ const Settings: React.FC = () => {
                 <Button danger>{t('settings.resetAllData')}</Button>
               </Popconfirm>
             </Space>
+          </div>
+        </div>
+
+        <Divider />
+
+        <div>
+          <h4>
+            <FolderOutlined /> Codex 归档管理
+          </h4>
+          <Text type="secondary">
+            查看和清理 Codex 会话归档，释放磁盘空间。归档保留了对话历史，可手动恢复。
+          </Text>
+          <div style={{ marginTop: 8, marginBottom: 16 }}>
+            <Text type="warning" style={{ fontSize: '12px' }}>
+              ⚠️ 提示：请选择项目根目录（包含 .codex-sessions 文件夹的父目录），系统会自动检测归档。
+            </Text>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <Button type="primary" icon={<FolderOutlined />} onClick={handleOpenArchiveModal}>
+              打开归档管理
+            </Button>
           </div>
         </div>
       </Space>
@@ -519,6 +684,102 @@ const Settings: React.FC = () => {
         ]}
       >
         <TextArea value={exportContent} readOnly rows={15} style={{ fontFamily: 'monospace' }} />
+      </Modal>
+
+      {/* 归档管理Modal */}
+      <Modal
+        title="Codex 归档管理"
+        open={archiveModalVisible}
+        onCancel={() => setArchiveModalVisible(false)}
+        width={1000}
+        footer={[
+          <Button key="close" onClick={() => setArchiveModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {/* 归档统计 */}
+          <Row gutter={16}>
+            <Col span={8}>
+              <Card style={{ minHeight: '120px' }}>
+                <Tooltip title={workingDirectoryForArchive} placement="top">
+                  <Statistic
+                    title="工作目录"
+                    value={workingDirectoryForArchive.split(/[/\\]/).pop() || ''}
+                    prefix={<FolderOutlined />}
+                    valueStyle={{ fontSize: '18px' }}
+                  />
+                </Tooltip>
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card style={{ minHeight: '120px' }}>
+                <Statistic
+                  title="归档数量"
+                  value={archives.length}
+                  prefix={<DatabaseOutlined />}
+                  suffix="个"
+                  valueStyle={{ fontSize: '18px' }}
+                />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card style={{ minHeight: '120px' }}>
+                <Statistic
+                  title="占用空间"
+                  value={formatSize(totalArchiveSize)}
+                  prefix={<DatabaseOutlined />}
+                  valueStyle={{ fontSize: '18px' }}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          <Divider />
+
+          {/* 清理按钮 */}
+          <div>
+            <Space wrap>
+              <Button danger icon={<DeleteOutlined />} onClick={() => handleCleanArchives(10)}>
+                清理 10 天前
+              </Button>
+              <Button danger icon={<DeleteOutlined />} onClick={() => handleCleanArchives(20)}>
+                清理 20 天前
+              </Button>
+              <Button danger icon={<DeleteOutlined />} onClick={() => handleCleanArchives(30)}>
+                清理 30 天前
+              </Button>
+              <Button danger type="primary" icon={<DeleteOutlined />} onClick={() => handleCleanArchives(0)}>
+                清理所有归档
+              </Button>
+            </Space>
+          </div>
+
+          <Divider />
+
+          {/* 归档列表 */}
+          <div>
+            <h4>
+              <ClockCircleOutlined /> 归档会话列表
+            </h4>
+            <Table
+              columns={archiveColumns}
+              dataSource={archives}
+              rowKey="sessionId"
+              loading={archiveLoading}
+              pagination={{
+                pageSize: 10,
+                showQuickJumper: true,
+                showSizeChanger: true,
+                showTotal: (total: number) => `共 ${total} 个归档`,
+              }}
+              locale={{
+                emptyText: '暂无归档会话',
+              }}
+            />
+          </div>
+        </Space>
       </Modal>
     </div>
   );

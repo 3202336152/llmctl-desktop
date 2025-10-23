@@ -15,6 +15,13 @@ export interface ElectronAPI {
   readFile(filePath: string): Promise<string>;
   writeFile(filePath: string, content: string): Promise<boolean>;
   selectDirectory(): Promise<{ canceled: boolean; path: string | null }>;
+  deleteDirectory(dirPath: string): Promise<{ success: boolean; error?: string }>;
+  moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }>;
+
+  // 归档管理
+  getDirectorySize(dirPath: string): Promise<{ success: boolean; size: number; error?: string }>;
+  listArchives(workingDirectory: string): Promise<{ success: boolean; archives: Array<{ sessionId: string; archivedAt: number; size: number }>; error?: string }>;
+  cleanArchives(workingDirectory: string, days: number): Promise<{ success: boolean; deletedCount: number; error?: string }>;
 
   // 系统功能
   showNotification(title: string, body: string): void;
@@ -82,6 +89,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('write-file', filePath, content),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  deleteDirectory: (dirPath: string) => ipcRenderer.invoke('delete-directory', dirPath),
+  moveDirectory: (sourcePath: string, destPath: string) => ipcRenderer.invoke('move-directory', sourcePath, destPath),
+
+  // 归档管理
+  getDirectorySize: (dirPath: string) => ipcRenderer.invoke('get-directory-size', dirPath),
+  listArchives: (workingDirectory: string) => ipcRenderer.invoke('list-archives', workingDirectory),
+  cleanArchives: (workingDirectory: string, days: number) => ipcRenderer.invoke('clean-archives', workingDirectory, days),
 
   // 系统功能
   showNotification: (title: string, body: string) => {

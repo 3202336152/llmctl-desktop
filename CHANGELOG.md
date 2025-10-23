@@ -5,6 +5,47 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.1] - 2025-10-23
+
+### Added 🎉
+- **Codex 会话配置隔离** - 实现会话级别的配置管理
+  - **会话独立配置目录**：每个 Codex 会话使用独立的配置目录 `.codex-sessions/{sessionId}/`
+  - **配置文件隔离**：每个会话包含独立的 config.toml、auth.json 和对话历史（sessions/）
+  - **环境变量自动配置**：后端自动设置 `CODEX_HOME` 环境变量指向会话配置目录
+  - **解决配置冲突**：多个会话可在同一工作目录中并行运行，不会相互干扰
+
+- **归档管理系统** - Settings 页面新增 Codex 归档管理功能
+  - **归档目录结构**：归档会话存储在 `.codex-sessions/archived/{sessionId}/` 目录
+  - **智能目录选择**：支持通过文件夹选择对话框选择项目根目录
+  - **自动路径检测**：智能检测用户是否误选归档目录，自动修正为项目根目录
+  - **清理选项**：提供 10天、20天、30天和全部归档的清理选项
+  - **归档统计展示**：
+    - 显示归档目录占用的磁盘空间
+    - 显示归档会话数量
+    - 列出所有可恢复的归档会话（会话ID、归档时间、大小、天数）
+  - **批量清理**：支持按时间范围批量删除归档会话
+
+- **Electron API 增强** - 新增文件系统操作 API
+  - `getDirectorySize(dirPath)` - 递归计算目录大小
+  - `listArchives(workingDirectory)` - 列出归档会话列表
+  - `cleanArchives(workingDirectory, days)` - 按时间范围清理归档（days=0 表示全部）
+
+### Fixed 🐛
+- **归档路径优化** - 将归档目录从项目根目录的 `.codex-sessions-archived/` 移动到 `.codex-sessions/archived/`
+  - 避免项目根目录文件混乱
+  - 保持归档在 Codex 配置目录内，便于统一管理
+- **UI 高度一致性** - 修复归档管理 Modal 中统计卡片高度不一致问题
+  - 统一所有统计卡片的 `minHeight: '120px'`
+  - 统一字体大小 `fontSize: '18px'`
+  - 将完整工作目录路径移至 Tooltip，避免卡片高度变化
+
+### Changed 📝
+- **Codex 配置管理架构升级**：
+  - 旧方案：每个项目使用单一 `.codex/` 目录存储配置
+  - 新方案：每个会话使用独立的 `.codex-sessions/{sessionId}/` 目录
+  - 优势：支持同一项目中多个 Codex 会话并行运行，互不干扰
+  - 迁移：旧会话仍使用旧配置路径，新会话自动使用新方案
+
 ## [2.2.0] - 2025-10-23
 
 ### Added 🎉

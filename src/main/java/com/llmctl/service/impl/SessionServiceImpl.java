@@ -349,7 +349,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new BusinessException("Token不存在: " + session.getTokenId());
         }
 
-        return buildEnvironmentVariables(provider, selectedToken, session.getWorkingDirectory());
+        return buildEnvironmentVariables(provider, selectedToken, session.getWorkingDirectory(), sessionId);
     }
 
     /**
@@ -359,9 +359,10 @@ public class SessionServiceImpl implements ISessionService {
      * @param provider Provider对象
      * @param selectedToken 选中的Token
      * @param workingDirectory 工作目录路径
+     * @param sessionId 会话ID（用于创建独立的配置目录）
      * @return 环境变量Map
      */
-    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken, String workingDirectory) {
+    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken, String workingDirectory, String sessionId) {
         Map<String, String> envVars = new HashMap<>();
 
         // 解密Token值
@@ -402,11 +403,11 @@ public class SessionServiceImpl implements ISessionService {
                     break;
 
                 case "codex":
-                    // ✅ 设置 CODEX_HOME 环境变量，指向项目的 .codex 目录
-                    // Codex CLI 会优先读取 CODEX_HOME 指定目录下的配置文件
-                    String codexHome = workingDirectory + "/.codex";
+                    // ✅ 使用会话独立的配置目录，避免多个会话相互覆盖
+                    // 目录结构: 工作目录/.codex-sessions/{sessionId}/
+                    String codexHome = workingDirectory + "/.codex-sessions/" + sessionId;
                     envVars.put("CODEX_HOME", codexHome);
-                    log.debug("设置 CODEX_HOME 环境变量: {}", codexHome);
+                    log.debug("设置 CODEX_HOME 环境变量: {} (会话: {})", codexHome, sessionId);
 
                     // Codex 配置通过文件而不是环境变量
                     // 将配置数据存储到环境变量中，前端Electron会读取并创建文件

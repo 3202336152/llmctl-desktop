@@ -371,13 +371,35 @@ const SessionManager: React.FC = () => {
 
   const handleDeleteSession = async (sessionId: string) => {
     modal.confirm({
-      title: '确定要清除这个会话记录吗？',
-      content: '清除后将永久删除，无法恢复',
+      title: '确定要删除这个会话记录吗？',
+      content: '删除后将永久删除，无法恢复',
       okText: '确定',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
+          // 0. ✅ 归档 Codex 配置（如果适用）
+          const session = sessions.find(s => s.id === sessionId);
+          if (session?.type === 'codex' && session.workingDirectory) {
+            try {
+              const codexDir = `${session.workingDirectory}/.codex-sessions/${sessionId}`;
+              const archivedDir = `${session.workingDirectory}/.codex-sessions/archived/${sessionId}`;
+
+              console.log('[SessionManager] 检查 Codex 配置目录:', codexDir);
+
+              // 尝试移动到归档目录（如果目录存在）
+              const moveResult = await window.electronAPI.moveDirectory(codexDir, archivedDir);
+              if (moveResult.success) {
+                console.log('[SessionManager] ✅ Codex 配置已归档:', archivedDir);
+                message.info('Codex 对话历史已归档，可手动恢复');
+              } else {
+                console.log('[SessionManager] ℹ️ Codex 配置目录不存在或已删除');
+              }
+            } catch (error) {
+              console.warn('[SessionManager] 归档 Codex 配置失败（忽略）:', error);
+            }
+          }
+
           // 1. 删除后端会话记录
           await sessionAPI.deleteSession(sessionId);
 
@@ -414,6 +436,26 @@ const SessionManager: React.FC = () => {
           await window.electronAPI.terminalKill(sessionId);
         } catch (error) {
           console.log('终端进程已终止或不存在:', error);
+        }
+
+        // 2.5. ✅ 归档 Codex 配置（如果适用）
+        if (session.type === 'codex' && session.workingDirectory) {
+          try {
+            const codexDir = `${session.workingDirectory}/.codex-sessions/${sessionId}`;
+            const archivedDir = `${session.workingDirectory}/.codex-sessions/archived/${sessionId}`;
+
+            console.log('[SessionManager] 检查 Codex 配置目录:', codexDir);
+
+            // 尝试移动到归档目录（如果目录存在）
+            const moveResult = await window.electronAPI.moveDirectory(codexDir, archivedDir);
+            if (moveResult.success) {
+              console.log('[SessionManager] ✅ Codex 配置已归档:', archivedDir);
+            } else {
+              console.log('[SessionManager] ℹ️ Codex 配置目录不存在或已删除');
+            }
+          } catch (error) {
+            console.warn('[SessionManager] 归档 Codex 配置失败（忽略）:', error);
+          }
         }
 
         // 3. ✅ 删除旧会话记录（避免 terminalManager 误判为 resume）

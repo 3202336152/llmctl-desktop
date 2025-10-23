@@ -155,18 +155,20 @@ class TerminalManager {
       console.log('[TerminalManager] 检测到 Windows 系统，已添加完整的 UTF-8 编码环境变量');
     }
 
-    // ✅ Codex 配置文件处理（工作目录方案）
+    // ✅ Codex 配置文件处理（会话独立方案）
+    // 目录结构: 工作目录/.codex-sessions/{sessionId}/
     let codexConfigPath: string | undefined;
     if (fullEnv.CODEX_CONFIG_TOML || fullEnv.CODEX_AUTH_JSON) {
-      console.log('[TerminalManager] 检测到 Codex 配置，开始创建配置文件');
+      console.log('[TerminalManager] 检测到 Codex 配置，开始创建会话独立的配置文件');
 
       try {
-        // ✅ 直接在工作目录下创建 .codex/ 目录（Codex CLI 会读取此路径）
-        const codexDir = path.join(cwd, '.codex');
+        // ✅ 从环境变量中获取 CODEX_HOME（已由后端设置为 .codex-sessions/{sessionId}）
+        // 格式: /path/to/project/.codex-sessions/{sessionId}
+        const codexDir = fullEnv.CODEX_HOME || path.join(cwd, '.codex-sessions', sessionId);
         fs.mkdirSync(codexDir, { recursive: true });
-        console.log('[TerminalManager] 创建 Codex 配置目录:', codexDir);
+        console.log('[TerminalManager] 创建 Codex 会话独立配置目录:', codexDir);
 
-        // 保存配置路径用于后续清理（但不会自动删除，避免影响其他会话）
+        // 保存配置路径用于后续清理
         codexConfigPath = codexDir;
 
         // 写入 config.toml
@@ -549,11 +551,12 @@ class TerminalManager {
     }
 
     // ✅ 3. Codex 配置文件处理
-    // 注意：配置文件位于工作目录的 .codex/ 下，可能被多个会话共享
-    // 因此不自动删除，由用户手动管理或在项目清理时处理
+    // 注意：会话独立配置目录 .codex-sessions/{sessionId}/ 不在此处理
+    // 删除会话时由前端 SessionManager 负责移动到归档目录 .codex-sessions/archived/{sessionId}/
+    // 保留对话历史，用户可随时恢复或手动清理归档
     if (session.codexConfigPath) {
       console.log('[TerminalManager] ℹ️  Codex 配置文件位于:', session.codexConfigPath);
-      console.log('[TerminalManager] ℹ️  配置文件保留，可能被其他会话使用（如需清理请手动删除）');
+      console.log('[TerminalManager] ℹ️  配置目录将由前端负责归档（保留对话历史）');
     }
 
     // ✅ 4. 最后才杀掉 PTY 进程
@@ -600,9 +603,9 @@ class TerminalManager {
         clearTimeout(session.errorDetectionTimer);
       }
 
-      // ✅ 3. Codex 配置文件不删除（保留在项目目录，由用户管理）
+      // ✅ 3. Codex 配置文件不在此处删除（由前端SessionManager负责归档）
       if (session.codexConfigPath) {
-        console.log('[TerminalManager] ℹ️  保留 Codex 配置:', session.codexConfigPath);
+        console.log('[TerminalManager] ℹ️  保留 Codex 配置（将由前端归档）:', session.codexConfigPath);
       }
 
       // ✅ 4. 杀掉 PTY 进程

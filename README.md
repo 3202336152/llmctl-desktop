@@ -4,7 +4,7 @@
 
 **强大的 LLM Provider、Token 和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -14,7 +14,7 @@
 
 ## 📖 简介
 
-LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 配置、智能 Token 轮询、会话管理和终端集成功能。支持 Claude Code、Codex、Gemini、Qoder 等主流 CLI 工具，让您在一个应用中高效管理所有 AI 开发工作流。
+LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 配置、智能 Token 轮询、会话管理和终端集成功能。支持 Claude Code、Codex、Gemini、Qoder 等主流 CLI 工具，在一个应用中高效管理所有 AI 开发工作流。
 
 ## ✨ 核心特性
 
@@ -26,7 +26,8 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 ### 🏗️ Provider 管理
 - **配置分离架构** - 一个 Provider 支持多个 CLI 工具
 - **动态配置表单** - 根据 CLI 类型自动显示配置项
-- **Codex 优化** - 自动生成配置，CODEX_HOME 环境变量支持
+- **Codex 会话隔离** - 每个会话使用独立配置目录，支持多会话并行运行
+- **归档管理** - 归档会话配置，支持按时间范围批量清理
 
 ### 🔑 智能 Token 管理
 - **多种轮询策略** - Round Robin、Weighted、Random、Least Used
@@ -128,6 +129,13 @@ LLMctl/
 ---
 
 ## 🔄 最新更新
+
+### v2.2.1 (2025-10-23)
+
+- 🔐 **Codex 会话配置隔离** - 每个会话使用独立的 `.codex-sessions/{sessionId}/` 配置目录
+- 🗂️ **归档管理系统** - Settings 页面新增归档清理功能，支持 10/20/30 天和全部清理选项
+- 📊 **归档统计展示** - 显示归档数量、占用空间、会话列表
+- 🛠️ **智能目录检测** - 自动修正用户选择的目录路径，避免路径错误
 
 ### v2.2.0 (2025-10-23)
 
