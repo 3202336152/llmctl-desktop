@@ -3,7 +3,9 @@ package com.llmctl.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.llmctl.dto.*;
 import com.llmctl.entity.Provider;
+import com.llmctl.entity.ProviderConfig;
 import com.llmctl.entity.Token;
+import com.llmctl.mapper.ProviderConfigMapper;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.IConfigService;
@@ -40,6 +42,7 @@ public class ConfigServiceImpl implements IConfigService {
     private final ProviderService providerService;
     private final TokenService tokenService;
     private final ProviderMapper providerMapper;
+    private final ProviderConfigMapper providerConfigMapper;
     private final TokenMapper tokenMapper;
     private final ObjectMapper objectMapper;
 
@@ -295,11 +298,18 @@ public class ConfigServiceImpl implements IConfigService {
             providerConfig.put("name", provider.getName());
             providerConfig.put("description", provider.getDescription());
             providerConfig.put("types", provider.getTypes());
-            providerConfig.put("baseUrl", provider.getBaseUrl());
-            providerConfig.put("modelName", provider.getModelName());
-            providerConfig.put("maxTokens", provider.getMaxTokens());
-            providerConfig.put("temperature", provider.getTemperature());
             providerConfig.put("tokenStrategyType", provider.getTokenStrategyType());
+
+            // 导出CLI配置
+            List<ProviderConfig> configs = providerConfigMapper.selectByProviderId(provider.getId());
+            if (configs != null && !configs.isEmpty()) {
+                Map<String, Object> cliConfigs = new HashMap<>();
+                for (ProviderConfig providerCliConfig : configs) {
+                    Map<String, Object> configData = parseConfigData(providerCliConfig.getConfigData());
+                    cliConfigs.put(providerCliConfig.getCliType().getValue() + "Config", configData);
+                }
+                providerConfig.put("configs", cliConfigs);
+            }
 
             // 导出Token（隐藏实际值）
             List<Token> tokens = tokenMapper.findByProviderId(provider.getId());
@@ -409,14 +419,23 @@ public class ConfigServiceImpl implements IConfigService {
             updateRequest.setName(name);
             updateRequest.setDescription((String) providerConfig.get("description"));
             updateRequest.setTypes(types);
-            updateRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
-            updateRequest.setModelName((String) providerConfig.get("modelName"));
-            updateRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
 
-            if (providerConfig.get("temperature") != null) {
-                Object tempValue = providerConfig.get("temperature");
-                if (tempValue instanceof Number) {
-                    updateRequest.setTemperature(new java.math.BigDecimal(tempValue.toString()));
+            // 从 configs 中提取 CLI 配置
+            if (providerConfig.containsKey("configs")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> configs = (Map<String, Object>) providerConfig.get("configs");
+
+                if (configs.containsKey("claudeConfig")) {
+                    updateRequest.setClaudeConfig((Map<String, Object>) configs.get("claudeConfig"));
+                }
+                if (configs.containsKey("codexConfig")) {
+                    updateRequest.setCodexConfig((Map<String, Object>) configs.get("codexConfig"));
+                }
+                if (configs.containsKey("geminiConfig")) {
+                    updateRequest.setGeminiConfig((Map<String, Object>) configs.get("geminiConfig"));
+                }
+                if (configs.containsKey("qoderConfig")) {
+                    updateRequest.setQoderConfig((Map<String, Object>) configs.get("qoderConfig"));
                 }
             }
 
@@ -435,21 +454,31 @@ public class ConfigServiceImpl implements IConfigService {
             createRequest.setName(name);
             createRequest.setDescription((String) providerConfig.get("description"));
             createRequest.setTypes(types);
-            createRequest.setBaseUrl((String) providerConfig.get("baseUrl"));
-            createRequest.setModelName((String) providerConfig.get("modelName"));
-            createRequest.setMaxTokens((Integer) providerConfig.get("maxTokens"));
 
-            if (providerConfig.get("temperature") != null) {
-                Object tempValue = providerConfig.get("temperature");
-                if (tempValue instanceof Number) {
-                    createRequest.setTemperature(new java.math.BigDecimal(tempValue.toString()));
+            // 从 configs 中提取 CLI 配置
+            if (providerConfig.containsKey("configs")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> configs = (Map<String, Object>) providerConfig.get("configs");
+
+                if (configs.containsKey("claudeConfig")) {
+                    createRequest.setClaudeConfig((Map<String, Object>) configs.get("claudeConfig"));
+                }
+                if (configs.containsKey("codexConfig")) {
+                    createRequest.setCodexConfig((Map<String, Object>) configs.get("codexConfig"));
+                }
+                if (configs.containsKey("geminiConfig")) {
+                    createRequest.setGeminiConfig((Map<String, Object>) configs.get("geminiConfig"));
+                }
+                if (configs.containsKey("qoderConfig")) {
+                    createRequest.setQoderConfig((Map<String, Object>) configs.get("qoderConfig"));
                 }
             }
 
             String tokenStrategyType = (String) providerConfig.get("tokenStrategyType");
             createRequest.setTokenStrategyType(tokenStrategyType != null ? tokenStrategyType : "round-robin");
 
-            // 处理第一个Token
+            // 处理第一个Token（注意：新版本不再有 setToken 和 setTokenAlias 方法，这部分逻辑需要单独处理Token）
+            /*
             String firstTokenValue = "PLACEHOLDER_TOKEN_PLEASE_UPDATE";
             String firstTokenAlias = "导入的占位符Token";
 
@@ -465,31 +494,21 @@ public class ConfigServiceImpl implements IConfigService {
                     }
                 }
             }
-
-            createRequest.setToken(firstTokenValue);
-            createRequest.setTokenAlias(firstTokenAlias);
+            */
 
             try {
                 ProviderDTO createdProvider = providerService.createProvider(createRequest);
                 result.setImportedCount(result.getImportedCount() + 1);
 
-                // 如果使用占位符，添加警告
-                if ("PLACEHOLDER_TOKEN_PLEASE_UPDATE".equals(firstTokenValue)) {
-                    String warning = String.format("Provider '%s' 已导入，但Token为占位符，请手动更新Token值", name);
-                    result.getWarnings().add(warning);
-                    log.warn("Provider {} 使用占位符Token，需要手动更新", createdProvider.getId());
-                }
-
                 log.info("成功创建Provider: {} ({})", name, createdProvider.getId());
 
-                // 导入剩余的Token配置（从第2个开始）- 使用实际创建的Provider ID
+                // 导入Token配置 - 使用实际创建的Provider ID
                 if (providerConfig.containsKey("tokens")) {
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> tokens = (List<Map<String, Object>>) providerConfig.get("tokens");
 
-                    // 从第二个Token开始导入（第一个已经在createProvider中创建）
-                    for (int i = 1; i < tokens.size(); i++) {
-                        Map<String, Object> tokenConfig = tokens.get(i);
+                    // 导入所有Token
+                    for (Map<String, Object> tokenConfig : tokens) {
                         importTokenForProvider(createdProvider.getId(), tokenConfig, result);
                     }
                 }
@@ -653,61 +672,117 @@ public class ConfigServiceImpl implements IConfigService {
 
         // 为所有支持的CLI类型设置环境变量
         for (String type : provider.getTypes()) {
+            // 查找对应的配置
+            ProviderConfig config = findConfigByType(provider, type);
+            if (config == null) {
+                log.warn("Provider {} 的类型 {} 没有配置数据，跳过环境变量设置", provider.getId(), type);
+                continue;
+            }
+
+            Map<String, Object> configData = parseConfigData(config.getConfigData());
+
             switch (type.toLowerCase()) {
                 case "claude code":
                     envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("ANTHROPIC_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("ANTHROPIC_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("ANTHROPIC_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", configData.get("maxTokens").toString());
                     }
                     break;
 
                 case "codex":
                     envVars.put("CODEX_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("CODEX_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("CODEX_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("CODEX_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("CODEX_MAX_TOKENS", provider.getMaxTokens().toString());
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("CODEX_MAX_TOKENS", configData.get("maxTokens").toString());
                     }
                     break;
 
                 case "gemini":
                     envVars.put("GEMINI_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("GEMINI_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("GEMINI_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("GEMINI_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("GEMINI_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("GEMINI_MAX_TOKENS", provider.getMaxTokens().toString());
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("GEMINI_MAX_TOKENS", configData.get("maxTokens").toString());
                     }
                     break;
 
                 case "qoder":
                     envVars.put("QODER_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("QODER_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("QODER_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("QODER_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("QODER_MAX_TOKENS", provider.getMaxTokens().toString());
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("QODER_MAX_TOKENS", configData.get("maxTokens").toString());
                     }
                     break;
             }
         }
 
         return envVars;
+    }
+
+    /**
+     * 从Provider的configs中查找指定类型的配置
+     *
+     * @param provider Provider对象
+     * @param type CLI类型名称
+     * @return ProviderConfig对象，如果找不到则返回null
+     */
+    private ProviderConfig findConfigByType(Provider provider, String type) {
+        if (provider.getConfigs() == null || provider.getConfigs().isEmpty()) {
+            // 如果 Provider 对象中没有加载 configs，尝试从数据库查询
+            List<ProviderConfig> configs = providerConfigMapper.selectByProviderId(provider.getId());
+            if (configs == null || configs.isEmpty()) {
+                return null;
+            }
+            provider.setConfigs(configs);
+        }
+
+        // 根据类型名称查找对应的配置
+        String normalizedType = type.toLowerCase().replace(" ", "");
+        return provider.getConfigs().stream()
+                .filter(config -> {
+                    String configType = config.getCliType().getValue();
+                    return configType.equalsIgnoreCase(normalizedType);
+                })
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * 解析配置数据JSON字符串为Map
+     *
+     * @param configDataJson JSON字符串
+     * @return 配置数据Map
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseConfigData(String configDataJson) {
+        if (configDataJson == null || configDataJson.trim().isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(configDataJson, Map.class);
+        } catch (Exception e) {
+            log.error("解析配置数据失败: {}", configDataJson, e);
+            return new HashMap<>();
+        }
     }
 }

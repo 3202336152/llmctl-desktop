@@ -38,15 +38,29 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     createdRef.current = true;
 
     const initTerminal = async () => {
+      // ✅ 获取环境变量前先验证会话是否存在
+      console.log('[TerminalComponent] 初始化终端，Session ID:', sessionId);
+
       // 获取环境变量
       let envVars: Record<string, string> = env || {};
       try {
         const envResponse = await sessionAPI.getSessionEnvironment(sessionId);
         if (envResponse.data) {
           envVars = { ...envVars, ...envResponse.data };
+          console.log('[TerminalComponent] ✅ 成功获取环境变量');
         }
-      } catch (error) {
-        console.error('获取环境变量失败:', error);
+      } catch (error: any) {
+        console.error('[TerminalComponent] ❌ 获取环境变量失败:', error);
+
+        // ✅ 如果会话不存在（404错误），不继续初始化终端
+        if (error?.response?.status === 404 || error?.code === 404) {
+          console.error('[TerminalComponent] 会话不存在，停止初始化终端:', sessionId);
+          createdRef.current = false; // 重置标记，允许重试
+          return;
+        }
+
+        // 其他错误只警告，继续初始化（使用默认环境变量）
+        console.warn('[TerminalComponent] 使用默认环境变量继续初始化');
       }
 
       const terminal = new Terminal({
@@ -147,14 +161,23 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       });
     });
 
-    // ✅ 优化的粘贴逻辑：使用 xterm.js 的原生 paste()，让 CMD 完整处理
-    const handlePaste = (text: string) => {
-      if (!text) return;
+    // ✅ 优化的粘贴逻辑：直接发送全部内容，移除分块逻辑
+    const handlePaste = async (text: string) => {
+      if (!text) {
+        console.log('[粘贴] 内容为空，跳过');
+        return;
+      }
 
-      // ✅ 使用 xterm.js 的原生 paste() 方法
-      // 这样可以让 CMD 完整处理粘贴内容，显示 [Pasted text #N +X lines] 提示
-      if (xtermRef.current) {
-        xtermRef.current.paste(text);
+      // 打印调试信息
+      console.log(`[粘贴] 接收到内容，长度: ${text.length} 字符`);
+      console.log(`[粘贴] 内容预览（前100字符）: ${text.substring(0, 100)}...`);
+
+      // 直接发送全部内容，不分块
+      try {
+        await window.electronAPI.terminalInput(sessionId, text);
+        console.log(`[粘贴] 发送完成`);
+      } catch (error) {
+        console.error('[粘贴] 发送失败:', error);
       }
     };
 

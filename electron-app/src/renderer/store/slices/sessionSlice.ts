@@ -32,6 +32,37 @@ const sessionSlice = createSlice({
   reducers: {
     setSessions: (state, action: PayloadAction<Session[]>) => {
       state.sessions = action.payload;
+
+      // ✅ 清理无效的终端状态：移除不在新 sessions 列表中的 sessionIds
+      const validSessionIds = new Set(action.payload.map(s => s.id));
+
+      // 过滤 createdTerminalSessions，只保留有效的
+      const invalidCreatedSessions = state.createdTerminalSessions.filter(id => !validSessionIds.has(id));
+      if (invalidCreatedSessions.length > 0) {
+        console.log('[sessionSlice] 清理无效的 createdTerminalSessions:', invalidCreatedSessions);
+        state.createdTerminalSessions = state.createdTerminalSessions.filter(id => validSessionIds.has(id));
+      }
+
+      // 过滤 openTerminalSessions，只保留有效的
+      const invalidOpenSessions = state.openTerminalSessions.filter(id => !validSessionIds.has(id));
+      if (invalidOpenSessions.length > 0) {
+        console.log('[sessionSlice] 清理无效的 openTerminalSessions:', invalidOpenSessions);
+        state.openTerminalSessions = state.openTerminalSessions.filter(id => validSessionIds.has(id));
+      }
+
+      // 清理 terminalSessionData 中无效的会话数据
+      Object.keys(state.terminalSessionData).forEach(sessionId => {
+        if (!validSessionIds.has(sessionId)) {
+          console.log('[sessionSlice] 清理无效的 terminalSessionData:', sessionId);
+          delete state.terminalSessionData[sessionId];
+        }
+      });
+
+      // 如果当前激活的 tab 已无效，重置为第一个有效的
+      if (state.activeTabKey && !validSessionIds.has(state.activeTabKey)) {
+        console.log('[sessionSlice] 当前激活的 tab 已无效，重置:', state.activeTabKey);
+        state.activeTabKey = state.openTerminalSessions[0];
+      }
     },
     addSession: (state, action: PayloadAction<Session>) => {
       state.sessions.push(action.payload);
@@ -70,11 +101,17 @@ const sessionSlice = createSlice({
     // 终端管理actions
     openTerminal: (state, action: PayloadAction<string>) => {
       const sessionId = action.payload;
-      // 保存session数据快照，用于终端渲染
+
+      // ✅ 验证会话是否存在
       const session = state.sessions.find(s => s.id === sessionId);
-      if (session) {
-        state.terminalSessionData[sessionId] = session;
+      if (!session) {
+        console.error('[sessionSlice] ❌ 尝试打开不存在的会话:', sessionId);
+        return; // 不打开无效会话
       }
+
+      // 保存session数据快照，用于终端渲染
+      state.terminalSessionData[sessionId] = session;
+
       // 添加到已创建列表（如果尚未创建）
       if (!state.createdTerminalSessions.includes(sessionId)) {
         state.createdTerminalSessions.push(sessionId);
@@ -84,6 +121,8 @@ const sessionSlice = createSlice({
         state.openTerminalSessions.push(sessionId);
       }
       state.activeTabKey = sessionId;
+
+      console.log('[sessionSlice] ✅ 打开终端:', sessionId);
     },
     closeTerminal: (state, action: PayloadAction<string>) => {
       const sessionId = action.payload;

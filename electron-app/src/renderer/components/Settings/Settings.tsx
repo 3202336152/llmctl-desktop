@@ -66,7 +66,6 @@ const Settings: React.FC = () => {
         autoStart: false,
         minimizeToTray: true,
         showNotifications: true,
-        theme: 'light',
         language: 'zh',
       };
 
@@ -80,9 +79,6 @@ const Settings: React.FC = () => {
             break;
           case 'app.show_notifications':
             formValues.showNotifications = config.configValue === 'true';
-            break;
-          case 'app.theme':
-            formValues.theme = config.configValue;
             break;
           case 'app.language':
             formValues.language = config.configValue;
@@ -109,15 +105,11 @@ const Settings: React.FC = () => {
         { configKey: 'app.auto_start', configValue: String(values.autoStart || false) },
         { configKey: 'app.minimize_to_tray', configValue: String(values.minimizeToTray || false) },
         { configKey: 'app.show_notifications', configValue: String(values.showNotifications || false) },
-        { configKey: 'app.theme', configValue: values.theme || 'light' },
         { configKey: 'app.language', configValue: values.language || 'zh' },
       ];
 
       await configAPI.setBatchGlobalConfigs(configs);
       message.success(t('settings.settingsSaved'));
-
-      // 触发设置变更事件，通知 App 组件重新加载配置
-      window.dispatchEvent(new Event('settings-changed'));
 
       // 应用语言切换
       if (values.language && values.language !== i18n.language) {
@@ -231,18 +223,6 @@ const Settings: React.FC = () => {
               <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item label={t('settings.theme')} name="theme">
-              <Select>
-                <Option value="light">{t('settings.themeLight')}</Option>
-                <Option value="dark">{t('settings.themeDark')}</Option>
-                <Option value="auto">{t('settings.themeAuto')}</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item label={t('settings.language')} name="language">
               <Select>
@@ -377,7 +357,7 @@ const Settings: React.FC = () => {
             >
               <div style={{ textAlign: 'center', color: 'white' }}>
                 <RocketOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
-                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>v2.1.5</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>v2.2.0</div>
                 <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.version')}</div>
               </div>
             </Card>

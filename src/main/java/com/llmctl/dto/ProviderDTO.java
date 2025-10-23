@@ -1,18 +1,17 @@
 package com.llmctl.dto;
 
-import com.llmctl.entity.Provider;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Provider展示用DTO
+ * Provider展示用DTO（配置分离版）
  *
  * @author Liu Yifan
- * @version 2.0.0
- * @since 2025-09-28
+ * @version 2.3.0
+ * @since 2025-01-15
  */
 @Data
 public class ProviderDTO {
@@ -33,29 +32,15 @@ public class ProviderDTO {
     private String description;
 
     /**
-     * Provider支持的CLI类型列表
+     * Provider支持的CLI类型列表（多选）
+     * 示例：["claude code", "codex"]
      */
     private List<String> types;
 
     /**
-     * API基础URL
+     * CLI配置列表
      */
-    private String baseUrl;
-
-    /**
-     * 模型名称
-     */
-    private String modelName;
-
-    /**
-     * 最大Token数
-     */
-    private Integer maxTokens;
-
-    /**
-     * 温度参数
-     */
-    private BigDecimal temperature;
+    private List<CliConfigDTO> configs;
 
     /**
      * 额外HTTP头
@@ -86,6 +71,37 @@ public class ProviderDTO {
      * 关联的Token列表
      */
     private List<TokenDTO> tokens;
+
+    /**
+     * CLI配置DTO
+     */
+    @Data
+    public static class CliConfigDTO {
+        /**
+         * 配置ID
+         */
+        private Long id;
+
+        /**
+         * CLI类型
+         */
+        private String cliType;  // "claude", "codex", "gemini", "qoder"
+
+        /**
+         * 配置数据（解析后的JSON）
+         */
+        private Map<String, Object> configData;
+
+        /**
+         * 创建时间
+         */
+        private LocalDateTime createdAt;
+
+        /**
+         * 更新时间
+         */
+        private LocalDateTime updatedAt;
+    }
 
     /**
      * Token策略DTO

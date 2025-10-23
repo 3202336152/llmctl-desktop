@@ -3,7 +3,7 @@
 # LLMctl
 **强大的LLM Provider、Token和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.1.7-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -19,13 +19,13 @@
 - 👤 **用户资料管理** - 个人信息编辑，头像上传，密码修改，邮箱绑定（v2.1.4）
 - 📧 **邮箱验证功能** - QQ/163邮箱验证码注册，支持用户名或邮箱登录（v2.1.2）
 - 🔔 **实时通知系统** - 基于SSE的实时推送，通知中心管理，优先级分类（v2.1.0）
-- 🌐 **多Provider支持** - 支持Claude、OpenAI、Qwen、Gemini等主流LLM Provider
+- 🌐 **多Provider支持** - 支持Claude Code、Codex、Gemini、Qoder等主流CLI工具
+- 🏗️ **配置分离架构** - Provider核心信息与CLI专用配置分离存储，支持一对多关系（v2.2.0）
 - 🔑 **智能Token管理** - 多Token轮询、健康检查、自动切换
 - 🔒 **企业级加密** - AES-256-GCM加密存储Token，NSA绝密信息级安全（v2.0.4）
 - 🔄 **自动故障恢复** - Token失效自动检测，一键切换到健康Token（v2.0.2）
 - 🖥️ **会话管理** - CLI进程监控、工作目录记录、实时状态更新、会话重启（v2.0.3）
 - 🌍 **国际化支持** - 支持中英文切换，语言配置持久化（v2.0.3）
-- 🎨 **暗色主题** - 完整的深色模式支持，保护眼睛，个性化定制（v2.1.7）
 - 📊 **统计分析** - 详细的使用统计和数据可视化
 - ⚙️ **配置管理** - 支持导入导出配置，方便迁移和备份
 - 📖 **帮助中心** - 完整的使用文档和常见问题解答（v2.1.0）
@@ -90,24 +90,9 @@
    - [macOS (dmg)](https://github.com/3202336152/llmctl-desktop/releases)
    - [Linux (AppImage)](https://github.com/3202336152/llmctl-desktop/releases)
 
-2. **配置MySQL数据库**
-   ```sql
-   CREATE DATABASE llmctl CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'llmctl'@'localhost' IDENTIFIED BY 'llmctl123';
-   GRANT ALL PRIVILEGES ON llmctl.* TO 'llmctl'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
-
-3. **启动应用**
+2. **启动应用**
    - 运行安装的LLMctl应用
    - 首次启动会自动初始化数据库表结构
-
-4. **首次登录**
-   - 应用启动后显示登录页面
-   - 使用默认管理员账户登录：
-     - 用户名：`admin`
-     - 密码：`admin123`
-   - 或点击"注册"标签创建新账户
 
 ### 基础配置
 
@@ -456,6 +441,73 @@ LLMctl/
 ---
 
 ## 🔄 最新更新
+
+### v2.2.0 (2025-10-23) 🎉
+
+#### 🏗️ 重大架构升级
+- ✅ **Provider 配置分离架构** - 提升扩展性和维护性
+  - **数据库表结构变更**：
+    - `providers` 表简化：只保留核心字段（id、name、description、types、策略配置等）
+    - 新增 `provider_configs` 表：存储 CLI 专用配置，支持一对多关系
+    - 使用 JSON 字段存储配置数据，灵活支持不同 CLI 的配置结构
+  - **后端实现**：
+    - 新增 `ProviderConfig.java` 实体类，支持 CliType 枚举（claude code、codex、gemini、qoder）
+    - 新增自定义 MyBatis TypeHandler 处理带空格的枚举值
+    - Service 层使用 `@Transactional` 处理 Provider 和配置的级联创建/更新
+  - **前端实现**：
+    - 更新 TypeScript 类型定义，添加 `ProviderConfig` 接口
+    - 重写 `ProviderManager.tsx` 表单提交逻辑，动态构建配置数据
+    - 表格显示优化，展示所有配置的 CLI 类型
+
+#### 🎯 Codex 配置优化
+- ✅ **简化配置输入**：
+  - 前端只需输入 config.toml 内容
+  - 后端自动生成 auth.json 模板并注入 API Token
+  - 添加 `CODEX_HOME` 环境变量支持，指向项目 `.codex` 目录
+  - 修复 Codex CLI 读取系统配置而不是项目配置的问题
+
+#### 🐛 Bug修复
+- ✅ **修复 Redux sessionId 不匹配导致的 404 错误**
+  - 问题：后端创建新会话但前端尝试访问旧的 sessionId
+  - 解决：`setSessions` action 添加自动清理逻辑，过滤无效的 sessionId
+  - 涉及：`sessionSlice.ts`、`TerminalComponent.tsx`、`SessionServiceImpl.java`
+- ✅ **修复 Codex CLI 读取配置路径问题**
+  - 添加 `CODEX_HOME` 环境变量，指向项目 `.codex` 目录
+  - 每个项目使用独立的 Codex 配置，互不干扰
+- ✅ **修复 Provider 编辑时 Claude Code 配置不显示**
+  - 修正 TypeScript `CliType` 类型定义错误（`'claude'` → `'claude code'`）
+
+#### 🎨 UI/UX 优化
+- ✅ **Provider 表单优化**：
+  - 类型选择改为 Select 下拉多选框，提升用户体验
+  - 根据选中类型动态显示对应的配置表单
+  - Gemini 和 Qoder 配置显示"暂未适配"提示
+
+#### 🏗️ 技术亮点
+- **数据库设计**：单一职责原则，providers 表只管理核心信息，配置独立存储
+- **开闭原则**：新增 CLI 类型无需修改表结构，只需插入新配置
+- **依赖倒置**：Service 层依赖抽象的配置接口，而不是具体字段
+- **优势对比**：
+  | 特性 | 旧方案 | 新方案 |
+  |------|--------|--------|
+  | 扩展性 | ❌ 每增加 CLI 需要 ALTER TABLE | ✅ 只需插入新记录 |
+  | 表结构 | ❌ 字段冗余（10+ 个 CLI 专用字段） | ✅ 核心表只有 8 个字段 |
+  | 维护性 | ❌ 字段语义混乱 | ✅ 职责清晰 |
+  | 配置灵活性 | ❌ 字段固定 | ✅ JSON 灵活配置 |
+
+#### ⚠️ 破坏性变更
+- **数据库结构变更**：必须执行迁移脚本 `migration_v2.3.0_split_configs.sql`
+- **API 接口变更**：Provider 创建/更新接口的请求体结构变化
+- **前端类型定义变更**：Provider 接口新增 `configs` 字段，移除 CLI 专用字段
+
+#### 📖 文档更新
+- ✅ 新增完整的架构文档：`docs/provider-config-separation-guide.md`
+  - 架构设计说明
+  - 数据库表结构设计
+  - 后端实现指南
+  - 前端实现指南
+  - 数据迁移步骤
+  - FAQ 和最佳实践
 
 ### v2.1.7 (2025-10-17)
 

@@ -36,7 +36,7 @@ import './i18n'; // 引入 i18n 配置
 import './styles/global.css'; // 引入全局样式
 import './styles/App.css'; // 引入应用样式
 import { useTranslation } from 'react-i18next';
-import { lightTheme, darkTheme } from './theme'; // 引入主题配置
+import { lightTheme } from './theme'; // 引入主题配置
 
 const { Content } = Layout;
 
@@ -53,10 +53,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-const AppContent: React.FC<{
-  currentTheme: 'light' | 'dark';
-  setCurrentTheme: (theme: 'light' | 'dark') => void;
-}> = ({ currentTheme, setCurrentTheme }) => {
+const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
@@ -517,47 +514,10 @@ const AppContent: React.FC<{
 
 // 包装组件，提供 Ant Design App 上下文
 const App: React.FC = () => {
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light');
-
-  // 加载主题配置
-  useEffect(() => {
-    const loadTheme = async () => {
-      // 检查是否已登录
-      if (!authStorage.isLoggedIn()) {
-        return;
-      }
-
-      try {
-        const response = await configAPI.getGlobalConfigs();
-        const configs = response.data || [];
-        const themeConfig = configs.find(c => c.configKey === 'app.theme');
-
-        if (themeConfig && (themeConfig.configValue === 'dark' || themeConfig.configValue === 'light')) {
-          setCurrentTheme(themeConfig.configValue);
-        }
-      } catch (error) {
-        console.error('[App] 加载主题配置失败:', error);
-      }
-    };
-
-    loadTheme();
-
-    // 监听设置变化事件
-    const handleSettingsChange = () => {
-      loadTheme();
-    };
-
-    window.addEventListener('settings-changed', handleSettingsChange);
-
-    return () => {
-      window.removeEventListener('settings-changed', handleSettingsChange);
-    };
-  }, []);
-
   return (
-    <ConfigProvider theme={currentTheme === 'dark' ? darkTheme : lightTheme}>
+    <ConfigProvider theme={lightTheme}>
       <AntApp>
-        <AppContent currentTheme={currentTheme} setCurrentTheme={setCurrentTheme} />
+        <AppContent />
       </AntApp>
     </ConfigProvider>
   );

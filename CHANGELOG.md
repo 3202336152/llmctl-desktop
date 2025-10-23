@@ -5,6 +5,228 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.0] - 2025-10-23
+
+### Added 🎉
+- **Provider 配置分离架构** - 重大架构升级，提升扩展性和维护性
+  - **数据库表结构变更**：
+    - `providers` 表简化：只保留核心字段（id、name、description、types、策略配置等）
+    - 新增 `provider_configs` 表：存储 CLI 专用配置，支持一对多关系
+    - 删除 providers 表的冗余字段（baseUrl、modelName、maxTokens等10+个CLI专用字段）
+    - 使用 JSON 字段存储配置数据，灵活支持不同 CLI 的配置结构
+
+  - **后端实现**：
+    - 新增 `ProviderConfig.java` 实体类，支持 CliType 枚举（claude code、codex、gemini、qoder）
+    - 新增 `ProviderConfigMapper` 接口和 XML 映射文件
+    - 新增 `CliTypeHandler.java` 自定义 MyBatis TypeHandler，处理带空格的枚举值
+    - `Provider.java` 简化，添加 `configs` 字段关联配置列表
+    - Service 层使用 `@Transactional` 处理 Provider 和配置的级联创建/更新
+    - 优化查询性能：使用 JOIN 查询一次性获取 Provider 及其配置
+
+  - **前端实现**：
+    - 更新 TypeScript 类型定义，添加 `ProviderConfig` 接口
+    - 更新 `Provider` 接口，添加 `configs` 数组字段
+    - 重写 `ProviderManager.tsx` 表单提交逻辑，动态构建配置数据
+    - 优化表单编辑逻辑，从 `configs` 数组中提取对应配置数据回填
+    - 表格显示优化，展示所有配置的 CLI 类型
+
+  - **Codex 配置优化**：
+    - 简化 auth.json 输入，自动生成默认结构
+    - 前端只需输入 config.toml 内容
+    - 后端自动生成 auth.json 模板并注入 API Token
+    - 添加 `CODEX_HOME` 环境变量支持，指向项目 `.codex` 目录
+    - 修复 Codex CLI 读取系统配置而不是项目配置的问题
+
+  - **数据迁移**：
+    - 创建迁移脚本：`migration_v2.3.0_split_configs.sql`
+    - 自动将 providers 表的 CLI 专用字段迁移到 provider_configs 表
+    - 保持数据完整性和一致性
+    - 支持回滚操作
+
+- **详细配置验证日志** - 增强 Codex 配置文件创建的可追踪性
+  - 配置文件写入后立即验证文件是否存在
+  - 输出配置文件大小和内容预览（前200字符）
+  - 便于排查配置文件创建失败问题
+
+### Fixed 🐛
+- **修复 Redux sessionId 不匹配导致的 404 错误** ⭐
+  - **问题描述**：
+    - 后端创建新会话 `session_72d985f9b3e1402d9a62c4df2a98dd11`
+    - 前端却尝试访问旧的 `session_9cc488ff590b4ab9bb3777199af1d134`
+    - 导致获取会话环境变量时返回 404 错误
+
+  - **根本原因**：
+    - Redux store 中的 `createdTerminalSessions` 数组包含过期的 sessionId
+    - `TerminalManager.tsx` 会为所有 `createdTerminalSessions` 中的 ID 创建 TerminalComponent
+    - 即使会话已删除，旧的 sessionId 仍然留在数组中
+
+  - **解决方案**：
+    - 修改 `sessionSlice.ts` 的 `setSessions` action，添加自动清理逻辑
+    - 对比后端返回的有效会话 ID，过滤掉无效的 sessionId
+    - 清理 `createdTerminalSessions`、`openTerminalSessions`、`terminalSessionData`
+    - 重置 `activeTabKey` 如果当前激活的标签已无效
+    - 添加详细的控制台日志，便于追踪清理过程
+
+  - **修复效果**：
+    - 前端不再尝试访问不存在的会话
+    - 终端组件只为有效会话创建实例
+    - 会话列表刷新时自动清理过期状态
+
+  - **涉及文件**：
+    - `sessionSlice.ts` (33-66行) - 添加清理逻辑
+    - `TerminalComponent.tsx` (52-60行) - 添加 404 错误处理
+    - `SessionServiceImpl.java` (334-353行) - 添加重试逻辑
+
+- **修复 Codex CLI 读取系统配置而不是项目配置的问题**
+  - **问题描述**：Codex CLI 默认读取 `~/.codex/config.toml`，忽略项目目录配置
+  - **解决方案**：添加 `CODEX_HOME` 环境变量，指向项目 `.codex` 目录
+  - **实现细节**：
+    - 修改 `SessionServiceImpl.buildEnvironmentVariables()` 方法签名，添加 `workingDirectory` 参数
+    - 在 Codex 配置分支中设置 `CODEX_HOME = {workingDirectory}/.codex`
+    - Codex CLI 会优先读取 `CODEX_HOME` 指定目录下的配置文件
+  - **修复效果**：每个项目使用独立的 Codex 配置，互不干扰
+  - **涉及文件**：`SessionServiceImpl.java` (352, 364, 404-421行)
+
+- **修复 Provider 编辑时 Claude Code 配置不显示的问题**
+  - **问题描述**：编辑 Provider 时，Codex 配置可以正常回填，但 Claude Code 配置无法显示
+  - **根本原因**：TypeScript `CliConfig` 接口的 `cliType` 类型定义错误（使用了 `'claude'` 而不是 `'claude code'`）
+  - **解决方案**：修正类型定义为 `'claude code' | 'codex' | 'gemini' | 'qoder'`
+  - **涉及文件**：`types/index.ts`
+
+### Changed 🎨
+- **Provider 表单 UI 优化**：
+  - 类型选择改为 Select 下拉多选框，替代原来的 Checkbox.Group
+  - 提升用户体验，多选操作更流畅
+  - 根据选中类型动态显示对应的配置表单
+
+- **Gemini 和 Qoder 配置禁用**：
+  - 在类型选择中添加 disabled 状态
+  - 显示"暂未适配"提示信息
+  - 为将来实现预留接口
+
+### Technical Details 🔧
+- **数据库设计**：
+  ```sql
+  -- providers 表（简化版）
+  CREATE TABLE `providers` (
+    `id` VARCHAR(50) PRIMARY KEY,
+    `user_id` BIGINT NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `description` TEXT,
+    `types` JSON NOT NULL,  -- ["claude code", "codex"]
+    `token_strategy_type` ENUM(...),
+    `token_fallback_on_error` TINYINT(1),
+    `is_active` TINYINT(1) DEFAULT 1,
+    ...
+  );
+
+  -- provider_configs 表（新增）
+  CREATE TABLE `provider_configs` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `provider_id` VARCHAR(50) NOT NULL,
+    `cli_type` ENUM('claude code', 'codex', 'gemini', 'qoder') NOT NULL,
+    `config_data` JSON NOT NULL,
+    ...,
+    UNIQUE KEY (`provider_id`, `cli_type`),
+    FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON DELETE CASCADE
+  );
+  ```
+
+- **配置数据结构（JSON）**：
+  ```json
+  // Claude Code 配置
+  {
+    "baseUrl": "https://api.anthropic.com/v1",
+    "modelName": "claude-3-5-sonnet-20241022",
+    "maxTokens": 8192,
+    "temperature": 0.7
+  }
+
+  // Codex 配置
+  {
+    "configToml": "model = \"gpt-4-turbo\"\n...",
+    "authJson": "{\"OPENAI_API_KEY\": \"${API_KEY}\"}"
+  }
+  ```
+
+- **后端修改文件**：
+  - `ProviderConfig.java` (新增) - 配置实体类
+  - `ProviderConfigMapper.java` (新增) - 数据访问接口
+  - `ProviderConfigMapper.xml` (新增) - MyBatis 映射文件
+  - `CliTypeHandler.java` (新增) - 自定义枚举类型处理器
+  - `Provider.java` - 简化字段，添加 configs 关联
+  - `ProviderServiceImpl.java` - 重写创建/更新/查询逻辑
+  - `SessionServiceImpl.java` - 添加 CODEX_HOME 环境变量，修复配置读取
+  - `CreateProviderRequest.java` - 更新 DTO 结构
+  - `UpdateProviderRequest.java` - 更新 DTO 结构
+
+- **前端修改文件**：
+  - `types/index.ts` - 新增 ProviderConfig 接口，修正 CliType 类型
+  - `ProviderManager.tsx` - 完整重写表单提交和编辑逻辑
+  - `sessionSlice.ts` - 添加 Redux 状态自动清理逻辑
+  - `terminalManager.ts` - 添加配置文件验证日志
+
+- **数据库迁移文件**：
+  - `migration_v2.3.0_split_configs.sql` - 完整的迁移脚本
+
+### Architecture 🏗️
+- **优势对比**：
+  | 特性 | 旧方案 | 新方案 |
+  |------|--------|--------|
+  | 扩展性 | ❌ 每增加 CLI 需要 ALTER TABLE | ✅ 只需插入新记录 |
+  | 表结构 | ❌ 字段冗余（10+ 个 CLI 专用字段） | ✅ 核心表只有 8 个字段 |
+  | 维护性 | ❌ 字段语义混乱 | ✅ 职责清晰 |
+  | 查询性能 | ✅ 直接查询，无 JOIN | ⚠️ 需要 JOIN（可接受） |
+  | 配置灵活性 | ❌ 字段固定 | ✅ JSON 灵活配置 |
+
+- **设计原则**：
+  - **单一职责**：providers 表只管理核心信息，配置独立存储
+  - **开闭原则**：新增 CLI 类型无需修改表结构，只需插入新配置
+  - **依赖倒置**：Service 层依赖抽象的配置接口，而不是具体字段
+
+### Documentation 📖
+- 新增完整的架构文档：`docs/provider-config-separation-guide.md`
+  - 架构设计说明
+  - 数据库表结构设计
+  - 后端实现指南（实体类、Service、Mapper）
+  - 前端实现指南（TypeScript类型、表单逻辑）
+  - 数据迁移步骤
+  - FAQ 和最佳实践
+- 更新 `CHANGELOG.md` - 记录 v2.3.0 所有变更
+- 更新 `README.md` - 添加架构升级说明
+
+### Breaking Changes ⚠️
+- **数据库结构变更**：必须执行迁移脚本 `migration_v2.3.0_split_configs.sql`
+- **API 接口变更**：Provider 创建/更新接口的请求体结构变化
+- **前端类型定义变更**：Provider 接口新增 `configs` 字段，移除 CLI 专用字段
+
+### Migration Guide 📋
+1. **备份数据库**：
+   ```bash
+   mysqldump -u llmctl -p llmctl > llmctl_backup_$(date +%Y%m%d).sql
+   ```
+
+2. **执行迁移脚本**：
+   ```bash
+   mysql -u llmctl -p llmctl < src/main/resources/db/migration_v2.3.0_split_configs.sql
+   ```
+
+3. **验证数据迁移**：
+   ```sql
+   -- 检查 provider_configs 表
+   SELECT COUNT(*) FROM provider_configs;
+
+   -- 检查数据完整性
+   SELECT p.id, p.name, COUNT(pc.id) AS config_count
+   FROM providers p
+   LEFT JOIN provider_configs pc ON p.id = pc.provider_id
+   GROUP BY p.id;
+   ```
+
+4. **重启后端应用**：新的实体类和 Mapper 生效
+
+5. **清除前端缓存**：确保使用最新的 TypeScript 类型定义
+
 ## [2.1.7] - 2025-10-17
 
 ### Added 🎉

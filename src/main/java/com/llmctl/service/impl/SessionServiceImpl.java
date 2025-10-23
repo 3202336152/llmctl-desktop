@@ -1,14 +1,17 @@
 package com.llmctl.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.llmctl.context.UserContext;
 import com.llmctl.dto.SessionDTO;
 import com.llmctl.dto.StartSessionRequest;
 import com.llmctl.entity.Provider;
+import com.llmctl.entity.ProviderConfig;
 import com.llmctl.entity.Session;
 import com.llmctl.entity.Token;
 import com.llmctl.exception.BusinessException;
 import com.llmctl.exception.ResourceNotFoundException;
 import com.llmctl.exception.ServiceException;
+import com.llmctl.mapper.ProviderConfigMapper;
 import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.SessionMapper;
 import com.llmctl.mapper.TokenMapper;
@@ -44,10 +47,12 @@ public class SessionServiceImpl implements ISessionService {
 
     private final SessionMapper sessionMapper;
     private final ProviderMapper providerMapper;
+    private final ProviderConfigMapper providerConfigMapper;
     private final TokenMapper tokenMapper;
     private final TokenService tokenService;
     private final IGlobalConfigService globalConfigService;
     private final ITokenEncryptionService encryptionService;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<SessionDTO> getActiveSessions() {
@@ -84,7 +89,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -97,8 +102,8 @@ public class SessionServiceImpl implements ISessionService {
         Long userId = UserContext.getUserId();
         log.info("创建新的会话记录: Provider: {}, WorkingDir: {}, 用户ID: {}", request.getProviderId(), request.getWorkingDirectory(), userId);
 
-        // 检查Provider是否存在且属于当前用户
-        Provider provider = providerMapper.findById(request.getProviderId(), userId);
+        // 检查Provider是否存在且属于当前用户（使用带配置的查询）
+        Provider provider = providerMapper.findByIdWithConfigs(request.getProviderId(), userId);
         if (provider == null) {
             throw new ResourceNotFoundException("Provider不存在或无权访问", request.getProviderId());
         }
@@ -149,7 +154,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -183,7 +188,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -237,7 +242,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -262,7 +267,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("会话", sessionId);
         }
 
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -327,12 +332,9 @@ public class SessionServiceImpl implements ISessionService {
         Long userId = UserContext.getUserId();
 
         Session session = sessionMapper.findById(sessionId);
-        if (session == null) {
-            throw new ResourceNotFoundException("会话", sessionId);
-        }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findById(session.getProviderId(), userId);
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -347,14 +349,19 @@ public class SessionServiceImpl implements ISessionService {
             throw new BusinessException("Token不存在: " + session.getTokenId());
         }
 
-        return buildEnvironmentVariables(provider, selectedToken);
+        return buildEnvironmentVariables(provider, selectedToken, session.getWorkingDirectory());
     }
 
     /**
      * 构建环境变量（用于启动进程）
      * 说明：由于一个Provider可以支持多个CLI类型，需要为所有支持的类型设置对应的环境变量
+     *
+     * @param provider Provider对象
+     * @param selectedToken 选中的Token
+     * @param workingDirectory 工作目录路径
+     * @return 环境变量Map
      */
-    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken) {
+    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken, String workingDirectory) {
         Map<String, String> envVars = new HashMap<>();
 
         // 解密Token值
@@ -371,65 +378,77 @@ public class SessionServiceImpl implements ISessionService {
 
         // 为所有支持的CLI类型设置环境变量
         for (String type : provider.getTypes()) {
+            // 查找对应的配置
+            ProviderConfig config = findConfigByType(provider, type);
+            if (config == null) {
+                log.warn("Provider {} 的类型 {} 没有配置数据，跳过环境变量设置", provider.getId(), type);
+                continue;
+            }
+
+            Map<String, Object> configData = parseConfigData(config.getConfigData());
+
             switch (type.toLowerCase()) {
                 case "claude code":
                     envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("ANTHROPIC_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("ANTHROPIC_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("ANTHROPIC_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("ANTHROPIC_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", provider.getMaxTokens().toString());
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", configData.get("maxTokens").toString());
                     }
                     break;
 
                 case "codex":
+                    // ✅ 设置 CODEX_HOME 环境变量，指向项目的 .codex 目录
+                    // Codex CLI 会优先读取 CODEX_HOME 指定目录下的配置文件
+                    String codexHome = workingDirectory + "/.codex";
+                    envVars.put("CODEX_HOME", codexHome);
+                    log.debug("设置 CODEX_HOME 环境变量: {}", codexHome);
+
+                    // Codex 配置通过文件而不是环境变量
+                    // 将配置数据存储到环境变量中，前端Electron会读取并创建文件
+                    if (configData.get("configToml") != null) {
+                        envVars.put("CODEX_CONFIG_TOML", configData.get("configToml").toString());
+                    }
+                    if (configData.get("authJson") != null) {
+                        envVars.put("CODEX_AUTH_JSON", configData.get("authJson").toString());
+                    }
+                    // Token 也会通过环境变量传递给前端处理
                     envVars.put("CODEX_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("CODEX_BASE_URL", provider.getBaseUrl());
-                    }
-                    if (provider.getModelName() != null) {
-                        envVars.put("CODEX_MODEL", provider.getModelName());
-                    }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("CODEX_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
-                    }
-                    if (provider.getTemperature() != null) {
-                        envVars.put("CODEX_TEMPERATURE", provider.getTemperature().toString());
-                    }
                     break;
 
                 case "gemini":
                     envVars.put("GOOGLE_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("GOOGLE_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("GOOGLE_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("GEMINI_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("GEMINI_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("GEMINI_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("GEMINI_MAX_TOKENS", configData.get("maxTokens").toString());
                     }
-                    if (provider.getTemperature() != null) {
-                        envVars.put("GEMINI_TEMPERATURE", provider.getTemperature().toString());
+                    if (configData.get("temperature") != null) {
+                        envVars.put("GEMINI_TEMPERATURE", configData.get("temperature").toString());
                     }
                     break;
 
                 case "qoder":
                     envVars.put("QODER_API_KEY", tokenValue);
-                    if (provider.getBaseUrl() != null) {
-                        envVars.put("QODER_BASE_URL", provider.getBaseUrl());
+                    if (configData.get("baseUrl") != null) {
+                        envVars.put("QODER_BASE_URL", configData.get("baseUrl").toString());
                     }
-                    if (provider.getModelName() != null) {
-                        envVars.put("QODER_MODEL", provider.getModelName());
+                    if (configData.get("modelName") != null) {
+                        envVars.put("QODER_MODEL", configData.get("modelName").toString());
                     }
-                    if (provider.getMaxTokens() != null) {
-                        envVars.put("QODER_MAX_TOKENS", String.valueOf(provider.getMaxTokens()));
+                    if (configData.get("maxTokens") != null) {
+                        envVars.put("QODER_MAX_TOKENS", configData.get("maxTokens").toString());
                     }
-                    if (provider.getTemperature() != null) {
-                        envVars.put("QODER_TEMPERATURE", provider.getTemperature().toString());
+                    if (configData.get("temperature") != null) {
+                        envVars.put("QODER_TEMPERATURE", configData.get("temperature").toString());
                     }
                     break;
 
@@ -470,7 +489,7 @@ public class SessionServiceImpl implements ISessionService {
         // 获取Provider名称
         try {
             Long userId = UserContext.getUserId();
-            Provider provider = providerMapper.findById(session.getProviderId(), userId);
+            Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
             if (provider != null) {
                 dto.setProviderName(provider.getName());
             }
@@ -512,5 +531,52 @@ public class SessionServiceImpl implements ISessionService {
         dto.setProviderName(session.getProviderName());
 
         return dto;
+    }
+
+    /**
+     * 从Provider的configs中查找指定类型的配置
+     *
+     * @param provider Provider对象
+     * @param type CLI类型名称
+     * @return ProviderConfig对象，如果找不到则返回null
+     */
+    private ProviderConfig findConfigByType(Provider provider, String type) {
+        if (provider.getConfigs() == null || provider.getConfigs().isEmpty()) {
+            // 如果 Provider 对象中没有加载 configs，尝试从数据库查询
+            List<ProviderConfig> configs = providerConfigMapper.selectByProviderId(provider.getId());
+            if (configs == null || configs.isEmpty()) {
+                return null;
+            }
+            provider.setConfigs(configs);
+        }
+
+        // 根据类型名称查找对应的配置
+        // 注意：不再去掉空格，因为数据库中的枚举值可能包含空格
+        return provider.getConfigs().stream()
+                .filter(config -> {
+                    String configType = config.getCliType().getValue();
+                    return configType.equalsIgnoreCase(type);
+                })
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * 解析配置数据JSON字符串为Map
+     *
+     * @param configDataJson JSON字符串
+     * @return 配置数据Map
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseConfigData(String configDataJson) {
+        if (configDataJson == null || configDataJson.trim().isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(configDataJson, Map.class);
+        } catch (Exception e) {
+            log.error("解析配置数据失败: {}", configDataJson, e);
+            return new HashMap<>();
+        }
     }
 }

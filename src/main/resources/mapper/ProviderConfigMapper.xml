@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.ProviderConfigMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.ProviderConfig">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="provider_id" property="providerId" jdbcType="VARCHAR"/>
+        <result column="cli_type" property="cliType" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.CliTypeHandler"/>
+        <result column="config_data" property="configData" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, provider_id, cli_type, config_data, created_at, updated_at
+    </sql>
+
+    <!-- 插入配置 -->
+    <insert id="insert" parameterType="com.llmctl.entity.ProviderConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO provider_configs (
+            provider_id, cli_type, config_data, created_at, updated_at
+        ) VALUES (
+            #{providerId},
+            #{cliType, typeHandler=com.llmctl.config.CliTypeHandler},
+            #{configData},
+            NOW(),
+            NOW()
+        )
+    </insert>
+
+    <!-- 查询某个Provider的所有配置 -->
+    <select id="selectByProviderId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM provider_configs
+        WHERE provider_id = #{providerId}
+        ORDER BY cli_type
+    </select>
+
+    <!-- 查询某个Provider的特定CLI配置 -->
+    <select id="selectByProviderIdAndCliType" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM provider_configs
+        WHERE provider_id = #{providerId}
+          AND cli_type = #{cliType, typeHandler=com.llmctl.config.CliTypeHandler}
+    </select>
+
+    <!-- 根据配置ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM provider_configs
+        WHERE id = #{id}
+    </select>
+
+    <!-- 更新配置 -->
+    <update id="update" parameterType="com.llmctl.entity.ProviderConfig">
+        UPDATE provider_configs
+        SET config_data = #{configData},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除某个Provider的所有配置 -->
+    <delete id="deleteByProviderId">
+        DELETE FROM provider_configs
+        WHERE provider_id = #{providerId}
+    </delete>
+
+    <!-- 删除特定配置 -->
+    <delete id="deleteById">
+        DELETE FROM provider_configs
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 统计某个Provider的配置数量 -->
+    <select id="countByProviderId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM provider_configs
+        WHERE provider_id = #{providerId}
+    </select>
+
+</mapper>

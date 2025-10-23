@@ -1,0 +1,54 @@
+{
+  "provider": {
+    "title": "Provider 管理",
+    "createProvider": "创建 Provider",
+    "editProvider": "编辑 Provider",
+    "deleteProvider": "删除 Provider",
+    "deleteConfirm": "确认删除？",
+    "deleteHint": "删除后将无法恢复，请谨慎操作。",
+    "name": "名称",
+    "description": "描述",
+    "type": "类型",
+    "model": "模型",
+    "status": "状态",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+
+    "namePlaceholder": "请输入 Provider 名称，例如：OpenAI Official",
+    "descriptionPlaceholder": "请输入描述信息，例如：OpenAI 官方 API",
+    "nameRequired": "Provider 名称不能为空",
+    "nameTooLong": "Provider 名称长度不能超过100字符",
+    "descriptionTooLong": "描述长度不能超过1000字符",
+    "typeRequired": "请选择 Provider 类型",
+
+    "selectTypeFirst": "请先选择 Provider 类型",
+    "selectTypeHint": "根据选择的类型，将显示对应的配置字段",
+
+    "claudeConfig": "Claude Code 配置",
+    "baseUrlRequired": "Base URL 不能为空",
+    "baseUrlInvalid": "请输入有效的 URL 地址",
+    "modelRequired": "模型名称不能为空",
+    "maxTokensRequired": "Max Tokens 不能为空",
+    "temperatureRequired": "Temperature 不能为空",
+
+    "codexConfig": "Codex 配置",
+    "codexConfigHint": "配置说明",
+    "codexHint1": "每个 Codex 会话会创建独立的配置目录",
+    "codexHint2": "配置目录路径：.codex-configs/session-{sessionId}/",
+    "codexHint3": "auth.json 中的",
+    "codexHint4": "会被替换为实际的 Token",
+    "codexConfigRequired": "config.toml 配置不能为空",
+    "codexAuthRequired": "auth.json 配置不能为空",
+    "codexConfigTooltip": "Codex 配置文件内容，支持 TOML 格式",
+    "codexAuthTooltip": "认证配置模板，使用 ${API_KEY} 作为占位符",
+
+    "comingSoon": "即将推出",
+    "comingSoonDescription": "该功能正在开发中，敬请期待！",
+
+    "createSuccess": "创建成功",
+    "updateSuccess": "更新成功",
+    "deleteSuccess": "删除成功",
+    "submitFailed": "提交失败",
+    "deleteFailed": "删除失败"
+  }
+}

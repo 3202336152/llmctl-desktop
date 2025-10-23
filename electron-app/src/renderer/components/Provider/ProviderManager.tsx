@@ -16,7 +16,6 @@ import {
   App as AntApp,
   Row,
   Col,
-  Checkbox,
 } from 'antd';
 import {
   PlusOutlined,
@@ -48,6 +47,7 @@ const ProviderManager: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]); // 监听选中的类型
 
   // 筛选和搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -61,11 +61,10 @@ const ProviderManager: React.FC = () => {
   // 筛选后的数据
   const filteredProviders = useMemo(() => {
     return providers.filter((provider) => {
-      // 搜索关键词筛选（名称、描述、模型名称）
+      // 搜索关键词筛选（名称、描述）
       const matchesSearch = !searchKeyword ||
         provider.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        provider.description?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        provider.modelName?.toLowerCase().includes(searchKeyword.toLowerCase());
+        provider.description?.toLowerCase().includes(searchKeyword.toLowerCase());
 
       // 类型筛选（检查 types 数组是否包含筛选类型）
       const matchesType = !typeFilter || provider.types.includes(typeFilter as any);
@@ -87,21 +86,51 @@ const ProviderManager: React.FC = () => {
   const handleCreateProvider = () => {
     setEditingProvider(null);
     form.resetFields();
+    setSelectedTypes([]);
     setModalVisible(true);
   };
 
   const handleEditProvider = (provider: Provider) => {
     setEditingProvider(provider);
-    form.setFieldsValue({
+    setSelectedTypes(provider.types || []);
+
+    // 从 configs 中提取各个 CLI 类型的配置
+    const formValues: any = {
       name: provider.name,
       description: provider.description,
       types: provider.types,
-      baseUrl: provider.baseUrl,
-      modelName: provider.modelName,
-      maxTokens: provider.maxTokens,
-      temperature: provider.temperature,
       isActive: provider.isActive,
-    });
+    };
+
+    // 提取各个 CLI 类型的配置数据
+    if (provider.configs) {
+      provider.configs.forEach(config => {
+        const cliType = config.cliType;
+        const configData = config.configData || {};
+
+        if (cliType === 'claude code') {
+          formValues.claudeBaseUrl = configData.baseUrl;
+          formValues.claudeModelName = configData.modelName;
+          formValues.claudeMaxTokens = configData.maxTokens;
+          formValues.claudeTemperature = configData.temperature;
+        } else if (cliType === 'codex') {
+          // 只加载 config.toml，auth.json 由系统自动生成
+          formValues.codexConfigToml = configData.configToml;
+        } else if (cliType === 'gemini') {
+          formValues.geminiBaseUrl = configData.baseUrl;
+          formValues.geminiModelName = configData.modelName;
+          formValues.geminiMaxTokens = configData.maxTokens;
+          formValues.geminiTemperature = configData.temperature;
+        } else if (cliType === 'qoder') {
+          formValues.qoderBaseUrl = configData.baseUrl;
+          formValues.qoderModelName = configData.modelName;
+          formValues.qoderMaxTokens = configData.maxTokens;
+          formValues.qoderTemperature = configData.temperature;
+        }
+      });
+    }
+
+    form.setFieldsValue(formValues);
     setModalVisible(true);
   };
 
@@ -133,31 +162,67 @@ const ProviderManager: React.FC = () => {
       setSubmitting(true);
       const values = await form.validateFields();
 
+      // 构造请求对象
+      const requestData: any = {
+        name: values.name,
+        description: values.description,
+        types: values.types,
+      };
+
+      // 根据选中的类型添加对应的配置
+      if (values.types.includes('claude code')) {
+        requestData.claudeConfig = {
+          baseUrl: values.claudeBaseUrl || '',
+          modelName: values.claudeModelName || '',
+          maxTokens: values.claudeMaxTokens,
+          temperature: values.claudeTemperature,
+        };
+      }
+
+      if (values.types.includes('codex')) {
+        // 自动生成 auth.json 默认结构
+        const authJson = JSON.stringify({
+          "OPENAI_API_KEY": ""
+        }, null, 2);
+
+        requestData.codexConfig = {
+          configToml: values.codexConfigToml || '',
+          authJson: authJson,
+        };
+      }
+
+      if (values.types.includes('gemini')) {
+        requestData.geminiConfig = {
+          baseUrl: values.geminiBaseUrl || '',
+          modelName: values.geminiModelName || '',
+          maxTokens: values.geminiMaxTokens,
+          temperature: values.geminiTemperature,
+        };
+      }
+
+      if (values.types.includes('qoder')) {
+        requestData.qoderConfig = {
+          baseUrl: values.qoderBaseUrl || '',
+          modelName: values.qoderModelName || '',
+          maxTokens: values.qoderMaxTokens,
+          temperature: values.qoderTemperature,
+        };
+      }
+
       if (editingProvider) {
         // 更新Provider
         const updateRequest: UpdateProviderRequest = {
-          name: values.name,
-          description: values.description,
-          types: values.types,
-          baseUrl: values.baseUrl,
-          modelName: values.modelName,
-          maxTokens: values.maxTokens,
-          temperature: values.temperature,
+          ...requestData,
           isActive: values.isActive,
         };
         await dispatch(updateProvider({ id: editingProvider.id, request: updateRequest })).unwrap();
         message.success('Provider更新成功');
       } else {
-        // 创建Provider
+        // 创建Provider（包含Token）
         const createRequest: CreateProviderRequest = {
-          name: values.name,
-          description: values.description,
-          types: values.types,
-          baseUrl: values.baseUrl,
-          modelName: values.modelName,
+          ...requestData,
           token: values.token,
-          maxTokens: values.maxTokens,
-          temperature: values.temperature,
+          tokenAlias: values.tokenAlias,
         };
         await dispatch(createProvider(createRequest)).unwrap();
         message.success('Provider创建成功');
@@ -221,17 +286,6 @@ const ProviderManager: React.FC = () => {
       render: (description: string) => (
         <Tooltip title={description}>
           <span>{description && description.length > 40 ? `${description.substring(0, 40)}...` : description || '-'}</span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: t('providers.baseUrl'),
-      dataIndex: 'baseUrl',
-      key: 'baseUrl',
-      align: 'center' as const,
-      render: (url: string) => (
-        <Tooltip title={url}>
-          <span>{url.length > 30 ? `${url.substring(0, 30)}...` : url}</span>
         </Tooltip>
       ),
     },
@@ -352,7 +406,7 @@ const ProviderManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         confirmLoading={submitting}
-        width={600}
+        width={700}
         destroyOnHidden
       >
         <Form
@@ -361,6 +415,7 @@ const ProviderManager: React.FC = () => {
           initialValues={{
             isActive: true,
           }}
+          preserve={false}
         >
           <Form.Item
             label={t('providers.name')}
@@ -374,145 +429,147 @@ const ProviderManager: React.FC = () => {
             <TextArea rows={3} placeholder={t('providers.descriptionPlaceholder')} />
           </Form.Item>
 
+          {/* Token 输入框（创建时必填） */}
+          {!editingProvider && (
+            <>
+              <Form.Item
+                label="API Token"
+                name="token"
+                rules={[{ required: true, message: '请输入API Token' }]}
+              >
+                <Input.Password placeholder="请输入API Token" />
+              </Form.Item>
+
+              <Form.Item label="Token 别名" name="tokenAlias">
+                <Input placeholder="可选，用于标识此Token" />
+              </Form.Item>
+            </>
+          )}
+
           <Form.Item
             label={t('providers.type')}
             name="types"
             rules={[{ required: true, message: '请至少选择一个Provider类型' }]}
           >
-            <Checkbox.Group style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                <Row gutter={[16, 16]} style={{ maxWidth: '380px', margin: '0 auto' }}>
-                  <Col span={12}>
-                    <div
-                      style={{
-                        padding: '10px 16px',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '6px',
-                        transition: 'all 0.3s',
-                        cursor: 'pointer',
-                        backgroundColor: '#fafafa',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '42px',
-                      }}
-                      className="provider-type-item"
-                    >
-                      <Checkbox value="claude code" style={{ fontWeight: 500, margin: 0 }}>
-                        Claude Code
-                      </Checkbox>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div
-                      style={{
-                        padding: '10px 16px',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '6px',
-                        transition: 'all 0.3s',
-                        cursor: 'pointer',
-                        backgroundColor: '#fafafa',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '42px',
-                      }}
-                      className="provider-type-item"
-                    >
-                      <Checkbox value="codex" style={{ fontWeight: 500, margin: 0 }}>
-                        Codex
-                      </Checkbox>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div
-                      style={{
-                        padding: '10px 16px',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '6px',
-                        transition: 'all 0.3s',
-                        cursor: 'pointer',
-                        backgroundColor: '#fafafa',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '42px',
-                      }}
-                      className="provider-type-item"
-                    >
-                      <Checkbox value="gemini" style={{ fontWeight: 500, margin: 0 }}>
-                        Google Gemini
-                      </Checkbox>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div
-                      style={{
-                        padding: '10px 16px',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '6px',
-                        transition: 'all 0.3s',
-                        cursor: 'pointer',
-                        backgroundColor: '#fafafa',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '42px',
-                      }}
-                      className="provider-type-item"
-                    >
-                      <Checkbox value="qoder" style={{ fontWeight: 500, margin: 0 }}>
-                        Qoder
-                      </Checkbox>
-                    </div>
-                  </Col>
-                </Row>
+            <Select
+              mode="multiple"
+              placeholder="请选择支持的CLI类型（可多选）"
+              style={{ width: '100%' }}
+              onChange={(values: string[]) => setSelectedTypes(values)}
+              options={[
+                {
+                  label: 'Claude Code',
+                  value: 'claude code',
+                },
+                {
+                  label: 'Codex',
+                  value: 'codex',
+                },
+                {
+                  label: 'Google Gemini（暂未适配）',
+                  value: 'gemini',
+                  disabled: true,
+                },
+                {
+                  label: 'Qoder（暂未适配）',
+                  value: 'qoder',
+                  disabled: true,
+                },
+              ]}
+            />
+          </Form.Item>
+
+          {/* Claude Code 配置 */}
+          {selectedTypes.includes('claude code') && (
+            <>
+              <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 600, color: '#1890ff' }}>
+                Claude Code 配置
               </div>
-            </Checkbox.Group>
-          </Form.Item>
-
-          <Form.Item
-            label={t('providers.baseUrl')}
-            name="baseUrl"
-            rules={[{ required: true, message: t('providers.baseUrlRequired') }]}
-          >
-            <Input placeholder={t('providers.baseUrlPlaceholder')} />
-          </Form.Item>
-
-          <Form.Item label={t('providers.model')} name="modelName">
-            <Input placeholder={t('providers.modelPlaceholder')} />
-          </Form.Item>
-
-          {!editingProvider && (
-            <Form.Item
-              label="Token"
-              name="token"
-              rules={[{ required: true, message: t('providers.tokenPlaceholder') }]}
-            >
-              <Input.Password placeholder={t('providers.tokenPlaceholder')} />
-            </Form.Item>
+              <Form.Item
+                label="Base URL"
+                name="claudeBaseUrl"
+                rules={[{ required: true, message: '请输入Claude Code的Base URL' }]}
+              >
+                <Input placeholder="请输入API Base URL" />
+              </Form.Item>
+              <Form.Item label="Model Name" name="claudeModelName">
+                <Input placeholder="请输入模型名称" />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Max Tokens" name="claudeMaxTokens">
+                    <InputNumber min={1} max={100000} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Temperature" name="claudeTemperature">
+                    <InputNumber min={0} max={2} step={0.1} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
           )}
 
-          <Form.Item label={t('providers.maxTokens')} name="maxTokens">
-            <InputNumber
-              min={1}
-              max={100000}
-              placeholder={t('providers.maxTokens')}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
+          {/* Codex 配置 */}
+          {selectedTypes.includes('codex') && (
+            <>
+              <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 600, color: '#52c41a' }}>
+                Codex 配置
+              </div>
+              <Form.Item
+                label="config.toml 文件内容"
+                name="codexConfigToml"
+                rules={[{ required: true, message: '请输入 config.toml 文件内容' }]}
+              >
+                <TextArea
+                  rows={10}
+                  placeholder={`示例内容：
+model = "gpt-5-codex"
+model_provider = "joker"
+preferred_auth_method = "apikey"
 
-          <Form.Item label={t('providers.temperature')} name="temperature">
-            <InputNumber
-              min={0}
-              max={2}
-              step={0.1}
-              placeholder={t('providers.temperature')}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
+[model_providers.joker]
+name = "Any Router"
+base_url = "https://joker.top/v1"
+wire_api = "responses"`}
+                />
+              </Form.Item>
+              <div style={{ padding: '8px 12px', background: '#f0f9ff', border: '1px solid #91d5ff', borderRadius: '4px', color: '#0958d9', marginBottom: '16px' }}>
+                💡 <strong>说明：</strong>系统将自动生成 auth.json 文件，并使用关联的 API Token。
+              </div>
+            </>
+          )}
 
-          <Form.Item label={t('providers.status')} name="isActive" valuePropName="checked">
+          {/* Gemini 配置 */}
+          {selectedTypes.includes('gemini') && (
+            <>
+              <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 600, color: '#722ed1' }}>
+                Google Gemini 配置
+              </div>
+              <div style={{ padding: '16px 12px', background: '#fafafa', border: '1px solid #d9d9d9', borderRadius: '4px', color: '#8c8c8c', textAlign: 'center', marginBottom: '16px' }}>
+                🚧 <strong>暂未适配</strong>：该 CLI 类型正在开发中，敬请期待后续版本支持
+              </div>
+            </>
+          )}
+
+          {/* Qoder 配置 */}
+          {selectedTypes.includes('qoder') && (
+            <>
+              <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 600, color: '#fa8c16' }}>
+                Qoder 配置
+              </div>
+              <div style={{ padding: '16px 12px', background: '#fafafa', border: '1px solid #d9d9d9', borderRadius: '4px', color: '#8c8c8c', textAlign: 'center', marginBottom: '16px' }}>
+                🚧 <strong>暂未适配</strong>：该 CLI 类型正在开发中，敬请期待后续版本支持
+              </div>
+            </>
+          )}
+
+          <Form.Item
+            label={t('providers.status')}
+            name="isActive"
+            valuePropName="checked"
+            style={{ marginTop: 16 }}
+          >
             <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
           </Form.Item>
         </Form>

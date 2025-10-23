@@ -12,10 +12,6 @@
         <result column="description" property="description" jdbcType="VARCHAR"/>
         <result column="types" property="types" jdbcType="VARCHAR"
                 typeHandler="com.llmctl.config.JsonListTypeHandler"/>
-        <result column="base_url" property="baseUrl" jdbcType="VARCHAR"/>
-        <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
-        <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
-        <result column="temperature" property="temperature" jdbcType="DECIMAL"/>
         <result column="extra_headers" property="extraHeaders" jdbcType="VARCHAR"/>
         <result column="token_strategy_type" property="tokenStrategyType"
                 typeHandler="com.llmctl.config.TokenStrategyTypeHandler"/>
@@ -25,11 +21,38 @@
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
+    <!-- 结果映射（带配置） -->
+    <resultMap id="ProviderWithConfigsMap" type="com.llmctl.entity.Provider">
+        <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="types" property="types" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonListTypeHandler"/>
+        <result column="extra_headers" property="extraHeaders" jdbcType="VARCHAR"/>
+        <result column="token_strategy_type" property="tokenStrategyType"
+                typeHandler="com.llmctl.config.TokenStrategyTypeHandler"/>
+        <result column="token_fallback_on_error" property="tokenFallbackOnError" jdbcType="BOOLEAN"/>
+        <result column="is_active" property="isActive" jdbcType="BOOLEAN"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+
+        <!-- 关联 configs -->
+        <collection property="configs" ofType="com.llmctl.entity.ProviderConfig">
+            <id column="config_id" property="id" jdbcType="BIGINT"/>
+            <result column="config_provider_id" property="providerId" jdbcType="VARCHAR"/>
+            <result column="config_cli_type" property="cliType" jdbcType="VARCHAR"
+                    typeHandler="com.llmctl.config.CliTypeHandler"/>
+            <result column="config_data" property="configData" jdbcType="VARCHAR"/>
+            <result column="config_created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+            <result column="config_updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        </collection>
+    </resultMap>
+
     <!-- 基础列 -->
     <sql id="Base_Column_List">
-        id, user_id, name, description, types, base_url, model_name, max_tokens,
-        temperature, extra_headers, token_strategy_type, token_fallback_on_error, is_active,
-        created_at, updated_at
+        id, user_id, name, description, types, extra_headers,
+        token_strategy_type, token_fallback_on_error, is_active, created_at, updated_at
     </sql>
 
     <!-- 根据ID和用户ID查询Provider -->
@@ -69,15 +92,13 @@
     <!-- 插入Provider -->
     <insert id="insert" parameterType="com.llmctl.entity.Provider">
         INSERT INTO providers (
-            id, user_id, name, description, types, base_url, model_name,
-            max_tokens, temperature, extra_headers,
+            id, user_id, name, description, types, extra_headers,
             token_strategy_type, token_fallback_on_error, is_active, created_at, updated_at
         )
         VALUES (
             #{id}, #{userId}, #{name}, #{description},
             #{types, typeHandler=com.llmctl.config.JsonListTypeHandler},
-            #{baseUrl}, #{modelName},
-            #{maxTokens}, #{temperature}, #{extraHeaders},
+            #{extraHeaders},
             #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
             #{tokenFallbackOnError}, #{isActive}, #{createdAt}, #{updatedAt}
         )
@@ -90,10 +111,6 @@
             name = #{name},
             description = #{description},
             types = #{types, typeHandler=com.llmctl.config.JsonListTypeHandler},
-            base_url = #{baseUrl},
-            model_name = #{modelName},
-            max_tokens = #{maxTokens},
-            temperature = #{temperature},
             extra_headers = #{extraHeaders},
             token_strategy_type = #{tokenStrategyType, typeHandler=com.llmctl.config.TokenStrategyTypeHandler},
             token_fallback_on_error = #{tokenFallbackOnError},
@@ -134,6 +151,42 @@
         SELECT COUNT(*)
         FROM providers
         WHERE JSON_CONTAINS(types, JSON_QUOTE(#{type})) AND user_id = #{userId}
+    </select>
+
+    <!-- 根据ID和用户ID查询Provider（带配置） -->
+    <select id="findByIdWithConfigs" resultMap="ProviderWithConfigsMap">
+        SELECT
+            p.id, p.user_id, p.name, p.description, p.types, p.extra_headers,
+            p.token_strategy_type, p.token_fallback_on_error, p.is_active,
+            p.created_at, p.updated_at,
+            pc.id AS config_id,
+            pc.provider_id AS config_provider_id,
+            pc.cli_type AS config_cli_type,
+            pc.config_data,
+            pc.created_at AS config_created_at,
+            pc.updated_at AS config_updated_at
+        FROM providers p
+        LEFT JOIN provider_configs pc ON p.id = pc.provider_id
+        WHERE p.id = #{id} AND p.user_id = #{userId}
+        ORDER BY pc.cli_type
+    </select>
+
+    <!-- 查询指定用户的所有Provider（带配置） -->
+    <select id="findAllWithConfigs" resultMap="ProviderWithConfigsMap">
+        SELECT
+            p.id, p.user_id, p.name, p.description, p.types, p.extra_headers,
+            p.token_strategy_type, p.token_fallback_on_error, p.is_active,
+            p.created_at, p.updated_at,
+            pc.id AS config_id,
+            pc.provider_id AS config_provider_id,
+            pc.cli_type AS config_cli_type,
+            pc.config_data,
+            pc.created_at AS config_created_at,
+            pc.updated_at AS config_updated_at
+        FROM providers p
+        LEFT JOIN provider_configs pc ON p.id = pc.provider_id
+        WHERE p.user_id = #{userId}
+        ORDER BY p.created_at DESC, pc.cli_type
     </select>
 
 </mapper>

@@ -3,15 +3,15 @@ package com.llmctl.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 更新Provider请求DTO
+ * 更新Provider请求DTO（配置分离版）
  *
  * @author Liu Yifan
- * @version 2.1.6
- * @since 2025-09-28
+ * @version 2.3.0
+ * @since 2025-01-15
  */
 @Data
 public class UpdateProviderRequest {
@@ -29,36 +29,38 @@ public class UpdateProviderRequest {
     private String description;
 
     /**
-     * Provider支持的CLI类型列表（可选，用于编辑）
+     * Provider支持的CLI类型列表（多选）
+     * 示例：["claude code", "codex"]
      */
     @Size(min = 1, message = "至少选择一个Provider类型")
     private List<@Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
                           message = "Provider类型必须是：claude code, codex, gemini, qoder 之一") String> types;
 
-    /**
-     * API基础URL
-     */
-    @Size(max = 500, message = "Base URL长度不能超过500字符")
-    private String baseUrl;
+    // ========== CLI 配置（Map 结构） ==========
 
     /**
-     * 模型名称
+     * Claude Code 配置
+     * 示例：{"baseUrl": "...", "modelName": "...", "maxTokens": 8192, "temperature": 0.7}
      */
-    @Size(max = 100, message = "模型名称长度不能超过100字符")
-    private String modelName;
+    private Map<String, Object> claudeConfig;
 
     /**
-     * 最大Token数
+     * Codex 配置
+     * 示例：{"configToml": "...", "authTemplate": "..."}
      */
-    @Min(value = 1, message = "最大Token数必须大于0")
-    private Integer maxTokens;
+    private Map<String, Object> codexConfig;
 
     /**
-     * 温度参数
+     * Gemini 配置（未来）
      */
-    @DecimalMin(value = "0.0", message = "温度参数必须大于等于0.0")
-    @DecimalMax(value = "1.0", message = "温度参数必须小于等于2.0")
-    private BigDecimal temperature;
+    private Map<String, Object> geminiConfig;
+
+    /**
+     * Qoder 配置（未来）
+     */
+    private Map<String, Object> qoderConfig;
+
+    // ========== 通用字段 ==========
 
     /**
      * 额外HTTP头 (JSON格式)

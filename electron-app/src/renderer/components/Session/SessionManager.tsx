@@ -548,10 +548,15 @@ const SessionManager: React.FC = () => {
         const displayName = getSessionDisplayName(record);
         return (
           <Tooltip title={`完整ID: ${text}\n命令: ${record.command || '-'}`} placement="topLeft">
-            <Space>
-              <DesktopOutlined />
-              <span style={{ color: '#1890ff', fontWeight: 500 }}>{displayName}</span>
-            </Space>
+            <div
+              onDoubleClick={() => handleOpenTerminal(record.id)}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
+              <Space>
+                <DesktopOutlined />
+                <span style={{ color: '#1890ff', fontWeight: 500 }}>{displayName}</span>
+              </Space>
+            </div>
           </Tooltip>
         );
       },
@@ -961,9 +966,6 @@ const SessionManager: React.FC = () => {
           dataSource={filteredSessions}
           rowKey="id"
           loading={loading}
-          onRow={(record: Session) => ({
-            onDoubleClick: () => handleOpenTerminal(record.id),
-          })}
           scroll={{ x: 'max-content' }}
           pagination={{
             pageSize: 10,

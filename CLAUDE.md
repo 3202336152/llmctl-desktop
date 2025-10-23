@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构,当前版本为 **v2.1.7**。
+LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。项目采用 Electron + Spring Boot 架构，已完成从 CLI 工具到桌面应用的重构,当前版本为 **v2.2.0**。
 
 ## 开发环境要求
 
@@ -390,7 +390,68 @@ FLUSH PRIVILEGES;
 - `README.md` - 项目主页文档
 - `CHANGELOG.md` - 版本更新记录
 
-## 最新版本特性 (v2.1.7)
+## 最新版本特性 (v2.2.0)
+
+### 🏗️ Provider 配置分离架构 - 重大架构升级
+- **数据库表结构变更**：
+  - `providers` 表简化：只保留核心字段（id、name、description、types、策略配置等）
+  - 新增 `provider_configs` 表：存储 CLI 专用配置，支持一对多关系
+  - 使用 JSON 字段存储配置数据，灵活支持不同 CLI 的配置结构
+- **后端实现**：
+  - 新增 `ProviderConfig.java` 实体类，支持 CliType 枚举（claude code、codex、gemini、qoder）
+  - 新增 `CliTypeHandler.java` 自定义 MyBatis TypeHandler，处理带空格的枚举值
+  - Service 层使用 `@Transactional` 处理 Provider 和配置的级联创建/更新
+  - 优化查询性能：使用 JOIN 查询一次性获取 Provider 及其配置
+- **前端实现**：
+  - 更新 TypeScript 类型定义，添加 `ProviderConfig` 接口
+  - 重写 `ProviderManager.tsx` 表单提交逻辑，动态构建配置数据
+  - 优化表单编辑逻辑，从 `configs` 数组中提取对应配置数据回填
+  - 表格显示优化，展示所有配置的 CLI 类型
+
+### 🎯 Codex 配置优化
+- **简化配置输入**：前端只需输入 config.toml 内容
+- **自动生成模板**：后端自动生成 auth.json 模板并注入 API Token
+- **环境变量支持**：添加 `CODEX_HOME` 环境变量，指向项目 `.codex` 目录
+- **修复配置读取问题**：Codex CLI 使用项目专用配置，而不是系统全局配置
+
+### 🐛 Bug修复
+- **修复 Redux sessionId 不匹配导致的 404 错误**
+  - 问题：后端创建新会话 `session_72d985f9b3e1402d9a62c4df2a98dd11`，前端却尝试访问旧的 `session_9cc488ff590b4ab9bb3777199af1d134`
+  - 根本原因：Redux store 中的 `createdTerminalSessions` 数组包含过期的 sessionId
+  - 解决方案：修改 `sessionSlice.ts` 的 `setSessions` action，添加自动清理逻辑
+  - 涉及文件：`sessionSlice.ts` (33-66行)、`TerminalComponent.tsx` (52-60行)、`SessionServiceImpl.java` (334-353行)
+- **修复 Codex CLI 读取配置路径问题**
+  - 问题：Codex CLI 默认读取 `~/.codex/config.toml`，忽略项目目录配置
+  - 解决方案：添加 `CODEX_HOME` 环境变量，指向项目 `.codex` 目录
+  - 修复效果：每个项目使用独立的 Codex 配置，互不干扰
+- **修复 Provider 编辑时 Claude Code 配置不显示**
+  - 问题：编辑 Provider 时，Codex 配置可以正常回填，但 Claude Code 配置无法显示
+  - 根本原因：TypeScript `CliConfig` 接口的 `cliType` 类型定义错误（使用了 `'claude'` 而不是 `'claude code'`）
+  - 解决方案：修正类型定义为 `'claude code' | 'codex' | 'gemini' | 'qoder'`
+
+### 🎨 UI/UX 优化
+- **Provider 表单优化**：
+  - 类型选择改为 Select 下拉多选框，替代原来的 Checkbox.Group
+  - 提升用户体验，多选操作更流畅
+  - 根据选中类型动态显示对应的配置表单
+- **Gemini 和 Qoder 配置禁用**：在类型选择中添加 disabled 状态，显示"暂未适配"提示
+
+### 🏗️ 架构优势
+- **扩展性**：新增 CLI 类型无需 ALTER TABLE，只需插入新配置记录
+- **表结构简化**：providers 核心表从 18+ 字段减少到 8 个字段
+- **职责清晰**：providers 表管理核心信息，provider_configs 表管理 CLI 专用配置
+- **配置灵活性**：JSON 字段支持任意结构的配置数据
+- **设计原则**：遵循单一职责、开闭原则、依赖倒置原则
+
+### ⚠️ 破坏性变更
+- **数据库结构变更**：必须执行迁移脚本 `migration_v2.3.0_split_configs.sql`
+- **API 接口变更**：Provider 创建/更新接口的请求体结构变化
+- **前端类型定义变更**：Provider 接口新增 `configs` 字段，移除 CLI 专用字段
+
+### 📖 文档更新
+- 新增完整的架构文档：`docs/provider-config-separation-guide.md`
+
+## 历史版本特性 (v2.1.7)
 
 ### 🎨 暗色主题功能
 - **暗色主题配置**：

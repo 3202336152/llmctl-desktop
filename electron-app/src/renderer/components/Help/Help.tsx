@@ -99,13 +99,8 @@ const Help: React.FC = () => {
           <Title level={5}>首次登录</Title>
           <Paragraph>
             1. 应用启动后显示登录页面<br />
-            2. 使用默认管理员账户登录：
-            <ul>
-              <li>用户名：<Text code>admin</Text></li>
-              <li>密码：<Text code>admin123</Text></li>
-            </ul>
-            3. 或点击"注册"标签创建新账户（需要邮箱验证）<br />
-            4. 登录成功后进入主应用
+            2. 或点击"注册"标签创建新账户（需要邮箱验证）<br />
+            3. 登录成功后进入主应用
           </Paragraph>
 
           <Title level={5}>邮箱验证注册</Title>
@@ -275,6 +270,27 @@ const Help: React.FC = () => {
             3. <Text strong>测试连接：</Text>点击 "Test" 按钮验证配置是否正确<br />
             4. <Text strong>启用/禁用：</Text>通过开关控制 Provider 的启用状态
           </Paragraph>
+
+          <Alert
+            message="✨ v2.2.0 新特性：Provider 配置分离架构"
+            description={
+              <div>
+                <Paragraph>
+                  全新的 Provider 配置架构，提升扩展性和维护性：
+                </Paragraph>
+                <ul>
+                  <li>🏗️ <Text strong>一对多关系</Text> - 一个 Provider 可以支持多个 CLI 工具（Claude Code、Codex、Gemini、Qoder）</li>
+                  <li>🎯 <Text strong>动态配置表单</Text> - 根据选中的 CLI 类型动态显示对应的配置项</li>
+                  <li>📦 <Text strong>配置独立存储</Text> - CLI 专用配置与核心信息分离，灵活扩展</li>
+                  <li>🔧 <Text strong>Codex 配置优化</Text> - 只需输入 config.toml，自动生成 auth.json 并注入 Token</li>
+                  <li>🌍 <Text strong>项目专用配置</Text> - 通过 CODEX_HOME 环境变量支持项目独立配置，互不干扰</li>
+                </ul>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
 
           <Title level={5}>常见问题</Title>
           <Paragraph>
@@ -546,11 +562,13 @@ const Help: React.FC = () => {
             <li>👤 用户资料管理 - 个人信息编辑、头像上传、密码修改、邮箱绑定</li>
             <li>🔔 实时通知系统 - SSE推送、通知中心、优先级管理</li>
             <li>🎯 多 Provider 支持 - Claude Code、Codex、Gemini、Qoder 等</li>
+            <li>🏗️ <Text strong>Provider配置分离架构 (v2.2.0)</Text> - 一对多关系、动态配置表单、项目专用配置</li>
             <li>🔑 智能 Token 管理 - 多种轮询策略，自动故障切换，手动切换Token</li>
             <li>🛡️ 企业级加密 - AES-256-GCM加密存储Token</li>
             <li>💻 强大终端功能 - 多标签页、全屏模式、字体缩放、快捷键、外部终端</li>
             <li>⌨️ 终端快捷键 - Ctrl+1/2/3切换标签、Ctrl+W关闭、右键粘贴</li>
             <li>🌐 国际化支持 - 中英文双语界面</li>
+            <li>🎨 主题定制 - 亮色/暗色主题切换</li>
             <li>📊 会话管理 - 实时监控、状态管理、自动重启</li>
             <li>🔧 配置管理 - 导入导出、备份恢复</li>
             <li>📖 帮助中心 - 完整的应用内帮助文档</li>

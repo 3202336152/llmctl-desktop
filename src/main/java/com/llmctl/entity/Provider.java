@@ -3,7 +3,6 @@ package com.llmctl.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,29 +39,9 @@ public class Provider {
 
     /**
      * Provider支持的CLI类型列表: claude code, codex, gemini, qoder
-     * 一个Provider可以支持多个CLI类型，通过不同的环境变量来区分
+     * 一个Provider可以支持多个CLI类型（多选）
      */
     private List<String> types;
-
-    /**
-     * API基础URL
-     */
-    private String baseUrl;
-
-    /**
-     * 模型名称
-     */
-    private String modelName;
-
-    /**
-     * 最大Token数
-     */
-    private Integer maxTokens;
-
-    /**
-     * 温度参数 (0.0-1.0)
-     */
-    private BigDecimal temperature;
 
     /**
      * 额外HTTP头 (JSON格式)
@@ -98,6 +77,11 @@ public class Provider {
      * 关联的Token列表 (一对多关系)
      */
     private List<Token> tokens;
+
+    /**
+     * 关联的CLI配置列表 (一对多关系)
+     */
+    private List<ProviderConfig> configs;
 
     /**
      * Token轮询策略枚举

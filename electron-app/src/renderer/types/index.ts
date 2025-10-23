@@ -12,36 +12,49 @@ export interface Provider {
   name: string;
   description?: string;
   types: Array<'claude code' | 'codex' | 'gemini' | 'qoder'>;
-  baseUrl: string;
-  modelName: string;
-  maxTokens?: number;
-  temperature?: number;
+  configs?: CliConfig[];
+  extraHeaders?: string;
+  tokenStrategy?: TokenStrategy;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   tokens?: Token[];
-  tokenStrategy?: TokenStrategy;
+}
+
+export interface CliConfig {
+  id: number;
+  cliType: 'claude code' | 'codex' | 'gemini' | 'qoder';
+  configData: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateProviderRequest {
   name: string;
   description?: string;
   types: string[];
-  baseUrl?: string;
-  modelName?: string;
-  token: string;
-  maxTokens?: number;
-  temperature?: number;
+  claudeConfig?: Record<string, any>;
+  codexConfig?: Record<string, any>;
+  geminiConfig?: Record<string, any>;
+  qoderConfig?: Record<string, any>;
+  extraHeaders?: string;
+  tokenStrategyType?: string;
+  tokenFallbackOnError?: boolean;
+  token: string;  // API Token (必填)
+  tokenAlias?: string;  // Token 别名 (可选)
 }
 
 export interface UpdateProviderRequest {
   name?: string;
   description?: string;
   types?: string[];
-  baseUrl?: string;
-  modelName?: string;
-  maxTokens?: number;
-  temperature?: number;
+  claudeConfig?: Record<string, any>;
+  codexConfig?: Record<string, any>;
+  geminiConfig?: Record<string, any>;
+  qoderConfig?: Record<string, any>;
+  extraHeaders?: string;
+  tokenStrategyType?: string;
+  tokenFallbackOnError?: boolean;
   isActive?: boolean;
 }
 

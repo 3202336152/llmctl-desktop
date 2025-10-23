@@ -1,0 +1,58 @@
+{
+  "provider": {
+    "title": "Provider 管理",
+    "createProvider": "创建 Provider",
+    "editProvider": "编辑 Provider",
+    "deleteProvider": "删除 Provider",
+    "deleteConfirm": "确认删除？",
+    "deleteHint": "删除后将无法恢复，请谨慎操作。",
+
+    "name": "名称",
+    "description": "描述",
+    "types": "类型（多选）",
+    "type": "类型",
+    "model": "模型",
+    "status": "状态",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "configuration": "配置",
+
+    "namePlaceholder": "请输入 Provider 名称，例如：AnyRouter",
+    "descriptionPlaceholder": "请输入描述信息，例如：通用 API 路由器",
+    "nameRequired": "Provider 名称不能为空",
+    "nameTooLong": "Provider 名称长度不能超过100字符",
+    "descriptionTooLong": "描述长度不能超过1000字符",
+
+    "typesRequired": "请至少选择一个类型",
+    "atLeastOneType": "至少选择一个 Provider 类型",
+    "typesHint": "可以同时选择多个类型，Token 将在所有类型间共享",
+
+    "claudeConfigHint": "Claude Code 环境变量配置（通过 ANTHROPIC_API_KEY 等传递）",
+    "baseUrlRequired": "Base URL 不能为空",
+    "baseUrlInvalid": "请输入有效的 URL 地址",
+    "modelRequired": "模型名称不能为空",
+    "maxTokensRequired": "Max Tokens 不能为空",
+    "temperatureRequired": "Temperature 不能为空",
+    "claudeConfigRequired": "选中 Claude Code 时，必须填写 Base URL 和模型名称",
+
+    "codexConfigHint": "Codex 配置文件内容（将写入 config.toml 和 auth.json）",
+    "codexHint1": "每个 Codex 会话会创建独立的配置目录：.codex-configs/session-{sessionId}/",
+    "codexHint2": "config.toml 内容将完整保存，请直接粘贴配置文件",
+    "codexConfigRequired": "config.toml 配置不能为空",
+    "codexAuthRequired": "auth.json 配置不能为空",
+    "codexConfigTooltip": "Codex 配置文件内容（TOML 格式），直接粘贴即可",
+    "codexAuthTooltip": "认证配置模板，使用 ${API_KEY} 作为占位符",
+    "codexConfigRequiredError": "选中 Codex 时，必须填写 config.toml 和 auth.json",
+
+    "tokenShared": "Token 共享",
+    "tokenSharedDescription": "所有选中的类型将使用同一组 Token（在 API Keys 页面管理）。创建会话时，系统会自动根据类型选择合适的 Token。",
+
+    "comingSoon": "即将推出",
+
+    "createSuccess": "创建成功",
+    "updateSuccess": "更新成功",
+    "deleteSuccess": "删除成功",
+    "submitFailed": "提交失败",
+    "deleteFailed": "删除失败"
+  }
+}

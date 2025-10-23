@@ -111,4 +111,21 @@ public interface ProviderMapper {
      * @return 指定类型的Provider数量
      */
     long countByType(@Param("type") String type, @Param("userId") Long userId);
+
+    /**
+     * 根据ID和用户ID查询Provider（带配置）
+     *
+     * @param id Provider ID
+     * @param userId 用户ID
+     * @return Provider对象（包含configs），如果不存在则返回null
+     */
+    Provider findByIdWithConfigs(@Param("id") String id, @Param("userId") Long userId);
+
+    /**
+     * 查询指定用户的所有Provider（带配置）
+     *
+     * @param userId 用户ID
+     * @return Provider列表（每个Provider包含configs）
+     */
+    List<Provider> findAllWithConfigs(@Param("userId") Long userId);
 }

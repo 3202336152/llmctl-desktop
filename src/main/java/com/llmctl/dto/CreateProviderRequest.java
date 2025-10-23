@@ -3,15 +3,15 @@ package com.llmctl.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 创建Provider请求DTO
+ * 创建Provider请求DTO（配置分离版）
  *
  * @author Liu Yifan
- * @version 2.1.6
- * @since 2025-09-28
+ * @version 2.3.0
+ * @since 2025-01-15
  */
 @Data
 public class CreateProviderRequest {
@@ -30,51 +30,39 @@ public class CreateProviderRequest {
     private String description;
 
     /**
-     * Provider支持的CLI类型列表（至少选择一个）
+     * Provider支持的CLI类型列表（多选）
+     * 示例：["claude code", "codex"]
      */
     @NotNull(message = "Provider类型列表不能为空")
     @Size(min = 1, message = "至少选择一个Provider类型")
     private List<@Pattern(regexp = "^(claude code|codex|gemini|qoder)$",
                           message = "Provider类型必须是：claude code, codex, gemini, qoder 之一") String> types;
 
-    /**
-     * API基础URL
-     */
-    @Size(max = 500, message = "Base URL长度不能超过500字符")
-    private String baseUrl;
+    // ========== CLI 配置（Map 结构） ==========
 
     /**
-     * 模型名称
+     * Claude Code 配置
+     * 示例：{"baseUrl": "...", "modelName": "...", "maxTokens": 8192, "temperature": 0.7}
      */
-    @Size(max = 100, message = "模型名称长度不能超过100字符")
-    private String modelName;
+    private Map<String, Object> claudeConfig;
 
     /**
-     * Token值 (创建Provider时���少需要一个Token)
+     * Codex 配置
+     * 示例：{"configToml": "...", "authTemplate": "..."}
      */
-    @NotBlank(message = "Token不能为空")
-    @Size(max = 500, message = "Token长度不能超过500字符")
-    private String token;
+    private Map<String, Object> codexConfig;
 
     /**
-     * Token别名
+     * Gemini 配置（未来）
      */
-    @Size(max = 100, message = "Token别名长度不能超过100字符")
-    private String tokenAlias;
+    private Map<String, Object> geminiConfig;
 
     /**
-     * 最大Token数
+     * Qoder 配置（未来）
      */
-    @Min(value = 1, message = "最大Token数必须大于0")
-    @Max(value = 1000000, message = "最大Token数不能超过1000000")
-    private Integer maxTokens;
+    private Map<String, Object> qoderConfig;
 
-    /**
-     * 温度参数
-     */
-    @DecimalMin(value = "0.0", message = "温度参数必须大于等于0.0")
-    @DecimalMax(value = "1.0", message = "温度参数必须小于等于1.0")
-    private BigDecimal temperature;
+    // ========== 通用字段 ==========
 
     /**
      * 额外HTTP头 (JSON格式)
@@ -92,4 +80,17 @@ public class CreateProviderRequest {
      * 错误时是否故障切换
      */
     private Boolean tokenFallbackOnError;
+
+    // ========== Token 字段 ==========
+
+    /**
+     * API Token（创建Provider时必填）
+     */
+    @NotBlank(message = "API Token不能为空")
+    private String token;
+
+    /**
+     * Token 别名（可选）
+     */
+    private String tokenAlias;
 }
