@@ -78,9 +78,15 @@ spring:
 
 # MyBatis配置
 mybatis:
+  # Mapper XML 文件位置
   mapper-locations: classpath:mapper/*.xml
+  # 实体类包路径（用于别名）
   type-aliases-package: com.llmctl.entity
+  # 自定义类型处理器包路径
   type-handlers-package: com.llmctl.config
+  # Mapper 接口扫描路径（等同于 @MapperScan 注解）
+  # 注意：建议使用 @MapperScan 注解方式，更清晰且类型安全
+  # mapper-scan: com.llmctl.mapper
   configuration:
     map-underscore-to-camel-case: true
     # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 已禁用详细SQL日志以提升性能
@@ -131,3 +137,22 @@ avatar:
     # 开发环境默认：本地文件路径（测试时可以直接访问文件）
     # 生产环境：设置环境变量 AVATAR_BASE_URL=http://117.72.200.2/downloads/llmctl/images/avatar/
     url: ${AVATAR_BASE_URL:http://localhost:8080/llmctl/uploads/}
+
+# XXL-Job 配置
+xxl:
+  job:
+    # ========== 执行器配置 ==========
+    executor:
+      appname: llmctl-executor                       # 执行器名称（唯一标识）
+      ip:                                            # 执行器IP（留空自动获取）
+      port: 9989           # 执行器端口（默认9999）
+      logpath: ${XXL_JOB_LOG_PATH:logs/xxl-job}     # 日志路径
+      logretentiondays: 30                           # 日志保留天数
+
+    # ========== 调度中心配置 ==========
+    admin:
+      addresses: http://117.72.200.2:8088/xxl-job-admin  # 调度中心地址
+
+    # ========== 执行器通信TOKEN ==========
+    accessToken: ${XXL_JOB_ACCESS_TOKEN:liuyifanyifan}  # 与调度中心通信的Token（需与调度中心配置一致）
+

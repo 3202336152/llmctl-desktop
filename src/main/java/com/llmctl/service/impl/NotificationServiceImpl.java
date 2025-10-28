@@ -17,9 +17,18 @@ import java.util.stream.Collectors;
 
 /**
  * 通知服务实现类
+ *
+ * 事务配置说明：
+ * - 类级别使用 @Transactional(readOnly = true) 作为默认配置，适用于所有查询方法
+ * - 写操作方法使用 @Transactional 覆盖类级别配置，启用读写事务
+ * - 委托方法无需添加 @Transactional，会自动继承被调用方法的事务
+ *
+ * @author Liu Yifan
+ * @since 2025-01-24
  */
 @Slf4j
 @Service
+@Transactional(readOnly = true)
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationMapper notificationMapper;
@@ -28,6 +37,11 @@ public class NotificationServiceImpl implements NotificationService {
         this.notificationMapper = notificationMapper;
     }
 
+    // ==================== 写操作（覆盖类级别配置，使用读写事务）====================
+
+    /**
+     * 创建通知（单个）
+     */
     @Override
     @Transactional
     public Notification createNotification(NotificationRequest request) {
@@ -47,6 +61,9 @@ public class NotificationServiceImpl implements NotificationService {
         return notification;
     }
 
+    /**
+     * 批量创建通知
+     */
     @Override
     @Transactional
     public List<Notification> batchCreateNotifications(List<NotificationRequest> requests) {
@@ -69,6 +86,8 @@ public class NotificationServiceImpl implements NotificationService {
 
         return notifications;
     }
+
+    // ==================== 查询操作（继承类级别的 readOnly=true 事务）====================
 
     @Override
     public List<NotificationResponse> getNotifications(Long userId,
@@ -110,6 +129,10 @@ public class NotificationServiceImpl implements NotificationService {
         return convertToResponse(notification);
     }
 
+    /**
+     * 标记通知为已读
+     * 注意：包含权限检查，防止用户标记其他用户的通知
+     */
     @Override
     @Transactional
     public void markAsRead(Long id, Long userId) {
@@ -120,6 +143,9 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    /**
+     * 批量标记为已读
+     */
     @Override
     @Transactional
     public void batchMarkAsRead(List<Long> ids, Long userId) {
@@ -129,6 +155,9 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    /**
+     * 标记所有通知为已读
+     */
     @Override
     @Transactional
     public void markAllAsRead(Long userId) {
@@ -136,6 +165,10 @@ public class NotificationServiceImpl implements NotificationService {
         log.debug("标记用户所有通知已读: userId={}, 更新数量={}", userId, updated);
     }
 
+    /**
+     * 删除通知
+     * 注意：包含权限检查，防止用户删除其他用户的通知
+     */
     @Override
     @Transactional
     public void deleteNotification(Long id, Long userId) {
@@ -146,6 +179,9 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    /**
+     * 批量删除通知
+     */
     @Override
     @Transactional
     public void batchDeleteNotifications(List<Long> ids, Long userId) {
@@ -160,6 +196,9 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationMapper.countUnreadByUserId(userId);
     }
 
+    /**
+     * 清理过期通知
+     */
     @Override
     @Transactional
     public void cleanupExpiredNotifications() {
@@ -169,10 +208,26 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    // 便捷方法实现
-
+    /**
+     * 清理超过指定天数的已读通知
+     */
     @Override
     @Transactional
+    public int cleanupOldReadNotifications(int days) {
+        int deleted = notificationMapper.deleteOldReadNotifications(days);
+        if (deleted > 0) {
+            log.info("清理超过{}天的已读通知: {} 条", days, deleted);
+        }
+        return deleted;
+    }
+
+    // ==================== 便捷方法（委托给核心方法，继承其事务配置）====================
+
+    /**
+     * 创建系统通知
+     * 注意：此方法委托给 createNotification，会继承其 @Transactional 事务
+     */
+    @Override
     public Notification createSystemNotification(Long userId, String title, String content) {
         NotificationRequest request = new NotificationRequest();
         request.setUserId(userId);
@@ -184,8 +239,11 @@ public class NotificationServiceImpl implements NotificationService {
         return createNotification(request);
     }
 
+    /**
+     * 创建会话通知
+     * 注意：此方法委托给 createNotification，会继承其 @Transactional 事务
+     */
     @Override
-    @Transactional
     public Notification createSessionNotification(Long userId, String sessionId, String title, String content, String actionUrl) {
         NotificationRequest request = new NotificationRequest();
         request.setUserId(userId);
@@ -202,8 +260,11 @@ public class NotificationServiceImpl implements NotificationService {
         return createNotification(request);
     }
 
+    /**
+     * 创建警告通知
+     * 注意：此方法委托给 createNotification，会继承其 @Transactional 事务
+     */
     @Override
-    @Transactional
     public Notification createWarningNotification(Long userId, String title, String content, String actionUrl) {
         NotificationRequest request = new NotificationRequest();
         request.setUserId(userId);
@@ -217,8 +278,11 @@ public class NotificationServiceImpl implements NotificationService {
         return createNotification(request);
     }
 
+    /**
+     * 创建错误通知
+     * 注意：此方法委托给 createNotification，会继承其 @Transactional 事务
+     */
     @Override
-    @Transactional
     public Notification createErrorNotification(Long userId, String title, String content, String actionUrl) {
         NotificationRequest request = new NotificationRequest();
         request.setUserId(userId);
@@ -232,8 +296,11 @@ public class NotificationServiceImpl implements NotificationService {
         return createNotification(request);
     }
 
+    /**
+     * 创建成功通知
+     * 注意：此方法委托给 createNotification，会继承其 @Transactional 事务
+     */
     @Override
-    @Transactional
     public Notification createSuccessNotification(Long userId, String title, String content) {
         NotificationRequest request = new NotificationRequest();
         request.setUserId(userId);
@@ -245,8 +312,11 @@ public class NotificationServiceImpl implements NotificationService {
         return createNotification(request);
     }
 
+    // ==================== 私有辅助方法（纯内存操作，无需事务）====================
+
     /**
      * 转换为响应DTO
+     * 注意：此方法仅做内存对象转换，无数据库操作，无需事务
      */
     private NotificationResponse convertToResponse(Notification notification) {
         NotificationResponse response = new NotificationResponse();

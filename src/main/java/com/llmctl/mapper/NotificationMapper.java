@@ -88,6 +88,14 @@ public interface NotificationMapper {
     int deleteExpired();
 
     /**
+     * 删除超过指定天数的已读通知
+     *
+     * @param days 天数（例如：30表示删除30天前的已读通知）
+     * @return 删除的记录数
+     */
+    int deleteOldReadNotifications(@Param("days") int days);
+
+    /**
      * 查询最近的通知（用于SSE推送）
      */
     List<Notification> selectRecentByUserId(@Param("userId") Long userId, @Param("since") LocalDateTime since);

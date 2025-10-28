@@ -175,6 +175,13 @@
         AND expires_at &lt; NOW()
     </delete>
 
+    <!-- 删除超过指定天数的已读通知 -->
+    <delete id="deleteOldReadNotifications">
+        DELETE FROM notifications
+        WHERE is_read = true
+        AND updated_at &lt; DATE_SUB(NOW(), INTERVAL #{days} DAY)
+    </delete>
+
     <!-- 查询最近的通知（用于SSE推送） -->
     <select id="selectRecentByUserId" resultMap="BaseResultMap">
         SELECT

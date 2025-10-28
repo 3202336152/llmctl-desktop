@@ -72,6 +72,14 @@ public interface NotificationService {
      */
     void cleanupExpiredNotifications();
 
+    /**
+     * 清理超过指定天数的已读通知
+     *
+     * @param days 天数（例如：30表示删除30天前的已读通知）
+     * @return 删除的记录数
+     */
+    int cleanupOldReadNotifications(int days);
+
     // 便捷方法：创建不同类型的通知
 
     /**
