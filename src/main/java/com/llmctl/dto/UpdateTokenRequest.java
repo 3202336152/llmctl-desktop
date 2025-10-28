@@ -17,7 +17,7 @@ public class UpdateTokenRequest {
     /**
      * Token值 (可选，不提供则保持原值)
      */
-    @Size(max = 500, message = "Token值长度不能超过500字符")
+    @Size(max = 5000, message = "Token值长度不能超过5000字符")
     private String value;
 
     /**

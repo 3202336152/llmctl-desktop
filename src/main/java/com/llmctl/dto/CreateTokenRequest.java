@@ -18,7 +18,7 @@ public class CreateTokenRequest {
      * Token值
      */
     @NotBlank(message = "Token值不能为空")
-    @Size(max = 500, message = "Token值长度不能超过500字符")
+    @Size(max = 5000, message = "Token值长度不能超过5000字符")
     private String value;
 
     /**
