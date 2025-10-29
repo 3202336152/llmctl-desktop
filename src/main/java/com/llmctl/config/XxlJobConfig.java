@@ -3,6 +3,7 @@ package com.llmctl.config;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,11 +11,15 @@ import org.springframework.context.annotation.Configuration;
  * XXL-Job 配置类
  * 配置执行器，连接到 XXL-Job 调度中心
  *
+ * ✅ 条件加载：仅当 xxl.job.enabled=true 时才启用此配置
+ * 默认情况下（xxl.job.enabled=false），此配置不会加载，不会尝试连接调度中心
+ *
  * @author Liu Yifan
  * @since 2025-01-24
  */
 @Slf4j
 @Configuration
+@ConditionalOnProperty(name = "xxl.job.enabled", havingValue = "true", matchIfMissing = false)
 public class XxlJobConfig {
 
     @Value("${xxl.job.admin.addresses}")
@@ -43,7 +48,7 @@ public class XxlJobConfig {
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
-//        log.info("========== 初始化 XXL-Job 执行器 ==========");
+        log.info("========== 初始化 XXL-Job 执行器 ==========");
 
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
 
@@ -70,12 +75,12 @@ public class XxlJobConfig {
         // 设置日志保留天数
         xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
 
-//        log.info("XXL-Job 执行器配置完成:");
-//        log.info("  - 调度中心地址: {}", adminAddresses);
-//        log.info("  - 执行器名称: {}", appname);
-//        log.info("  - 执行器端口: {}", port);
-//        log.info("  - 日志路径: {}", logPath);
-//        log.info("========================================");
+        log.info("XXL-Job 执行器配置完成:");
+        log.info("  - 调度中心地址: {}", adminAddresses);
+        log.info("  - 执行器名称: {}", appname);
+        log.info("  - 执行器端口: {}", port);
+        log.info("  - 日志路径: {}", logPath);
+        log.info("========================================");
 
         return xxlJobSpringExecutor;
     }

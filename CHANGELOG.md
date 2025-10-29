@@ -5,6 +5,73 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.3] - 2025-10-29
+
+### Fixed 🐛
+- **/resume 命令错误检测误报** - 彻底解决 `/resume` 后触发 Token 错误弹窗问题 ⭐
+  - **问题描述**：
+    - 用户执行 `/resume` 命令恢复历史对话时，系统错误地检测历史对话中的 Token 错误
+    - 触发"当前 Token 已失效"弹窗，提示切换 Token
+    - 即使 Token 正常，仍会误报，影响用户体验
+
+  - **根本原因**：
+    - 用户通过方向键（↑/↓）选择会话并按回车确认
+    - 方向键和回车被误认为"用户再次输入"
+    - 错误检测被过早重新启用
+    - `/resume` 输出的历史对话内容被检测，触发误报
+
+  - **解决方案 - 三层防护机制**：
+    1. **输出检测 `/resume`** (`terminalManager.ts:308-319`)
+       - 在终端输出中检测 `/resume` 回显（支持历史命令选择方式）
+       - 检测到后立即禁用错误检测，清空缓冲区
+
+    2. **控制键过滤** (`terminalManager.ts:400-420`)
+       - 过滤方向键（`\x1b[A/B/C/D`）、回车（`\r`）、退格等控制键
+       - 只有真正的文本命令才重新启用错误检测
+       - 避免在会话选择过程中误启用检测
+
+    3. **时间戳过滤** (`terminalManager.ts:479-486`)
+       - 添加 `errorDetectionEnabledAt` 时间戳字段
+       - 只检测错误检测启用之后的输出
+       - 防止残留历史输出被误检
+
+  - **技术细节**：
+    - 修改文件：`electron-app/src/main/services/terminalManager.ts`
+    - 新增字段：`errorDetectionEnabledAt?: number`（记录检测启用时间）
+    - 新增字段：`waitingForNextInput: boolean`（等待用户真正输入）
+    - 删除废弃代码：`RESUME_COMPLETION_PATTERNS` 常量和相关复杂逻辑
+
+  - **用户体验提升**：
+    - 清理冗余调试日志，控制台输出简洁明了
+    - `/resume` 命令执行流畅，不再有误报弹窗
+    - 错误检测仍然有效，真正的 Token 错误依然能被准确捕获
+
+- **外部终端临时文件清理** - 修复 `.llmctl-temp` 目录未自动删除问题
+  - **问题描述**：
+    - 使用"外部终端"功能后，工作目录下会残留 `.llmctl-temp/launch-{timestamp}.bat` 文件和空文件夹
+    - 影响用户体验，项目目录显得杂乱
+
+  - **根本原因**：
+    - 批处理文件（.bat）在5秒后被正确删除
+    - 但 `.llmctl-temp` 空目录本身没有被清理
+    - 导致用户可见空文件夹残留
+
+  - **解决方案**：
+    - 在删除批处理文件后，检查 `.llmctl-temp` 目录是否为空
+    - 如果为空，则自动删除该目录
+    - 同时处理成功和失败两种情况，确保完整清理
+
+  - **技术细节**：
+    - 修改文件：`electron-app/src/main/main.ts` (720-747行)
+    - 使用 `fs.readdirSync()` 检查目录是否为空
+    - 使用 `fs.rmSync({ recursive: true, force: true })` 删除空目录
+    - 添加详细的清理日志便于追踪
+
+  - **用户体验提升**：
+    - 外部终端使用后无残留文件，对用户无感知
+    - 工作目录保持整洁，不会积累临时文件夹
+    - 异常情况下也能正确清理，避免垃圾文件堆积
+
 ## [2.2.1] - 2025-10-23
 
 ### Added 🎉

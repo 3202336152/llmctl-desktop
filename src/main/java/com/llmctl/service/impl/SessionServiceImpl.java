@@ -409,15 +409,15 @@ public class SessionServiceImpl implements ISessionService {
                     envVars.put("CODEX_HOME", codexHome);
                     log.debug("设置 CODEX_HOME 环境变量: {} (会话: {})", codexHome, sessionId);
 
-                    // Codex 配置通过文件而不是环境变量
-                    // 将配置数据存储到环境变量中，前端Electron会读取并创建文件
+                    // 前端 Electron 会直接从数据库读取配置并创建文件
+                    // 只传递必要的配置数据供前端使用
                     if (configData.get("configToml") != null) {
                         envVars.put("CODEX_CONFIG_TOML", configData.get("configToml").toString());
                     }
                     if (configData.get("authJson") != null) {
                         envVars.put("CODEX_AUTH_JSON", configData.get("authJson").toString());
                     }
-                    // Token 也会通过环境变量传递给前端处理
+                    // Token 传递给前端用于替换 auth.json 中的占位符
                     envVars.put("CODEX_API_KEY", tokenValue);
                     break;
 

@@ -5,10 +5,14 @@ import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
  * 通知清理定时任务（基于 XXL-Job）
+ *
+ * ✅ 条件加载：仅当 xxl.job.enabled=true 时才启用此任务
+ * 默认情况下（xxl.job.enabled=false），此任务不会加载
  *
  * 任务列表：
  * 1. cleanupExpiredNotificationsJob - 清理过期通知（建议每天凌晨2点执行）
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "xxl.job.enabled", havingValue = "true", matchIfMissing = false)
 public class NotificationCleanupTask {
 
     private final NotificationService notificationService;

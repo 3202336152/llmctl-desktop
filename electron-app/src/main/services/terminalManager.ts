@@ -15,27 +15,15 @@ interface TerminalSession {
   errorDetected: boolean; // 标记是否已检测到错误，避免重复通知
   createdAt: number; // 会话创建时间戳，用于延迟错误检测
   errorDetectionEnabled: boolean; // 是否启用错误检测（延迟启动）
+  errorDetectionEnabledAt?: number; // ✅ 新增：错误检测启用的时间戳（用于过滤启用前的输出）
   errorDetectionTimer?: NodeJS.Timeout; // 错误检测延迟定时器（用于清除）
-  isResumed: boolean; // 标记是否为重建的会话(/resume)
-  resumeDetectionActive: boolean; // 是否正在等待 resume 完成
-  resumeCompletionDetected: boolean; // 是否已检测到 resume 完成
+  waitingForNextInput: boolean; // ✅ 新增：等待用户下次输入（用于 /resume 后重新启用错误检测）
   timedOutputBuffer: Array<{ timestamp: number; content: string }>; // 带时间戳的输出缓冲区
   codexConfigPath?: string; // Codex 配置文件目录路径（用于会话结束时清理）
   // ✅ PTY 监听器引用，用于清理时移除
   dataListener?: pty.IDisposable;
   exitListener?: pty.IDisposable;
 }
-
-// /resume 命令完成检测模式
-const RESUME_COMPLETION_PATTERNS = [
-  // Claude CLI 的典型完成模式
-  /Continue\s+this\s+conversation/i,           // "Continue this conversation?"
-  /\[Y\/n\]/i,                                  // 用户输入提示
-  />\s*$/,                                      // 命令提示符 ">"
-  /\$\s*$/,                                     // Shell 提示符
-  /\w+>\s*$/,                                   // 带路径的提示符 "C:\Users\xxx>"
-  /\w+@\w+:\S+\$\s*$/,                         // Linux 提示符 "user@host:~$"
-];
 
 // Token/API 错误检测模式
 const TOKEN_ERROR_PATTERNS = [
@@ -267,39 +255,29 @@ class TerminalManager {
         outputBuffer: '', // 初始化输出缓冲区
         errorDetected: false, // 初始化错误检测标记
         createdAt: Date.now(), // 记录创建时间
-        errorDetectionEnabled: !isResumed, // resume 会话等待完成检测，首次创建延迟启用
+        errorDetectionEnabled: false, // 初始禁用，延迟5秒后启用
         errorDetectionTimer: undefined, // 初始无定时器
-        isResumed, // 标记是否为重建的会话
-        resumeDetectionActive: isResumed, // resume 会话启用完成检测
-        resumeCompletionDetected: false, // 初始未检测到完成
+        waitingForNextInput: false, // 初始不等待用户输入
         timedOutputBuffer: [], // 初始化时间戳缓冲区
         codexConfigPath, // 保存 Codex 配置路径（用于清理）
       };
 
       this.sessions.set(sessionId, newSession);
 
-      // ✅ 智能延迟启动错误检测
-      // - 首次创建会话: 延迟5秒（避免检测到历史错误）
-      // - resume 会话: 不延迟，等待检测到命令完成标记后启用
-      if (!isResumed) {
-        const detectionDelay = 5000;
-        console.log(`[TerminalManager] ⏰ 将在 5秒 后启用错误检测:`, sessionId);
+      // ✅ 延迟5秒后启用错误检测（避免检测初始化输出）
+      const detectionDelay = 5000;
+      console.log(`[TerminalManager] ⏰ 将在 5秒 后启用错误检测:`, sessionId);
 
-        // ✅ 保存定时器引用，以便后续可以清除
-        const timer = setTimeout(() => {
-          const session = this.sessions.get(sessionId);
-          if (session && session.instanceId === currentInstanceId) {
-            session.errorDetectionEnabled = true;
-            session.errorDetectionTimer = undefined; // 清除定时器引用
-            console.log('[TerminalManager] ✅ 错误检测已启用 (首次创建):', sessionId);
-          }
-        }, detectionDelay);
+      const timer = setTimeout(() => {
+        const session = this.sessions.get(sessionId);
+        if (session && session.instanceId === currentInstanceId) {
+          session.errorDetectionEnabled = true;
+          session.errorDetectionTimer = undefined;
+          console.log('[TerminalManager] ✅ 错误检测已启用 (首次创建):', sessionId);
+        }
+      }, detectionDelay);
 
-        // ✅ 将定时器保存到会话对象中
-        newSession.errorDetectionTimer = timer;
-      } else {
-        console.log(`[TerminalManager] ⏰ Resume 会话，等待检测命令完成标记后启用错误检测:`, sessionId);
-      }
+      newSession.errorDetectionTimer = timer;
 
       // ✅ Windows 系统：启动后立即执行 chcp 65001 切换到 UTF-8 编码
       if (isWindows) {
@@ -316,9 +294,17 @@ class TerminalManager {
           return; // 会话已被删除或实例已过期，忽略数据
         }
 
-        // 打印原始终端输出（帮助调试）
-        if (data.toLowerCase().includes('error') || data.toLowerCase().includes('invalid') || data.toLowerCase().includes('credit')) {
-          console.log('[TerminalManager] ⚠️ 检测到可疑输出:', sessionId, data.substring(0, 200));
+        // ✅ 核心修复：在输出中检测 /resume 命令（因为用户可能通过历史命令选择）
+        const cleanData = data.replace(/\x1b\[[0-9;]*m/g, ''); // 移除 ANSI
+        if (cleanData.includes('/resume') || cleanData.includes('> /resume')) {
+          console.log('[TerminalManager] 🔄 检测到 /resume 命令，禁用错误检测');
+
+          // 禁用错误检测，等待用户下次输入
+          session.errorDetectionEnabled = false;
+          session.waitingForNextInput = true;
+
+          // 清空时间戳缓冲区
+          session.timedOutputBuffer = [];
         }
 
         // ✅ 过滤掉 bracketed paste mode 的控制序列
@@ -387,26 +373,44 @@ class TerminalManager {
         return;
       }
 
-      // ✅ 检测 /resume 命令
+      // ✅ 新方案：检测 /resume 命令和用户再次输入
       const cleanInput = filteredData.trim().toLowerCase();
+
       if (cleanInput.startsWith('/resume')) {
-        console.log('[TerminalManager] 🔄 检测到 /resume 命令，重新启动完成检测:', sessionId);
+        console.log('[TerminalManager] 🔄 检测到 /resume 命令，禁用错误检测');
 
-        // 暂时禁用错误检测
+        // 禁用错误检测，等待用户下次输入
         session.errorDetectionEnabled = false;
-        session.resumeDetectionActive = true;
-        session.resumeCompletionDetected = false;
+        session.waitingForNextInput = true;
 
-        // 清空时间戳缓冲区，避免检测旧的历史错误
+        // 清空时间戳缓冲区
         session.timedOutputBuffer = [];
+      } else if (session.waitingForNextInput) {
+        // ✅ 核心修复：过滤掉控制键（方向键、回车、退格等）
+        // 只有真正的文本命令才重新启用错误检测
+        const isControlKey = /^[\x00-\x1f\x7f]$/.test(cleanInput) || // ASCII 控制字符
+                             /^\x1b\[/.test(cleanInput); // ANSI 转义序列（方向键等）
 
-        console.log('[TerminalManager] ⏰ 等待 /resume 命令完成...');
+        if (!isControlKey && cleanInput.length > 0) {
+          // ✅ 用户再次输入真正的文本命令，重新启用错误检测
+          const now = Date.now();
+          console.log('[TerminalManager] ✅ 用户输入新命令，重新启用错误检测');
+
+          // 清空缓冲区，只检测新的输出
+          session.timedOutputBuffer = [];
+
+          // 重置 errorDetected 标记，允许检测新的错误
+          session.errorDetected = false;
+
+          // 启用错误检测，并记录启用时间戳
+          session.errorDetectionEnabled = true;
+          session.errorDetectionEnabledAt = now;
+          session.waitingForNextInput = false;
+        }
       }
 
       // ✅ 直接写入所有数据，不分块（PTY 会自动处理缓冲区）
-      console.log(`[TerminalManager] 📤 写入数据 (${filteredData.length} 字符)`);
       session.process.write(filteredData);
-      console.log(`[TerminalManager] ✅ 写入完成`);
     } catch (error) {
       console.error('[TerminalManager] 发送输入失败:', error);
     }
@@ -442,32 +446,7 @@ class TerminalManager {
     // 去除 ANSI 转义序列，方便匹配
     const cleanData = data.replace(/\x1b\[[0-9;]*m/g, '');
 
-    // ✅ 方案1: 如果正在等待 resume 完成，先检测是否完成
-    if (session.resumeDetectionActive && !session.resumeCompletionDetected) {
-      // 检查是否匹配 resume 完成模式
-      for (const pattern of RESUME_COMPLETION_PATTERNS) {
-        if (pattern.test(cleanData)) {
-          console.log('[TerminalManager] ✅ 检测到 /resume 命令完成，启用错误检测:', sessionId);
-          session.resumeCompletionDetected = true;
-          session.errorDetectionEnabled = true;
-          session.resumeDetectionActive = false; // 停止检测
-
-          // ✅ 重置 errorDetected 标记，允许检测新的错误
-          session.errorDetected = false;
-
-          console.log('[TerminalManager] 🔄 已重置错误检测状态，开始监控新的输出');
-          break;
-        }
-      }
-
-      // ✅ 关键修复：如果还未检测到完成，直接返回，不添加任何内容到缓冲区
-      if (!session.resumeCompletionDetected) {
-        console.log('[TerminalManager] ⏸️  Resume 未完成，跳过此输出（避免检测历史错误）:', cleanData.substring(0, 100));
-        return;
-      }
-    }
-
-    // ✅ 如果错误检测未启用，跳过检测（避免检测历史输出）
+    // ✅ 如果错误检测未启用，跳过检测（/resume 期间会被禁用）
     if (!session.errorDetectionEnabled) {
       return;
     }
@@ -477,7 +456,7 @@ class TerminalManager {
       return;
     }
 
-    // ✅ 方案3: 添加到时间戳缓冲区（只有在 resume 完成后才会执行到这里）
+    // ✅ 添加到时间戳缓冲区
     const now = Date.now();
     session.timedOutputBuffer.push({ timestamp: now, content: cleanData });
 
@@ -486,8 +465,17 @@ class TerminalManager {
       item => now - item.timestamp < 10000
     );
 
-    // ✅ 只检测3秒前的输出（给历史输出留出时间）
-    const oldOutputs = session.timedOutputBuffer
+    // ✅ 核心修复：只检测错误检测启用之后的输出
+    // 如果有 errorDetectionEnabledAt，则过滤掉启用前的输出
+    let bufferToCheck = session.timedOutputBuffer;
+    if (session.errorDetectionEnabledAt) {
+      bufferToCheck = session.timedOutputBuffer.filter(
+        item => item.timestamp >= session.errorDetectionEnabledAt!
+      );
+    }
+
+    // ✅ 只检测3秒前的输出（给输出留出缓冲时间）
+    const oldOutputs = bufferToCheck
       .filter(item => now - item.timestamp >= 3000)
       .map(item => item.content)
       .join('');
@@ -501,10 +489,16 @@ class TerminalManager {
     for (const pattern of TOKEN_ERROR_PATTERNS) {
       if (pattern.test(oldOutputs)) {
         console.warn('='.repeat(80));
-        console.warn('[TerminalManager] ✅ 检测到 Token 错误 (3秒前的输出)!!!');
+        console.warn('[TerminalManager] ⚠️ 检测到可能的 Token 错误!!!');
         console.warn('[TerminalManager] Session ID:', sessionId);
         console.warn('[TerminalManager] 错误模式:', pattern.toString());
-        console.warn('[TerminalManager] 错误内容:', oldOutputs.substring(0, 500));
+        console.warn('[TerminalManager] 错误内容长度:', oldOutputs.length);
+        console.warn('[TerminalManager] 错误内容（前200字符）:', oldOutputs.substring(0, 200));
+        console.warn('[TerminalManager] 错误内容（后200字符）:', oldOutputs.substring(Math.max(0, oldOutputs.length - 200)));
+        console.warn('[TerminalManager] 原始数据（当前）:', cleanData.substring(0, 200));
+        console.warn('[TerminalManager] 缓冲区项数:', session.timedOutputBuffer.length);
+        console.warn('[TerminalManager] 会话创建时间:', new Date(session.createdAt).toLocaleString());
+        console.warn('[TerminalManager] 错误检测启用时间:', now - session.createdAt, 'ms');
         console.warn('='.repeat(80));
 
         // 标记已检测到错误，避免重复触发

@@ -29,7 +29,7 @@ import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
 import TerminalManager from './components/Terminal/TerminalManager';
 import { ResizableSider, StatusBar, TopBar } from './components/Layout';
-import { configAPI, sessionAPI, tokenAPI } from './services/api';
+import { configAPI, sessionAPI, tokenAPI, authAPI } from './services/api';
 import { ConfigImportRequest, StartSessionRequest } from './types';
 import { authStorage } from './utils/authStorage';
 import './i18n'; // 引入 i18n 配置
@@ -83,6 +83,27 @@ const AppContent: React.FC = () => {
       if (!isAuthenticated) {
         console.log('[App] 用户未登录，跳过加载初始设置');
         return;
+      }
+
+      // ✅ 检查Token是否即将过期，主动刷新
+      if (authStorage.isTokenExpiringSoon()) {
+        const refreshToken = authStorage.getRefreshToken();
+        if (refreshToken) {
+          try {
+            console.log('[App启动] Token即将过期，尝试刷新');
+            const response = await authAPI.refreshToken({ refreshToken });
+            if (response.data && response.data.code === 200 && response.data.data) {
+              authStorage.updateAccessToken(
+                response.data.data.accessToken,
+                response.data.data.expiresIn
+              );
+              console.log('[App启动] Token刷新成功');
+            }
+          } catch (error) {
+            console.error('[App启动] Token刷新失败:', error);
+            // 刷新失败不影响应用启动，后续请求会触发自动刷新
+          }
+        }
       }
 
       try {

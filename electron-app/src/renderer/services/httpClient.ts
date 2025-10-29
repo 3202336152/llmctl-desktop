@@ -78,6 +78,25 @@ apiClient.interceptors.request.use(
   }
 );
 
+// 标志位：防止多个请求同时触发刷新
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+/**
+ * 将等待中的请求添加到队列
+ */
+function subscribeTokenRefresh(callback: (token: string) => void) {
+  refreshSubscribers.push(callback);
+}
+
+/**
+ * 刷新成功后，通知所有等待的请求使用新Token重试
+ */
+function onTokenRefreshed(newToken: string) {
+  refreshSubscribers.forEach(callback => callback(newToken));
+  refreshSubscribers = [];
+}
+
 // 响应拦截器 - 处理业务错误和401认证失败
 apiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
@@ -94,12 +113,13 @@ apiClient.interceptors.response.use(
 
     return response;
   },
-  (error: AxiosError<ApiResponse>) => {
+  async (error: AxiosError<ApiResponse>) => {
     // 只在开发环境打印详细错误
     if (process.env.NODE_ENV === 'development') {
       console.error('[API Response Error]', error);
     }
 
+    const originalRequest = error.config;
     let errorMessage = 'Network error';
 
     if (error.response) {
@@ -112,18 +132,89 @@ apiClient.interceptors.response.use(
           errorMessage = '请求参数错误';
           break;
         case 401:
-          // 区分登录失败和Token过期两种情况
-          // 如果是登录接口返回401，使用后端返回的错误消息（用户名或密码错误）
+          // 区分登录失败、刷新Token失败和Token过期三种情况
           const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+          const isRefreshEndpoint = error.config?.url?.includes('/auth/refresh');
+
           if (isLoginEndpoint) {
+            // 登录接口返回401 - 用户名或密码错误
             errorMessage = data?.message || data?.error || '用户名或密码错误';
-          } else {
-            // Token失效或未登录，清除认证信息并跳转到登录页
+          } else if (isRefreshEndpoint) {
+            // Refresh Token也失效了，清除认证信息并跳转到登录页
+            console.log('[Token刷新失败] Refresh Token已失效，跳转登录页');
             errorMessage = '登录已过期，请重新登录';
             authStorage.clearAuth();
-            // 使用 window.location 强制刷新到登录页
+            isRefreshing = false;
+            refreshSubscribers = [];
             if (!window.location.pathname.includes('/login')) {
               window.location.href = '/#/login';
+            }
+          } else {
+            // Access Token过期，尝试使用Refresh Token刷新
+            console.log('[Token过期] 尝试自动刷新Token');
+
+            // 如果正在刷新中，将请求加入队列
+            if (isRefreshing) {
+              console.log('[Token刷新中] 将请求加入等待队列');
+              return new Promise((resolve) => {
+                subscribeTokenRefresh((newToken: string) => {
+                  if (originalRequest && originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                  }
+                  resolve(apiClient.request(originalRequest!));
+                });
+              });
+            }
+
+            // 开始刷新Token
+            isRefreshing = true;
+            const refreshToken = authStorage.getRefreshToken();
+
+            if (refreshToken) {
+              try {
+                console.log('[Token刷新] 调用刷新接口');
+                const response = await axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {
+                  refreshToken: refreshToken
+                });
+
+                if (response.data && response.data.code === 200) {
+                  const { accessToken, expiresIn } = response.data.data;
+                  console.log('[Token刷新成功] 更新本地Token');
+
+                  // 更新本地存储
+                  authStorage.updateAccessToken(accessToken, expiresIn);
+
+                  // 通知所有等待的请求使用新Token重试
+                  onTokenRefreshed(accessToken);
+                  isRefreshing = false;
+
+                  // 重试当前请求
+                  if (originalRequest && originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                  }
+                  return apiClient.request(originalRequest!);
+                } else {
+                  throw new Error('刷新Token失败');
+                }
+              } catch (refreshError) {
+                console.error('[Token刷新失败]', refreshError);
+                authStorage.clearAuth();
+                isRefreshing = false;
+                refreshSubscribers = [];
+                errorMessage = '登录已过期，请重新登录';
+                if (!window.location.pathname.includes('/login')) {
+                  window.location.href = '/#/login';
+                }
+              }
+            } else {
+              // 没有Refresh Token，清除认证信息并跳转到登录页
+              console.log('[无Refresh Token] 跳转登录页');
+              errorMessage = '登录已过期，请重新登录';
+              authStorage.clearAuth();
+              isRefreshing = false;
+              if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/#/login';
+              }
             }
           }
           break;

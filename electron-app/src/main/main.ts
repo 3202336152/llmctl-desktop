@@ -613,36 +613,153 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
 
     // Windows: 使用 cmd.exe 打开新窗口
     if (process.platform === 'win32') {
-      // ✅ 构建环境变量设置命令
-      let envSetupCommands = '';
-      if (options.env && Object.keys(options.env).length > 0) {
-        console.log('[IPC] 设置环境变量:', options.env);
-        // 为每个环境变量生成 set 命令
-        for (const [key, value] of Object.entries(options.env)) {
-          // 跳过 CHCP 变量，因为这是内部使用的
-          if (key === 'CHCP') continue;
+      // ✅ Codex 配置文件创建逻辑（在打开终端之前，直接用 Node.js 创建文件）
+      if (options.env && options.env.CODEX_HOME && (options.env.CODEX_CONFIG_TOML || options.env.CODEX_AUTH_JSON)) {
+        console.log('[IPC] 检测到 Codex 配置，开始创建配置文件');
 
-          // 转义特殊字符
-          const escapedValue = value.replace(/"/g, '\\"');
-          envSetupCommands += `set "${key}=${escapedValue}" && `;
+        try {
+          const codexDir = options.env.CODEX_HOME;
+
+          // 创建配置目录
+          if (!fs.existsSync(codexDir)) {
+            fs.mkdirSync(codexDir, { recursive: true });
+            console.log('[IPC] ✅ 创建 Codex 配置目录:', codexDir);
+          }
+
+          // 写入 config.toml
+          if (options.env.CODEX_CONFIG_TOML) {
+            const configPath = path.join(codexDir, 'config.toml');
+            fs.writeFileSync(configPath, options.env.CODEX_CONFIG_TOML, 'utf-8');
+            console.log('[IPC] ✅ 写入 config.toml:', configPath);
+          }
+
+          // 写入 auth.json（并替换 OPENAI_API_KEY）
+          if (options.env.CODEX_AUTH_JSON) {
+            const authPath = path.join(codexDir, 'auth.json');
+
+            // 替换 auth.json 中的 OPENAI_API_KEY
+            let authContent = options.env.CODEX_AUTH_JSON;
+            if (options.env.CODEX_API_KEY) {
+              try {
+                const authObj = JSON.parse(authContent);
+                if ('OPENAI_API_KEY' in authObj) {
+                  authObj.OPENAI_API_KEY = options.env.CODEX_API_KEY;
+                  authContent = JSON.stringify(authObj, null, 2);
+                  console.log('[IPC] 已将 auth.json 中的 OPENAI_API_KEY 替换为实际 Token');
+                }
+              } catch (parseError) {
+                console.error('[IPC] 解析 auth.json 失败，使用原始内容:', parseError);
+              }
+            }
+
+            fs.writeFileSync(authPath, authContent, 'utf-8');
+            console.log('[IPC] ✅ 写入 auth.json:', authPath);
+          }
+
+          // ✅ 修复：配置文件创建完成后，从环境变量中删除文件内容
+          // 这样可以确保批处理文件不会包含多行内容，避免语法错误
+          delete options.env.CODEX_CONFIG_TOML;
+          delete options.env.CODEX_AUTH_JSON;
+          delete options.env.CODEX_API_KEY; // API Key 也不需要在批处理中设置
+          console.log('[IPC] ✅ Codex 配置文件创建成功，已清理环境变量');
+        } catch (error) {
+          console.error('[IPC] ❌ 创建 Codex 配置文件失败:', error);
+          return { success: false, error: `创建 Codex 配置文件失败: ${error}` };
         }
       }
 
-      // 使用 start 命令打开新的 CMD 窗口
-      // /K 保持窗口打开，/D 设置工作目录
-      // 先设置环境变量，然后执行命令
-      const command = `start "LLMctl Terminal" /D "${options.workingDirectory}" cmd /K "${envSetupCommands}${options.command}"`;
+      // ✅ 使用临时批处理文件的方式设置环境变量（更可靠）
+      // 创建临时批处理文件路径
+      const tempDir = path.join(options.workingDirectory, '.llmctl-temp');
+      const batchFile = path.join(tempDir, `launch-${Date.now()}.bat`);
 
-      child_process.exec(command, (error) => {
-        if (error) {
-          console.error('[IPC] 打开外部终端失败:', error);
-        } else {
-          console.log('[IPC] ✅ 外部终端已成功打开（已设置环境变量）');
+      try {
+        // 确保临时目录存在
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
-      });
 
-      console.log('[IPC] 正在打开外部终端...', command);
-      return { success: true };
+        // 构建批处理文件内容
+        let batchContent = '@echo off\n';
+        batchContent += `chcp 65001 >nul\n`; // 设置 UTF-8 编码
+        batchContent += `cd /d "${options.workingDirectory}"\n`; // 切换到工作目录
+
+        // 添加环境变量设置
+        if (options.env && Object.keys(options.env).length > 0) {
+          console.log('[IPC] 设置环境变量:', options.env);
+          for (const [key, value] of Object.entries(options.env)) {
+            // 跳过已处理的 Codex 配置变量和 CHCP
+            if (key === 'CHCP' || key === 'CODEX_CONFIG_TOML' || key === 'CODEX_AUTH_JSON' || key === 'CODEX_API_KEY') {
+              continue;
+            }
+            // 不需要转义，直接写入批处理文件
+            batchContent += `set ${key}=${value}\n`;
+          }
+        }
+
+        // 添加最终命令
+        batchContent += `${options.command}\n`;
+
+        // 写入批处理文件
+        fs.writeFileSync(batchFile, batchContent, { encoding: 'utf-8' });
+        console.log('[IPC] 已创建临时批处理文件:', batchFile);
+
+        // 使用 start 命令打开新的 CMD 窗口并执行批处理文件
+        const command = `start "LLMctl Terminal" cmd /K "${batchFile}"`;
+
+        child_process.exec(command, (error) => {
+          if (error) {
+            console.error('[IPC] 打开外部终端失败:', error);
+            // 清理批处理文件和临时目录
+            try {
+              // 删除批处理文件
+              if (fs.existsSync(batchFile)) {
+                fs.unlinkSync(batchFile);
+              }
+
+              // ✅ 检查临时目录是否为空，如果为空则删除
+              if (fs.existsSync(tempDir)) {
+                const files = fs.readdirSync(tempDir);
+                if (files.length === 0) {
+                  fs.rmSync(tempDir, { recursive: true, force: true });
+                  console.log('[IPC] 已清理临时目录（失败情况）');
+                }
+              }
+            } catch (e) {
+              // 忽略删除错误
+            }
+          } else {
+            console.log('[IPC] ✅ 外部终端已成功打开（已设置环境变量并创建 Codex 配置文件）');
+            // 延迟删除批处理文件（给终端一些时间启动）
+            setTimeout(() => {
+              try {
+                // 删除批处理文件
+                if (fs.existsSync(batchFile)) {
+                  fs.unlinkSync(batchFile);
+                  console.log('[IPC] 已清理临时批处理文件');
+                }
+
+                // ✅ 检查临时目录是否为空，如果为空则删除
+                if (fs.existsSync(tempDir)) {
+                  const files = fs.readdirSync(tempDir);
+                  if (files.length === 0) {
+                    fs.rmdirSync(tempDir);
+                    console.log('[IPC] 已清理临时目录:', tempDir);
+                  }
+                }
+              } catch (e) {
+                // 忽略删除错误
+              }
+            }, 5000); // 5秒后删除
+          }
+        });
+
+        console.log('[IPC] 正在打开外部终端...');
+        return { success: true };
+      } catch (err) {
+        console.error('[IPC] 创建批处理文件失败:', err);
+        return { success: false, error: (err as Error).message };
+      }
     }
     // macOS: 使用 Terminal.app
     else if (process.platform === 'darwin') {
@@ -652,14 +769,20 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
         console.log('[IPC] 设置环境变量:', options.env);
         for (const [key, value] of Object.entries(options.env)) {
           if (key === 'CHCP') continue;
-          const escapedValue = value.replace(/'/g, "'\\''"); // 转义单引号
+          // ✅ 修复：为 bash 命令正确转义单引号
+          const escapedValue = value.replace(/'/g, "'\\''");
           envSetupCommands += `export ${key}='${escapedValue}'; `;
         }
       }
 
+      // ✅ 修复：为 AppleScript 字符串转义双引号和反斜杠
+      const workingDirEscaped = options.workingDirectory.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const envCommandsEscaped = envSetupCommands.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const commandEscaped = options.command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
       const script = `
         tell application "Terminal"
-          do script "cd '${options.workingDirectory}' && ${envSetupCommands}${options.command}"
+          do script "cd \\"${workingDirEscaped}\\" && ${envCommandsEscaped}${commandEscaped}"
           activate
         end tell
       `;
@@ -682,12 +805,17 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
         console.log('[IPC] 设置环境变量:', options.env);
         for (const [key, value] of Object.entries(options.env)) {
           if (key === 'CHCP') continue;
-          const escapedValue = value.replace(/'/g, "'\\''"); // 转义单引号
+          // ✅ 为 bash 命令正确转义单引号
+          const escapedValue = value.replace(/'/g, "'\\''");
           envSetupCommands += `export ${key}='${escapedValue}'; `;
         }
       }
 
-      const command = `gnome-terminal --working-directory="${options.workingDirectory}" -- bash -c "${envSetupCommands}${options.command}; exec bash"`;
+      // ✅ 修复：为 bash -c 参数中的双引号转义
+      const workingDirEscaped = options.workingDirectory.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const commandEscaped = options.command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+      const command = `gnome-terminal --working-directory="${workingDirEscaped}" -- bash -c "${envSetupCommands}${commandEscaped}; exec bash"`;
 
       child_process.exec(command, (error) => {
         if (error) {

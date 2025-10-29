@@ -562,4 +562,18 @@ FLUSH PRIVILEGES;
 
 ---
 
+### 关键：Windows 上的文件编辑
+⚠️ 在 Windows 上使用 Edit 或 MultiEdit 工具时，文件路径中必须使用反斜杠（ \ ），而不是斜杠（ / ）。
+
+❌ 错误 - 将导致错误：
+```
+Edit(file_path: "D:/repos/project/file.tsx", ...)
+MultiEdit(file_path: "D:/repos/project/file.tsx", ...)
+```
+✅ 正确 - 总是有效：
+```
+Edit(file_path: "D:\repos\project\file.tsx", ...)
+MultiEdit(file_path: "D:\repos\project\file.tsx", ...)
+
+
 开发时请参考这些文档了解项目的整体设计和实施计划。如有疑问，请查看 `CHANGELOG.md` 了解最新更新。
