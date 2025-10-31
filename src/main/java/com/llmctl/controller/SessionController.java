@@ -279,6 +279,24 @@ public class SessionController {
     }
 
     /**
+     * 获取会话的 MCP 配置内容（供前端写入文件）
+     * 新增 API：解决跨平台文件路径问题，由前端负责写入本地文件
+     *
+     * @param sessionId 会话ID
+     * @return MCP 配置内容（JSON 格式）
+     */
+    @GetMapping("/{sessionId}/mcp-config")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMcpConfig(
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
+        log.info("获取会话 MCP 配置内容: {}", sessionId);
+
+        Map<String, Object> mcpConfig = sessionService.getMcpConfigContent(sessionId);
+        ApiResponse<Map<String, Object>> response = ApiResponse.success(mcpConfig, "MCP 配置内容获取成功");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 更新会话状态请求DTO
      */
     public static class UpdateSessionStatusRequest {

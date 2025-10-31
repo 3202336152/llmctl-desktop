@@ -71,4 +71,9 @@ export const sessionAPI = {
   refreshMcpConfig: (sessionId: string): Promise<ApiResponse<void>> => {
     return httpClient.post(`/sessions/${sessionId}/refresh-mcp`).then(response => response.data);
   },
+
+  // 获取会话的 MCP 配置内容（供前端写入文件）
+  getMcpConfig: (sessionId: string): Promise<ApiResponse<Record<string, any>>> => {
+    return httpClient.get(`/sessions/${sessionId}/mcp-config`).then(response => response.data);
+  },
 };

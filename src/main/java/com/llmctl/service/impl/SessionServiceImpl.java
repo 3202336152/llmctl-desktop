@@ -371,6 +371,43 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
+     * 获取会话的 MCP 配置内容（供前端写入文件）
+     * 新增方法：解决跨平台文件路径问题，由前端负责写入本地文件
+     *
+     * @param sessionId 会话ID
+     * @return MCP 配置内容（包含 mcpServers 配置的完整 JSON 对象）
+     */
+    @Override
+    public Map<String, Object> getMcpConfigContent(String sessionId) {
+        Long userId = UserContext.getUserId();
+        log.info("获取会话 MCP 配置内容: {}, 用户ID: {}", sessionId, userId);
+
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
+        }
+
+        // 生成 MCP 配置
+        Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
+            provider.getId(),
+            session.getType()
+        );
+
+        // 构建完整的配置对象（与文件格式一致）
+        Map<String, Object> fullConfig = new HashMap<>();
+        fullConfig.put("mcpServers", mcpConfig);
+
+        log.info("成功生成会话 {} 的 MCP 配置内容，包含 {} 个服务器", sessionId, mcpConfig.size());
+        return fullConfig;
+    }
+
+    /**
      * 获取会话对应的环境变量（供Electron前端使用）
      *
      * @param sessionId 会话ID
@@ -620,6 +657,16 @@ public class SessionServiceImpl implements ISessionService {
     private void injectMcpConfig(Session session, Provider provider, String cliType) {
         log.info("开始注入 MCP 配置，Provider: {}, CLI类型: {}", provider.getName(), cliType);
 
+        String workingDir = session.getWorkingDirectory();
+
+        // ✅ 跨平台路径检测：如果是 Windows 路径但运行在非 Windows 系统，跳过文件写入
+        // 由前端 Electron 负责写入本地文件
+        if (isWindowsPath(workingDir) && !isRunningOnWindows()) {
+            log.info("🔄 检测到跨平台场景（Windows 路径但运行在非 Windows 系统），跳过后端文件写入，由前端处理");
+            log.info("💡 前端应调用 GET /sessions/{sessionId}/mcp-config 获取配置内容并写入本地文件");
+            return;
+        }
+
         // 生成 MCP 配置
         Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
             provider.getId(),
@@ -630,8 +677,6 @@ public class SessionServiceImpl implements ISessionService {
             log.info("无需注入 MCP 配置（无关联的服务器）");
             return;
         }
-
-        String workingDir = session.getWorkingDirectory();
 
         // 根据不同 CLI 类型进行配置注入
         if ("claude code".equalsIgnoreCase(cliType)) {
@@ -648,6 +693,31 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
+     * 检测是否为 Windows 路径
+     * Windows 路径特征：以盘符开头，如 C:\、D:\ 等
+     *
+     * @param path 路径
+     * @return 是否为 Windows 路径
+     */
+    private boolean isWindowsPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+        // 匹配 Windows 绝对路径：X:\ 或 X:/
+        return path.matches("^[A-Za-z]:[/\\\\].*");
+    }
+
+    /**
+     * 检测当前系统是否为 Windows
+     *
+     * @return 是否为 Windows 系统
+     */
+    private boolean isRunningOnWindows() {
+        String os = System.getProperty("os.name");
+        return os != null && os.toLowerCase().contains("windows");
+    }
+
+    /**
      * 注入 Claude Code MCP 配置
      * 创建 .mcp.json 文件并写入 MCP 服务器配置（项目级配置）
      *
@@ -658,6 +728,9 @@ public class SessionServiceImpl implements ISessionService {
         try {
             // ✅ 修复：使用 .mcp.json（项目级配置）而不是 .claude/config.json
             Path configPath = Paths.get(workingDir, ".mcp.json");
+
+            // ✅ 修复：确保父目录存在
+            Files.createDirectories(configPath.getParent());
 
             // 读取现有配置（如果存在）
             Map<String, Object> existingConfig = new HashMap<>();

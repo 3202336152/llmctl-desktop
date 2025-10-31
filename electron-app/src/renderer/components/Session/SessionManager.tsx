@@ -317,6 +317,32 @@ const SessionManager: React.FC = () => {
       const response = await sessionAPI.startSession(request);
       if (response.data) {
         dispatch(addSession(response.data));
+
+        // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
+        try {
+          const mcpResponse = await sessionAPI.getMcpConfig(response.data.id);
+          if (mcpResponse.data && Object.keys(mcpResponse.data.mcpServers || {}).length > 0) {
+            // 根据 CLI 类型决定配置文件路径
+            let configFileName = '.mcp.json';
+            if (request.type === 'codex') {
+              configFileName = '.codex/mcp.json';
+            } else if (request.type === 'gemini') {
+              configFileName = '.gemini/mcp.json';
+            } else if (request.type === 'qoder') {
+              configFileName = '.qoder/mcp.json';
+            }
+
+            const configPath = `${values.workingDirectory}/${configFileName}`;
+            const configContent = JSON.stringify(mcpResponse.data, null, 2);
+
+            await window.electronAPI.writeFile(configPath, configContent);
+            console.log(`✅ MCP 配置文件写入成功: ${configPath}`);
+          }
+        } catch (mcpError) {
+          console.error('写入 MCP 配置文件失败:', mcpError);
+          // MCP 配置写入失败不影响会话创建，仅记录错误
+        }
+
         // 自动打开终端并切换到该标签
         dispatch(openTerminal(response.data.id));
         // 跳转到 Terminals 页面
@@ -473,6 +499,32 @@ const SessionManager: React.FC = () => {
         const response = await sessionAPI.startSession(newSessionRequest);
         if (response.data) {
           dispatch(addSession(response.data));
+
+          // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
+          try {
+            const mcpResponse = await sessionAPI.getMcpConfig(response.data.id);
+            if (mcpResponse.data && Object.keys(mcpResponse.data.mcpServers || {}).length > 0) {
+              // 根据 CLI 类型决定配置文件路径
+              let configFileName = '.mcp.json';
+              if (session.type === 'codex') {
+                configFileName = '.codex/mcp.json';
+              } else if (session.type === 'gemini') {
+                configFileName = '.gemini/mcp.json';
+              } else if (session.type === 'qoder') {
+                configFileName = '.qoder/mcp.json';
+              }
+
+              const configPath = `${session.workingDirectory}/${configFileName}`;
+              const configContent = JSON.stringify(mcpResponse.data, null, 2);
+
+              await window.electronAPI.writeFile(configPath, configContent);
+              console.log(`✅ MCP 配置文件写入成功: ${configPath}`);
+            }
+          } catch (mcpError) {
+            console.error('写入 MCP 配置文件失败:', mcpError);
+            // MCP 配置写入失败不影响会话创建，仅记录错误
+          }
+
           // 打开新会话的终端
           dispatch(openTerminal(response.data.id));
           // 跳转到 Terminals 页面

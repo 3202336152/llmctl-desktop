@@ -366,7 +366,12 @@ ipcMain.handle('read-file', async (_event, filePath: string) => {
  */
 ipcMain.handle('write-file', async (_event, filePath: string, content: string) => {
   try {
+    // ✅ 确保父目录存在
+    const dirPath = path.dirname(filePath);
+    await fs.promises.mkdir(dirPath, { recursive: true });
+
     await fs.promises.writeFile(filePath, content, 'utf-8');
+    console.log('[IPC] ✅ 文件写入成功:', filePath);
     return true;
   } catch (error) {
     console.error('[IPC] write-file 失败:', error);

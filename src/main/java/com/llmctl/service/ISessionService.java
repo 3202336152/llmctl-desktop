@@ -139,6 +139,16 @@ public interface ISessionService {
     void refreshMcpConfig(String sessionId);
 
     /**
+     * 获取会话的 MCP 配置内容（供前端写入文件）
+     * 新增方法：解决跨平台文件路径问题，由前端负责写入本地文件
+     *
+     * @param sessionId 会话ID
+     * @return MCP 配置内容（包含 mcpServers 配置的完整 JSON 对象）
+     * @throws IllegalArgumentException 如果会话不存在
+     */
+    Map<String, Object> getMcpConfigContent(String sessionId);
+
+    /**
      * 会话统计信息
      */
     class SessionStatistics {
