@@ -30,11 +30,12 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 - **归档管理** - 归档会话配置，支持按时间范围批量清理
 
 ### 🔌 MCP 服务器管理
-- **模板库** - 内置常用 MCP 服务器（mysql、gitlab、context7、brave-search等）
-- **自定义配置** - 支持创建和管理自定义 MCP 服务器
-- **智能关联** - 为不同 Provider 和 CLI 工具配置专属 MCP
-- **自动注入** - 会话启动时自动生成配置文件（`.mcp.json`）
-- **配置刷新** - 右键菜单一键刷新 MCP 配置
+- **模板库** - 内置常用 MCP 服务器（memory、sqlite、fetch、git、context7、brave-search、gitlab 等）
+- **图标系统** - 为每个 MCP 服务器配置专属图标，视觉化管理更直观
+- **动态配置** - 命令参数和环境变量可自由添加/删除，灵活配置
+- **全局配置** - 统一管理 MCP 服务器，所有会话自动应用已启用的 MCP
+- **状态管理** - 已启用服务器优先显示，实时排序，一键启用/禁用
+- **批量操作** - 支持批量启用、批量禁用、批量删除
 
 ### 🔑 智能 Token 管理
 - **多种轮询策略** - Round Robin、Weighted、Random、Least Used
