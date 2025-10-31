@@ -9,6 +9,7 @@ import {
   UserOutlined,
   BellOutlined,
   CodeOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from './store';
@@ -24,6 +25,7 @@ import NotificationCenter from './components/Notifications/NotificationCenter';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
 import RegisterPage from './components/Auth/RegisterPage';
+import McpServerManager from './components/Mcp/McpServerManager';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
@@ -387,6 +389,11 @@ const AppContent: React.FC = () => {
       label: t('nav.tokens'),
     },
     {
+      key: '/mcp-servers',
+      icon: <AppstoreOutlined />,
+      label: t('nav.mcpServers', 'MCP Servers'),
+    },
+    {
       key: '/sessions',
       icon: <DesktopOutlined />,
       label: t('nav.sessions'),
@@ -492,6 +499,7 @@ const AppContent: React.FC = () => {
                 <Route path="/providers" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
                 <Route path="/tokens" element={<ProtectedRoute><TokenManager /></ProtectedRoute>} />
                 <Route path="/sessions" element={<ProtectedRoute><SessionManager /></ProtectedRoute>} />
+                <Route path="/mcp-servers" element={<ProtectedRoute><McpServerManager /></ProtectedRoute>} />
                 <Route path="/terminals" element={<ProtectedRoute><div /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

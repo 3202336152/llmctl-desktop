@@ -66,4 +66,9 @@ export const sessionAPI = {
   cleanupInactiveSessions: (): Promise<ApiResponse<number>> => {
     return httpClient.delete('/sessions/cleanup-inactive').then(response => response.data);
   },
+
+  // 刷新会话的 MCP 配置
+  refreshMcpConfig: (sessionId: string): Promise<ApiResponse<void>> => {
+    return httpClient.post(`/sessions/${sessionId}/refresh-mcp`).then(response => response.data);
+  },
 };

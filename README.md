@@ -4,7 +4,7 @@
 
 **强大的 LLM Provider、Token 和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.2.4-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -29,6 +29,13 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 - **Codex 会话隔离** - 每个会话使用独立配置目录，支持多会话并行运行
 - **归档管理** - 归档会话配置，支持按时间范围批量清理
 
+### 🔌 MCP 服务器管理
+- **模板库** - 内置常用 MCP 服务器（mysql、gitlab、context7、brave-search等）
+- **自定义配置** - 支持创建和管理自定义 MCP 服务器
+- **智能关联** - 为不同 Provider 和 CLI 工具配置专属 MCP
+- **自动注入** - 会话启动时自动生成配置文件（`.mcp.json`）
+- **配置刷新** - 右键菜单一键刷新 MCP 配置
+
 ### 🔑 智能 Token 管理
 - **多种轮询策略** - Round Robin、Weighted、Random、Least Used
 - **健康检查** - 自动检测 Token 状态，失效自动切换
@@ -48,7 +55,6 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 
 ### 🌐 其他特性
 - **国际化** - 中英文双语切换
-- **暗色主题** - 亮色/暗色主题自由切换
 - **配置管理** - 导入导出配置，方便迁移备份
 - **帮助中心** - 完整的应用内帮助文档
 
@@ -82,6 +88,7 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 
 - 🔧 **多项目开发** - 不同项目使用不同的 Provider 和 Token 配置
 - 🔄 **Token 轮询** - 多个 API Key 负载均衡，避免速率限制
+- 🔌 **MCP 扩展** - 为 AI 工具添加外部能力（文件系统、数据库、API 等）
 - 🛡️ **团队协作** - 多用户隔离，每个成员独立管理自己的配置
 - 📊 **使用统计** - 追踪 Token 使用情况和会话历史
 
@@ -130,6 +137,14 @@ LLMctl/
 
 ## 🔄 最新更新
 
+### v2.2.4 (2025-10-30)
+
+- 🔌 **MCP 服务器管理** - 完整的 Model Context Protocol 服务器管理功能
+- 📚 **模板库** - 内置常用 MCP 服务器模板（memory、sqlite、fetch、git、context7）
+- 🔗 **智能关联** - 为每个 Provider 的不同 CLI 工具配置专属 MCP 服务器
+- 🔄 **配置刷新** - 右键菜单一键刷新 MCP 配置，无需重启会话
+- 🐛 **Bug 修复** - 修复重复提交、图标显示、删除确认等问题
+
 ### v2.2.1 (2025-10-23)
 
 - 🔐 **Codex 会话配置隔离** - 每个会话使用独立的 `.codex-sessions/{sessionId}/` 配置目录
@@ -153,11 +168,6 @@ LLMctl/
 
 - 📊 **会话表格优化** - 会话名称、时间信息、工作目录显示优化
 - 🖱️ **快捷操作** - 右键菜单、双击打开终端、命令下拉选择
-
-### v2.1.5 (2025-10-16)
-
-- 🔧 **外部终端环境变量** - 自动获取并注入环境变量
-- 🔄 **终端重启优化** - 解决黑屏和卡死问题
 
 [查看完整更新日志](CHANGELOG.md)
 

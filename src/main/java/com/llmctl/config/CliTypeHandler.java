@@ -13,17 +13,32 @@ import java.sql.SQLException;
 /**
  * CliType 枚举的 MyBatis 类型处理器
  *
+ * 支持两种输入类型：
+ * 1. ProviderConfig.CliType 枚举类型
+ * 2. String 字符串类型
+ *
  * @author Liu Yifan
  * @version 2.3.0
  * @since 2025-01-15
  */
 @MappedTypes(ProviderConfig.CliType.class)
-public class CliTypeHandler extends BaseTypeHandler<ProviderConfig.CliType> {
+public class CliTypeHandler extends BaseTypeHandler<Object> {
 
     @Override
-    public void setNonNullParameter(PreparedStatement ps, int i, ProviderConfig.CliType parameter, JdbcType jdbcType) throws SQLException {
-        // 将枚举转换为数据库值
-        ps.setString(i, parameter.getValue());
+    public void setNonNullParameter(PreparedStatement ps, int i, Object parameter, JdbcType jdbcType) throws SQLException {
+        // 支持两种类型：枚举和字符串
+        if (parameter instanceof ProviderConfig.CliType) {
+            // 如果是枚举，直接获取值
+            ps.setString(i, ((ProviderConfig.CliType) parameter).getValue());
+        } else if (parameter instanceof String) {
+            // 如果是字符串，直接使用
+            ps.setString(i, (String) parameter);
+        } else {
+            throw new IllegalArgumentException(
+                "CliTypeHandler 只支持 ProviderConfig.CliType 或 String 类型，但收到: " +
+                parameter.getClass().getName()
+            );
+        }
     }
 
     @Override

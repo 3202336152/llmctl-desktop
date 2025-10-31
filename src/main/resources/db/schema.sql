@@ -41,6 +41,32 @@ CREATE TABLE `global_config` (
 ) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='全局配置表';
 
 
+-- llmctl.mcp_servers definition
+
+CREATE TABLE `mcp_servers` (
+                               `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'MCP服务器ID',
+                               `user_id` bigint DEFAULT NULL COMMENT '用户ID（NULL表示全局模板，非NULL表示用户专属MCP）',
+                               `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'MCP服务器名称（唯一标识）',
+                               `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '服务器描述',
+                               `type` enum('stdio','sse') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'stdio' COMMENT 'MCP服务器类型：stdio（标准输入输出）或 sse（Server-Sent Events）',
+                               `command` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '启动命令（如 node, python, npx 等）',
+                               `args` json DEFAULT NULL COMMENT '命令参数数组（JSON格式），例如: ["-y", "@modelcontextprotocol/server-filesystem"]',
+                               `env` json DEFAULT NULL COMMENT '环境变量（JSON对象），例如: {"API_KEY": "xxx"}',
+                               `enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用：1-启用，0-禁用',
+                               `is_template` tinyint(1) DEFAULT '0' COMMENT '是否为模板：1-内置模板（不可删除），0-用户创建',
+                               `template_category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '模板分类：filesystem, database, api, dev-tools 等',
+                               `icon` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '图标名称（用于 UI 展示，如 folder, github, database）',
+                               `config_hints` json DEFAULT NULL COMMENT '配置提示信息（帮助用户填写参数），例如: {"args[2]": "设置允许访问的根目录路径"}',
+                               `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                               `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                               PRIMARY KEY (`id`),
+                               KEY `idx_name` (`name`),
+                               KEY `idx_enabled` (`enabled`),
+                               KEY `idx_template` (`is_template`),
+                               KEY `idx_category` (`template_category`)
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MCP服务器配置表';
+
+
 -- llmctl.provider_templates definition
 
 CREATE TABLE `provider_templates` (
@@ -121,7 +147,7 @@ CREATE TABLE `users` (
                          KEY `idx_username` (`username`),
                          KEY `idx_email` (`email`),
                          KEY `idx_is_active` (`is_active`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
 
 
 -- llmctl.login_logs definition
@@ -140,7 +166,7 @@ CREATE TABLE `login_logs` (
                               KEY `idx_username` (`username`),
                               KEY `idx_created_at` (`created_at`),
                               CONSTRAINT `fk_login_log_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=167 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=215 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志表';
 
 
 -- llmctl.notifications definition
@@ -219,7 +245,7 @@ CREATE TABLE `tokens` (
                           `id` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Token唯一标识',
                           `user_id` bigint NOT NULL,
                           `provider_id` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '关联的Provider ID',
-                          `value` varchar(500) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Token值（加密存储）',
+                          `value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Token值（加密存储）',
                           `alias` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Token别名',
                           `weight` int DEFAULT '1' COMMENT '权重（用于加权轮询）',
                           `enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用',
@@ -250,4 +276,26 @@ CREATE TABLE `provider_configs` (
                                     UNIQUE KEY `uk_provider_cli` (`provider_id`,`cli_type`) COMMENT '每个Provider的每种CLI只能有一个配置',
                                     KEY `idx_cli_type` (`cli_type`) COMMENT 'CLI类型索引',
                                     CONSTRAINT `fk_provider_configs_provider` FOREIGN KEY (`provider_id`) REFERENCES `providers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Provider CLI 配置表';
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Provider CLI 配置表';
+
+
+-- llmctl.provider_mcp_mappings definition
+
+CREATE TABLE `provider_mcp_mappings` (
+                                         `id` bigint NOT NULL AUTO_INCREMENT COMMENT '映射ID',
+                                         `provider_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Provider ID（关联 providers 表）',
+                                         `mcp_server_id` bigint NOT NULL COMMENT 'MCP 服务器ID（关联 mcp_servers 表）',
+                                         `cli_type` enum('claude code','codex','gemini','qoder') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'CLI 类型',
+                                         `enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用该关联：1-启用，0-禁用',
+                                         `priority` int DEFAULT '0' COMMENT '优先级（数字越大优先级越高，影响配置生成顺序）',
+                                         `custom_config` json DEFAULT NULL COMMENT '自定义配置覆盖（JSON对象，用于覆盖 MCP 服务器的默认配置）',
+                                         `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                         `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                         PRIMARY KEY (`id`),
+                                         UNIQUE KEY `uk_provider_mcp_cli` (`provider_id`,`mcp_server_id`,`cli_type`),
+                                         KEY `idx_provider_id` (`provider_id`),
+                                         KEY `idx_mcp_server_id` (`mcp_server_id`),
+                                         KEY `idx_cli_type` (`cli_type`),
+                                         CONSTRAINT `provider_mcp_mappings_ibfk_1` FOREIGN KEY (`mcp_server_id`) REFERENCES `mcp_servers` (`id`) ON DELETE CASCADE,
+                                         CONSTRAINT `provider_mcp_mappings_ibfk_2` FOREIGN KEY (`provider_id`) REFERENCES `providers` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Provider与MCP服务器关联表';

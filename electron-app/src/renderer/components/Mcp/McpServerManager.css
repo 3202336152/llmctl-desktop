@@ -1,0 +1,48 @@
+.mcp-server-manager {
+  padding: 24px;
+  background-color: #ffffff;
+  min-height: calc(100vh - 64px);
+}
+
+.mcp-server-header {
+  margin-bottom: 24px;
+}
+
+.mcp-server-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.mcp-server-description {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.mcp-server-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 8px;
+}
+
+/* 暗色主题支持 */
+.dark-theme .mcp-server-manager {
+  background-color: #1f1f1f;
+}
+
+.dark-theme .mcp-server-header h2 {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dark-theme .mcp-server-description {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.dark-theme .mcp-server-toolbar {
+  background-color: #262626;
+}

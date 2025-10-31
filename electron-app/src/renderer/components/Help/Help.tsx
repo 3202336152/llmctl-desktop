@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Input, List, Typography, Divider, Tag, Button, Space, Anchor, Alert } from 'antd';
-import { SearchOutlined, BookOutlined, QuestionCircleOutlined, KeyOutlined, DesktopOutlined, SettingOutlined, GithubOutlined, MessageOutlined } from '@ant-design/icons';
+import { Card, Input, List, Typography, Divider, Tag, Button, Space, Anchor, Alert, Steps } from 'antd';
+import { SearchOutlined, BookOutlined, QuestionCircleOutlined, KeyOutlined, DesktopOutlined, SettingOutlined, GithubOutlined, MessageOutlined, UserOutlined, ApiOutlined, RocketOutlined, LoginOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import './Help.css';
 
@@ -47,43 +47,186 @@ const Help: React.FC = () => {
       content: (
         <div>
           <Title level={4}>欢迎使用 LLMctl 🚀</Title>
-          <Paragraph>
-            LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。本指南将帮助您快速上手。
-          </Paragraph>
+          <Alert
+            message="开始您的 AI 助手管理之旅"
+            description="LLMctl 是一个功能强大的 LLM Provider、Token 和会话管理桌面应用。按照以下步骤快速配置并启动您的第一个 AI 会话。"
+            type="info"
+            showIcon
+            icon={<RocketOutlined />}
+            style={{ marginBottom: 24 }}
+          />
 
-          <Title level={5}>第一步：用户登录</Title>
-          <Paragraph>
-            1. 应用启动后显示登录页面<br />
-            2. 或点击"注册"创建新账户<br />
-            3. 登录成功后进入主应用
-          </Paragraph>
+          <Steps
+            direction="vertical"
+            size="small"
+            current={-1}
+            items={[
+              {
+                title: <Text strong style={{ fontSize: 16 }}>第一步：用户登录</Text>,
+                icon: <LoginOutlined style={{ fontSize: 20 }} />,
+                description: (
+                  <div style={{ marginTop: 12 }}>
+                    <List
+                      size="small"
+                      dataSource={[
+                        { icon: '🔐', text: '应用启动后显示登录页面' },
+                        { icon: '📝', text: '首次使用？点击"注册"创建新账户（需邮箱验证）' },
+                        { icon: '✅', text: '登录成功后进入主应用界面' }
+                      ]}
+                      renderItem={(item: { icon: string; text: string }) => (
+                        <List.Item style={{ border: 'none', padding: '4px 0' }}>
+                          <Space>
+                            <span style={{ fontSize: 16 }}>{item.icon}</span>
+                            <Text>{item.text}</Text>
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                    <Alert
+                      message="提示"
+                      description="支持 QQ 邮箱和 163 邮箱注册，验证码 5 分钟有效"
+                      type="success"
+                      showIcon
+                      style={{ marginTop: 12 }}
+                    />
+                  </div>
+                )
+              },
+              {
+                title: <Text strong style={{ fontSize: 16 }}>第二步：添加 Provider</Text>,
+                icon: <ApiOutlined style={{ fontSize: 20 }} />,
+                description: (
+                  <div style={{ marginTop: 12 }}>
+                    <List
+                      size="small"
+                      dataSource={[
+                        { step: '1', text: '点击左侧菜单', highlight: 'Providers' },
+                        { step: '2', text: '点击', highlight: 'Add Provider', color: 'blue' },
+                        { step: '3', text: '选择 LLM 服务商', highlight: 'Claude Code / Codex / Gemini / Qoder' },
+                        { step: '4', text: '填写 API 配置信息（API Key、端点等）' },
+                        { step: '5', text: '点击', highlight: 'Test', color: 'green', extra: '验证配置' },
+                        { step: '6', text: '保存配置', icon: '💾' }
+                      ]}
+                      renderItem={(item: any) => (
+                        <List.Item style={{ border: 'none', padding: '4px 0' }}>
+                          <Space>
+                            <Tag color="cyan">{item.step}</Tag>
+                            <Text>{item.text}</Text>
+                            {item.highlight && (
+                              <Tag color={item.color || 'default'}>
+                                <strong>{item.highlight}</strong>
+                              </Tag>
+                            )}
+                            {item.extra && <Text type="secondary">({item.extra})</Text>}
+                            {item.icon && <span style={{ fontSize: 16 }}>{item.icon}</span>}
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                  </div>
+                )
+              },
+              {
+                title: <Text strong style={{ fontSize: 16 }}>第三步：添加 API Keys</Text>,
+                icon: <KeyOutlined style={{ fontSize: 20 }} />,
+                description: (
+                  <div style={{ marginTop: 12 }}>
+                    <List
+                      size="small"
+                      dataSource={[
+                        { step: '1', text: '点击左侧菜单', highlight: 'API Keys' },
+                        { step: '2', text: '点击', highlight: 'Add Token', color: 'blue' },
+                        { step: '3', text: '输入 API Key', icon: '🔑', extra: 'AES-256-GCM 加密存储' },
+                        { step: '4', text: '选择对应的 Provider 和轮询策略', highlight: 'Round Robin / Weighted / Random / Least Used' },
+                        { step: '5', text: '保存配置', icon: '💾' }
+                      ]}
+                      renderItem={(item: any) => (
+                        <List.Item style={{ border: 'none', padding: '4px 0' }}>
+                          <Space>
+                            <Tag color="cyan">{item.step}</Tag>
+                            <Text>{item.text}</Text>
+                            {item.icon && <span style={{ fontSize: 16 }}>{item.icon}</span>}
+                            {item.highlight && (
+                              <Tag color={item.color || 'default'}>
+                                <strong>{item.highlight}</strong>
+                              </Tag>
+                            )}
+                            {item.extra && <Text type="secondary">({item.extra})</Text>}
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                    <Alert
+                      message="安全提示"
+                      description="所有 Token 采用 NSA 级 AES-256-GCM 加密存储，前端只显示前 4 位和后 4 位"
+                      type="warning"
+                      showIcon
+                      style={{ marginTop: 12 }}
+                    />
+                  </div>
+                )
+              },
+              {
+                title: <Text strong style={{ fontSize: 16 }}>第四步：创建会话</Text>,
+                icon: <DesktopOutlined style={{ fontSize: 20 }} />,
+                description: (
+                  <div style={{ marginTop: 12 }}>
+                    <List
+                      size="small"
+                      dataSource={[
+                        { step: '1', text: '点击左侧菜单', highlight: 'Sessions' },
+                        { step: '2', text: '点击', highlight: 'Start Session', color: 'green' },
+                        { step: '3', text: '选择 Provider 和工作目录', icon: '📁' },
+                        { step: '4', text: '选择 CLI 命令', highlight: 'claude / codex / gemini / qoder' },
+                        { step: '5', text: '点击启动，开始使用！', icon: '🎉' }
+                      ]}
+                      renderItem={(item: any) => (
+                        <List.Item style={{ border: 'none', padding: '4px 0' }}>
+                          <Space>
+                            <Tag color="cyan">{item.step}</Tag>
+                            <Text>{item.text}</Text>
+                            {item.icon && <span style={{ fontSize: 16 }}>{item.icon}</span>}
+                            {item.highlight && (
+                              <Tag color={item.color || 'default'}>
+                                <strong>{item.highlight}</strong>
+                              </Tag>
+                            )}
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                    <Alert
+                      message="恭喜！"
+                      description="会话启动后，您将看到一个功能强大的 AI 终端，支持全屏模式、多标签页、快捷键等特性。"
+                      type="success"
+                      showIcon
+                      icon={<CheckCircleOutlined />}
+                      style={{ marginTop: 12 }}
+                    />
+                  </div>
+                )
+              }
+            ]}
+          />
 
-          <Title level={5}>第二步：添加 Provider</Title>
-          <Paragraph>
-            1. 点击左侧菜单的 <Text strong>Providers</Text><br />
-            2. 点击 <Text strong>"Add Provider"</Text> 按钮<br />
-            3. 选择您要使用的 LLM 服务商（如 Claude、OpenAI、Qwen 等）<br />
-            4. 填写相应的 API 配置信息<br />
-            5. 点击 <Text strong>"Test"</Text> 验证配置<br />
-            6. 保存配置
-          </Paragraph>
+          <Divider />
 
-          <Title level={5}>第三步：添加 API Keys</Title>
-          <Paragraph>
-            1. 点击左侧菜单的 <Text strong>API Keys</Text><br />
-            2. 点击 <Text strong>"Add Token"</Text> 按钮<br />
-            3. 输入您的 API Key（会被加密存储）<br />
-            4. 选择对应的 Provider 和轮询策略<br />
-            5. 保存配置
-          </Paragraph>
-
-          <Title level={5}>第四步：创建会话</Title>
-          <Paragraph>
-            1. 点击左侧菜单的 <Text strong>Sessions</Text><br />
-            2. 点击 <Text strong>"Start Session"</Text> 按钮<br />
-            3. 选择 Provider 和工作目录<br />
-            4. 点击启动即可开始使用
-          </Paragraph>
+          <Alert
+            message="💡 快速提示"
+            description={
+              <div>
+                <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+                  <li>支持配置多个 Provider 和多个 Token 实现负载均衡</li>
+                  <li>Token 失效时系统会自动切换到下一个可用 Token</li>
+                  <li>使用 <Tag>Ctrl+K</Tag> 快速打开命令面板</li>
+                  <li>终端支持 <Tag>Ctrl+1/2/3</Tag> 切换标签页，<Tag>Ctrl+W</Tag> 关闭</li>
+                </ul>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
         </div>
       )
     },
@@ -361,6 +504,124 @@ const Help: React.FC = () => {
       )
     },
     {
+      id: 'mcp-servers',
+      title: 'MCP 服务器管理',
+      category: 'features',
+      keywords: ['mcp', 'model context protocol', '服务器', '扩展', '工具', '模板'],
+      content: (
+        <div>
+          <Title level={4}>Model Context Protocol (MCP) 服务器管理 🚀</Title>
+
+          <Alert
+            message="✨ v2.2.4 MCP 服务器管理系统"
+            description={
+              <div>
+                <Paragraph>
+                  全新的 MCP 服务器管理系统，为 AI 工具提供强大的扩展能力：
+                </Paragraph>
+                <ul>
+                  <li>📦 <Text strong>模板库</Text> - 内置 Filesystem、GitHub、Sequential Thinking 等多种 MCP 模板，一键创建</li>
+                  <li>🎯 <Text strong>智能图标</Text> - 为每个 MCP 服务器选择专属图标，视觉化管理更直观</li>
+                  <li>🔧 <Text strong>动态配置</Text> - 命令参数和环境变量可自由添加/删除，灵活配置</li>
+                  <li>🎨 <Text strong>状态管理</Text> - 已启用服务器优先显示（绿色标签），未启用自动排到末尾（灰色标签）</li>
+                  <li>⚡ <Text strong>实时排序</Text> - 启用/禁用操作后列表立即重排，无需刷新</li>
+                  <li>🗑️ <Text strong>批量操作</Text> - 支持批量启用、批量禁用、批量删除</li>
+                </ul>
+              </div>
+            }
+            type="success"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+
+          <Title level={5}>什么是 MCP？</Title>
+          <Paragraph>
+            Model Context Protocol (MCP) 是一个开放标准协议，允许 AI 助手（如 Claude Code、Codex 等）通过标准化的方式访问外部工具和数据源，极大扩展了 AI 的能力边界。
+          </Paragraph>
+
+          <Title level={5}>模板库</Title>
+          <Paragraph>
+            系统内置多种常用 MCP 模板，按类别分组：
+          </Paragraph>
+          <div style={{ marginBottom: 16 }}>
+            <Tag color="orange">文件系统</Tag> - 访问本地文件和目录<br />
+            <Tag color="blue">数据库</Tag> - 连接 MySQL、PostgreSQL 等数据库<br />
+            <Tag color="green">API & 服务</Tag> - Reddit、GitHub 等第三方 API<br />
+            <Tag color="purple">开发工具</Tag> - Sequential Thinking、API Tester 等
+          </div>
+
+          <Title level={5}>使用流程</Title>
+          <Paragraph>
+            <Text strong>方式一：从模板创建</Text><br />
+            1. 点击 <Text strong>"模板库"</Text> 按钮<br />
+            2. 浏览分类，选择合适的模板<br />
+            3. 点击 <Text strong>"使用模板"</Text><br />
+            4. 填写服务器名称、选择图标<br />
+            5. 配置命令参数和环境变量（必填项已标红）<br />
+            6. 点击 <Text strong>"创建 MCP 服务器"</Text>
+          </Paragraph>
+
+          <Paragraph>
+            <Text strong>方式二：手动创建</Text><br />
+            1. 点击 <Text strong>"新建服务器"</Text> 按钮<br />
+            2. 填写名称、描述、选择图标<br />
+            3. 选择类型（stdio / sse）<br />
+            4. 配置启动命令（如 npx, node, python）<br />
+            5. 添加命令参数和环境变量<br />
+            6. 保存配置
+          </Paragraph>
+
+          <Title level={5}>状态管理</Title>
+          <ul>
+            <li><Tag color="success">已启用</Tag> - MCP 服务器已启用，会自动应用到所有会话</li>
+            <li><Tag color="default">未启用</Tag> - MCP 服务器已禁用，不会被加载</li>
+          </ul>
+          <Paragraph>
+            <Text type="secondary">
+              ✨ 提示：已启用的 MCP 会自动排在列表顶部，点击"启用"或"禁用"按钮后列表会实时重排。
+            </Text>
+          </Paragraph>
+
+          <Title level={5}>批量操作</Title>
+          <Paragraph>
+            选中多个 MCP 服务器后，可进行批量操作：
+          </Paragraph>
+          <ul>
+            <li>✅ <Text strong>批量启用</Text> - 一键启用选中的所有 MCP 服务器</li>
+            <li>⛔ <Text strong>批量禁用</Text> - 一键禁用选中的所有 MCP 服务器</li>
+            <li>🗑️ <Text strong>批量删除</Text> - 一键删除选中的所有 MCP 服务器（需确认）</li>
+          </ul>
+
+          <Title level={5}>图标系统</Title>
+          <Paragraph>
+            为每个 MCP 服务器选择专属图标，提升管理效率：
+          </Paragraph>
+          <div style={{ marginBottom: 16 }}>
+            文件夹 📁 | 数据库 💾 | GitHub 🔗 | 全局 🌍 | 云服务 ☁️ | 分支 🌿 |
+            机器人 🤖 | 灯泡 💡 | 环境 🌏 | 文件 📄 | 硬盘 💿
+          </div>
+
+          <Title level={5}>配置提示</Title>
+          <Alert
+            message="环境变量安全"
+            description="环境变量中包含 KEY、TOKEN、PASSWORD、SECRET 的字段会自动识别为敏感信息，使用密码输入框保护隐私。"
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+
+          <Title level={5}>最佳实践</Title>
+          <Paragraph>
+            • 使用有意义的名称（如 my-filesystem）方便识别<br />
+            • 为不同用途的 MCP 选择不同图标<br />
+            • 定期检查并禁用不需要的 MCP 以提升性能<br />
+            • 环境变量中的敏感信息会被自动加密存储<br />
+            • 配置完成后需要在 Providers 页面关联到对应的 Provider
+          </Paragraph>
+        </div>
+      )
+    },
+    {
       id: 'sessions',
       title: '会话管理',
       category: 'features',
@@ -551,7 +812,7 @@ const Help: React.FC = () => {
 
           <Title level={5}>版本信息</Title>
           <Paragraph>
-            当前版本：v2.2.0<br />
+            当前版本：v2.2.4<br />
             更新日期：2025年10月<br />
             开发团队：LLMctl Team
           </Paragraph>
@@ -563,6 +824,7 @@ const Help: React.FC = () => {
             <li>🔔 实时通知系统 - SSE推送、通知中心、优先级管理</li>
             <li>🎯 多 Provider 支持 - Claude Code、Codex、Gemini、Qoder 等</li>
             <li>🏗️ <Text strong>Provider配置分离架构 (v2.2.0)</Text> - 一对多关系、动态配置表单、项目专用配置</li>
+            <li>🚀 <Text strong>MCP 服务器管理 (v2.2.4)</Text> - 模板库、智能图标、动态配置、实时排序、批量操作</li>
             <li>🔑 智能 Token 管理 - 多种轮询策略，自动故障切换，手动切换Token</li>
             <li>🛡️ 企业级加密 - AES-256-GCM加密存储Token</li>
             <li>💻 强大终端功能 - 多标签页、全屏模式、字体缩放、快捷键、外部终端</li>
@@ -631,7 +893,6 @@ const Help: React.FC = () => {
           prefix={<SearchOutlined />}
           value={searchTerm}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          style={{ marginBottom: 24 }}
         />
       </div>
 

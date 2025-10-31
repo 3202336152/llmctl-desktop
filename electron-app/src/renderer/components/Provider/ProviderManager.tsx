@@ -16,6 +16,7 @@ import {
   App as AntApp,
   Row,
   Col,
+  Tabs,
 } from 'antd';
 import {
   PlusOutlined,
@@ -48,6 +49,7 @@ const ProviderManager: React.FC = () => {
   const [submitting, setSubmitting] = useState(false); // 防止重复提交
   const [form] = Form.useForm();
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]); // 监听选中的类型
+  const [activeTabKey, setActiveTabKey] = useState<string>('1'); // Tab 切换状态
 
   // 筛选和搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -87,12 +89,14 @@ const ProviderManager: React.FC = () => {
     setEditingProvider(null);
     form.resetFields();
     setSelectedTypes([]);
+    setActiveTabKey('1'); // 重置到第一个 Tab
     setModalVisible(true);
   };
 
   const handleEditProvider = (provider: Provider) => {
     setEditingProvider(provider);
     setSelectedTypes(provider.types || []);
+    setActiveTabKey('1'); // 重置到第一个 Tab
 
     // 从 configs 中提取各个 CLI 类型的配置
     const formValues: any = {
@@ -406,17 +410,26 @@ const ProviderManager: React.FC = () => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         confirmLoading={submitting}
-        width={700}
+        width={900}
         destroyOnHidden
+        footer={activeTabKey === '1' ? undefined : null}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            isActive: true,
-          }}
-          preserve={false}
-        >
+        <Tabs
+          activeKey={activeTabKey}
+          onChange={setActiveTabKey}
+          items={[
+            {
+              key: '1',
+              label: '基本信息',
+              children: (
+                <Form
+                  form={form}
+                  layout="vertical"
+                  initialValues={{
+                    isActive: true,
+                  }}
+                  preserve={false}
+                >
           <Form.Item
             label={t('providers.name')}
             name="name"
@@ -572,7 +585,11 @@ wire_api = "responses"`}
           >
             <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
           </Form.Item>
-        </Form>
+                </Form>
+              ),
+            },
+          ]}
+        />
       </Modal>
     </div>
   );

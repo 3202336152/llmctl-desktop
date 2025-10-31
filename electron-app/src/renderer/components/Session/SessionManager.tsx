@@ -542,6 +542,7 @@ const SessionManager: React.FC = () => {
         icon: <CodeOutlined />,
         onClick: () => handleOpenTerminal(record.id),
       },
+      { type: 'divider' },
       {
         key: 'copyId',
         label: '复制会话ID',
@@ -685,7 +686,7 @@ const SessionManager: React.FC = () => {
       title: '操作',
       key: 'action',
       align: 'center' as const,
-      width: 120,
+      width: 160,
       render: (_: any, record: Session) => (
         <Space size="small">
           {record.status === 'active' && (
@@ -851,7 +852,7 @@ const SessionManager: React.FC = () => {
         borderRadius: 8,
         display: 'flex',
         alignItems: 'center',
-        gap: 24,
+        justifyContent: 'space-between',
         minHeight: '80px',
       }}>
         <Space size={24}>
@@ -871,6 +872,17 @@ const SessionManager: React.FC = () => {
             <span style={{ fontWeight: 600, fontSize: 16, color: '#fa8c16' }}>{inactiveSessions.length}</span>
           </Space>
         </Space>
+
+        <div style={{
+          padding: '8px 16px',
+          background: '#e6f7ff',
+          border: '1px solid #91d5ff',
+          borderRadius: 4,
+          fontSize: 13,
+          color: '#1890ff',
+        }}>
+          💡 提示：需要为 AI 工具配置扩展能力？访问侧边栏的 <strong>MCP Servers</strong> 页面创建和管理 MCP 服务器
+        </div>
       </div>
 
       <Card

@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs'; // ✅ 添加异步文件操作
 
 interface TerminalSession {
   id: string;
@@ -143,42 +144,47 @@ class TerminalManager {
       console.log('[TerminalManager] 检测到 Windows 系统，已添加完整的 UTF-8 编码环境变量');
     }
 
-    // ✅ Codex 配置文件处理（会话独立方案）
+    // ✅ Codex 配置文件处理（会话独立方案）- 异步化优化
     // 目录结构: 工作目录/.codex-sessions/{sessionId}/
     let codexConfigPath: string | undefined;
     if (fullEnv.CODEX_CONFIG_TOML || fullEnv.CODEX_AUTH_JSON) {
       console.log('[TerminalManager] 检测到 Codex 配置，开始创建会话独立的配置文件');
+      const perfStart = Date.now(); // ✅ 性能监控
 
       try {
         // ✅ 从环境变量中获取 CODEX_HOME（已由后端设置为 .codex-sessions/{sessionId}）
         // 格式: /path/to/project/.codex-sessions/{sessionId}
         const codexDir = fullEnv.CODEX_HOME || path.join(cwd, '.codex-sessions', sessionId);
-        fs.mkdirSync(codexDir, { recursive: true });
-        console.log('[TerminalManager] 创建 Codex 会话独立配置目录:', codexDir);
+
+        // ✅ 异步创建目录（避免阻塞主进程）
+        await fsPromises.mkdir(codexDir, { recursive: true });
+        console.log(`[TerminalManager] 创建 Codex 会话独立配置目录耗时: ${Date.now() - perfStart}ms`);
 
         // 保存配置路径用于后续清理
         codexConfigPath = codexDir;
 
-        // 写入 config.toml
+        // ✅ 异步写入 config.toml
         if (fullEnv.CODEX_CONFIG_TOML) {
           const configPath = path.join(codexDir, 'config.toml');
-          fs.writeFileSync(configPath, fullEnv.CODEX_CONFIG_TOML, 'utf-8');
-          console.log('[TerminalManager] ✅ 写入 config.toml:', configPath);
+          const writeStart = Date.now();
 
-          // ✅ 验证文件是否真的存在
-          if (fs.existsSync(configPath)) {
-            const fileContent = fs.readFileSync(configPath, 'utf-8');
+          await fsPromises.writeFile(configPath, fullEnv.CODEX_CONFIG_TOML, 'utf-8');
+          console.log(`[TerminalManager] 写入 config.toml 耗时: ${Date.now() - writeStart}ms`);
+
+          // ✅ 异步验证文件是否真的存在
+          try {
+            const fileContent = await fsPromises.readFile(configPath, 'utf-8');
             console.log('[TerminalManager] ✅ 验证成功，文件大小:', fileContent.length, '字符');
             console.log('[TerminalManager] 📄 配置内容预览（前200字符）:', fileContent.substring(0, 200));
-          } else {
-            console.error('[TerminalManager] ❌ 文件验证失败：文件不存在!');
+          } catch (verifyError) {
+            console.error('[TerminalManager] ❌ 文件验证失败：', verifyError);
           }
 
           // 从环境变量中移除（已写入文件）
           delete fullEnv.CODEX_CONFIG_TOML;
         }
 
-        // 写入 auth.json
+        // ✅ 异步写入 auth.json
         if (fullEnv.CODEX_AUTH_JSON) {
           const authPath = path.join(codexDir, 'auth.json');
 
@@ -200,13 +206,15 @@ class TerminalManager {
             }
           }
 
-          fs.writeFileSync(authPath, authContent, 'utf-8');
-          console.log('[TerminalManager] ✅ 写入 auth.json:', authPath);
+          const authWriteStart = Date.now();
+          await fsPromises.writeFile(authPath, authContent, 'utf-8');
+          console.log(`[TerminalManager] 写入 auth.json 耗时: ${Date.now() - authWriteStart}ms`);
 
-          // ✅ 验证文件是否真的存在
-          if (fs.existsSync(authPath)) {
+          // ✅ 异步验证文件是否真的存在
+          try {
+            await fsPromises.access(authPath, fs.constants.F_OK);
             console.log('[TerminalManager] ✅ 验证成功，auth.json 已创建');
-          } else {
+          } catch (verifyError) {
             console.error('[TerminalManager] ❌ 文件验证失败：auth.json 不存在!');
           }
 
@@ -215,7 +223,7 @@ class TerminalManager {
           delete fullEnv.CODEX_API_KEY; // 也删除 Token 环境变量
         }
 
-        console.log('[TerminalManager] ✅ Codex 配置文件创建成功，Codex CLI 将自动读取工作目录下的 .codex/ 配置');
+        console.log(`[TerminalManager] ✅ Codex 配置文件创建成功，总耗时: ${Date.now() - perfStart}ms`);
       } catch (error) {
         console.error('[TerminalManager] ❌ 创建 Codex 配置文件失败:', error);
         throw new Error(`创建 Codex 配置文件失败: ${error}`);

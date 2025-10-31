@@ -1,6 +1,7 @@
 package com.llmctl.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.llmctl.context.UserContext;
 import com.llmctl.dto.SessionDTO;
 import com.llmctl.dto.StartSessionRequest;
@@ -18,12 +19,16 @@ import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.IGlobalConfigService;
 import com.llmctl.service.ISessionService;
 import com.llmctl.service.ITokenEncryptionService;
+import com.llmctl.service.McpServerService;
 import com.llmctl.service.TokenService;
 import com.llmctl.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +57,7 @@ public class SessionServiceImpl implements ISessionService {
     private final TokenService tokenService;
     private final IGlobalConfigService globalConfigService;
     private final ITokenEncryptionService encryptionService;
+    private final McpServerService mcpServerService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -137,6 +143,16 @@ public class SessionServiceImpl implements ISessionService {
         int result = sessionMapper.insert(session);
         if (result <= 0) {
             throw new ServiceException("创建会话", "数据库插入失败");
+        }
+
+        // 注入 MCP 配置
+        if (provider != null) {
+            try {
+                injectMcpConfig(session, provider, request.getType());
+            } catch (Exception e) {
+                log.error("注入 MCP 配置失败，会话ID: {}", session.getId(), e);
+                // MCP 配置注入失败不影响会话创建，记录错误后继续
+            }
         }
 
         log.info("成功创建会话记录: {} (ID: {})", session.getCommand(), session.getId());
@@ -320,6 +336,38 @@ public class SessionServiceImpl implements ISessionService {
             log.info("用户 {} 无非活跃会话需要清除", userId);
         }
         return count;
+    }
+
+    /**
+     * 刷新会话的 MCP 配置
+     * 重新生成并写入 .mcp.json 配置文件，但不重启 CLI 进程
+     *
+     * @param sessionId 会话ID
+     */
+    @Override
+    public void refreshMcpConfig(String sessionId) {
+        Long userId = UserContext.getUserId();
+        log.info("刷新会话 MCP 配置: {}, 用户ID: {}", sessionId, userId);
+
+        Session session = sessionMapper.findById(sessionId);
+        if (session == null) {
+            throw new ResourceNotFoundException("会话", sessionId);
+        }
+
+        // 验证会话关联的Provider是否属于当前用户
+        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        if (provider == null) {
+            throw new IllegalArgumentException("无权访问该会话");
+        }
+
+        // 重新注入 MCP 配置
+        try {
+            injectMcpConfig(session, provider, session.getType());
+            log.info("成功刷新会话 {} 的 MCP 配置", sessionId);
+        } catch (Exception e) {
+            log.error("刷新 MCP 配置失败，会话ID: {}", sessionId, e);
+            throw new RuntimeException("刷新 MCP 配置失败: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -560,6 +608,153 @@ public class SessionServiceImpl implements ISessionService {
                 })
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 注入 MCP 配置到会话工作目录
+     *
+     * @param session 会话对象
+     * @param provider Provider对象
+     * @param cliType CLI类型
+     */
+    private void injectMcpConfig(Session session, Provider provider, String cliType) {
+        log.info("开始注入 MCP 配置，Provider: {}, CLI类型: {}", provider.getName(), cliType);
+
+        // 生成 MCP 配置
+        Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
+            provider.getId(),
+            cliType
+        );
+
+        if (mcpConfig.isEmpty()) {
+            log.info("无需注入 MCP 配置（无关联的服务器）");
+            return;
+        }
+
+        String workingDir = session.getWorkingDirectory();
+
+        // 根据不同 CLI 类型进行配置注入
+        if ("claude code".equalsIgnoreCase(cliType)) {
+            injectClaudeCodeMcpConfig(workingDir, mcpConfig);
+        } else if ("codex".equalsIgnoreCase(cliType)) {
+            injectCodexMcpConfig(workingDir, mcpConfig);
+        } else if ("gemini".equalsIgnoreCase(cliType)) {
+            injectGeminiMcpConfig(workingDir, mcpConfig);
+        } else if ("qoder".equalsIgnoreCase(cliType)) {
+            injectQoderMcpConfig(workingDir, mcpConfig);
+        } else {
+            log.warn("不支持的 CLI 类型: {}, 跳过 MCP 配置注入", cliType);
+        }
+    }
+
+    /**
+     * 注入 Claude Code MCP 配置
+     * 创建 .mcp.json 文件并写入 MCP 服务器配置（项目级配置）
+     *
+     * @param workingDir 工作目录
+     * @param mcpConfig MCP 配置
+     */
+    private void injectClaudeCodeMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
+        try {
+            // ✅ 修复：使用 .mcp.json（项目级配置）而不是 .claude/config.json
+            Path configPath = Paths.get(workingDir, ".mcp.json");
+
+            // 读取现有配置（如果存在）
+            Map<String, Object> existingConfig = new HashMap<>();
+            if (Files.exists(configPath)) {
+                String content = Files.readString(configPath);
+                existingConfig = objectMapper.readValue(content, new TypeReference<>() {});
+            }
+
+            // 添加 MCP 服务器配置
+            existingConfig.put("mcpServers", mcpConfig);
+
+            // 写入配置文件
+            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(existingConfig);
+            Files.writeString(configPath, configJson);
+
+            log.info("Claude Code MCP 配置注入成功: {} ({} 个服务器)",
+                configPath, mcpConfig.size());
+        } catch (Exception e) {
+            log.error("Claude Code MCP 配置注入失败", e);
+            throw new RuntimeException("MCP 配置注入失败", e);
+        }
+    }
+
+    /**
+     * 注入 Codex MCP 配置
+     * 创建 .codex/mcp.json 文件用于 MCP 服务器配置
+     *
+     * @param workingDir 工作目录
+     * @param mcpConfig MCP 配置
+     */
+    private void injectCodexMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
+        try {
+            Path configPath = Paths.get(workingDir, ".codex", "mcp.json");
+            Files.createDirectories(configPath.getParent());
+
+            // 写入 MCP 配置文件
+            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(mcpConfig);
+            Files.writeString(configPath, configJson);
+
+            log.info("Codex MCP 配置注入成功: {} ({} 个服务器)",
+                configPath, mcpConfig.size());
+        } catch (Exception e) {
+            log.error("Codex MCP 配置注入失败", e);
+            throw new RuntimeException("MCP 配置注入失败", e);
+        }
+    }
+
+    /**
+     * 注入 Gemini MCP 配置
+     * 创建 .gemini/mcp.json 文件用于 MCP 服务器配置
+     *
+     * @param workingDir 工作目录
+     * @param mcpConfig MCP 配置
+     */
+    private void injectGeminiMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
+        try {
+            Path configPath = Paths.get(workingDir, ".gemini", "mcp.json");
+            Files.createDirectories(configPath.getParent());
+
+            // 写入 MCP 配置文件
+            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(mcpConfig);
+            Files.writeString(configPath, configJson);
+
+            log.info("Gemini MCP 配置注入成功: {} ({} 个服务器)",
+                configPath, mcpConfig.size());
+        } catch (Exception e) {
+            log.error("Gemini MCP 配置注入失败", e);
+            throw new RuntimeException("MCP 配置注入失败", e);
+        }
+    }
+
+    /**
+     * 注入 Qoder MCP 配置
+     * 创建 .qoder/mcp.json 文件用于 MCP 服务器配置
+     *
+     * @param workingDir 工作目录
+     * @param mcpConfig MCP 配置
+     */
+    private void injectQoderMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
+        try {
+            Path configPath = Paths.get(workingDir, ".qoder", "mcp.json");
+            Files.createDirectories(configPath.getParent());
+
+            // 写入 MCP 配置文件
+            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(mcpConfig);
+            Files.writeString(configPath, configJson);
+
+            log.info("Qoder MCP 配置注入成功: {} ({} 个服务器)",
+                configPath, mcpConfig.size());
+        } catch (Exception e) {
+            log.error("Qoder MCP 配置注入失败", e);
+            throw new RuntimeException("MCP 配置注入失败", e);
+        }
     }
 
     /**

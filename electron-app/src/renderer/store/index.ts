@@ -6,6 +6,7 @@ import sessionSlice from './slices/sessionSlice';
 import configSlice from './slices/configSlice';
 import uiSlice from './slices/uiSlice';
 import notificationSlice from './slices/notificationSlice';
+import mcpSlice from './slices/mcpSlice';
 
 export const store = configureStore({
   reducer: {
@@ -15,6 +16,7 @@ export const store = configureStore({
     config: configSlice,
     ui: uiSlice,
     notification: notificationSlice,
+    mcp: mcpSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

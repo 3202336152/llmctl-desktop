@@ -129,6 +129,16 @@ public interface ISessionService {
     int deleteInactiveSessions(Long userId);
 
     /**
+     * 刷新会话的 MCP 配置
+     * 重新生成并写入 .mcp.json 配置文件，但不重启 CLI 进程
+     * 注意：用户需要手动重启 CLI 进程才能使新配置生效
+     *
+     * @param sessionId 会话ID
+     * @throws IllegalArgumentException 如果会话不存在
+     */
+    void refreshMcpConfig(String sessionId);
+
+    /**
      * 会话统计信息
      */
     class SessionStatistics {

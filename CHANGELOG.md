@@ -5,6 +5,47 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.3.0] - 2025-10-30
+
+### Added 🎉
+- **MCP 服务器管理** - 完整的 Model Context Protocol 服务器管理功能
+  - **模板库**：内置常用 MCP 服务器模板（memory、sqlite、fetch、git、context7）
+  - **自定义服务器**：支持创建自定义 MCP 服务器配置
+  - **Provider 关联**：为每个 Provider 的不同 CLI 工具配置专属 MCP 服务器
+  - **优先级管理**：可调整 MCP 服务器优先级，控制加载顺序
+  - **配置预览**：实时预览生成的 MCP 配置 JSON
+  - **使用教程**：内置完整的 MCP 使用指南
+
+- **自动配置注入** - 会话启动时自动注入 MCP 配置
+  - **Claude Code**：自动生成 `.mcp.json` 文件（项目级配置）
+  - **Codex**：自动生成 `.codex/mcp.json` 文件
+  - **跨平台兼容**：Windows 系统自动添加 `cmd /c` 包装，支持 npx/npm/yarn/pnpm 命令
+
+- **刷新 MCP 配置** - 新增手动刷新功能
+  - **右键菜单操作**：在 Sessions 页面右键会话，选择"刷新 MCP 配置"
+  - **即时更新**：不重启会话即可更新 `.mcp.json` 配置文件
+  - **智能提示**：自动提示用户重启 CLI 进程使配置生效
+
+### Fixed 🐛
+- **Provider MCP 配置重复提交** - 添加/删除 MCP 服务器时防止重复点击
+  - 添加 `submitting` 状态管理
+  - Modal 显示 `confirmLoading` 加载状态
+  - 有效防止网络延迟导致的重复提交
+
+- **MCP 删除确认对话框** - 删除 MCP 服务器时显示详细确认信息
+  - 改用 `modal.confirm` 替代简单的 `Popconfirm`
+  - 明确告知删除影响：配置移除、Provider 关联失效、需重启会话生效
+  - 提升用户删除操作的安全性
+
+- **context7 图标显示** - 修复 context7 MCP 服务器的 search 图标无法显示
+  - 在 `iconMap` 中添加 `search: <SearchOutlined />` 映射
+  - 所有图标类型均正确渲染
+
+### Changed 🔄
+- **菜单顺序调整** - 将 "MCP Servers" 菜单移动到 "Sessions" 上方
+  - 新顺序：Providers → Tokens → **MCP Servers** → Sessions → Terminals
+  - 更符合逻辑的工作流程：先配置 MCP，再创建会话
+
 ## [2.2.3] - 2025-10-29
 
 ### Fixed 🐛

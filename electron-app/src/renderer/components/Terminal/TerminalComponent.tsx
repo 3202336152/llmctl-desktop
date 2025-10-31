@@ -31,6 +31,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const createdRef = useRef<boolean>(false);
   const [fontSize, setFontSize] = useState<number>(16); // 默认字体大小
+  const fitDebounceTimerRef = useRef<NodeJS.Timeout | null>(null); // ✅ fit() 防抖定时器
 
   useEffect(() => {
     if (!terminalRef.current || createdRef.current) return;
@@ -38,13 +39,25 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     createdRef.current = true;
 
     const initTerminal = async () => {
-      // ✅ 获取环境变量前先验证会话是否存在
-      console.log('[TerminalComponent] 初始化终端，Session ID:', sessionId);
+      // ✅ 性能监控：记录初始化开始时间
+      const perfStart = performance.now();
+      console.log('[TerminalComponent] ⏱️ 开始初始化终端，Session ID:', sessionId);
 
       // 获取环境变量
       let envVars: Record<string, string> = env || {};
       try {
-        const envResponse = await sessionAPI.getSessionEnvironment(sessionId);
+        const envStart = performance.now();
+
+        // ✅ 添加超时保护（5秒超时）
+        const envResponse: any = await Promise.race([
+          sessionAPI.getSessionEnvironment(sessionId),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('获取环境变量超时(5秒)')), 5000)
+          )
+        ]);
+
+        console.log(`[TerminalComponent] ⏱️ 获取环境变量耗时: ${(performance.now() - envStart).toFixed(2)}ms`);
+
         if (envResponse.data) {
           envVars = { ...envVars, ...envResponse.data };
           console.log('[TerminalComponent] ✅ 成功获取环境变量');
@@ -64,38 +77,42 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       }
 
       const terminal = new Terminal({
-      cursorBlink: true,
-      fontSize: fontSize,
-      fontFamily: 'Consolas, "Courier New", monospace',
-      // ✅ 设置字符编码为 UTF-8，避免中文乱码
-      convertEol: true,
-      // ✅ Windows PowerShell 模式禁用（使用 CMD）
-      windowsMode: false,
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#ffffff',
-        black: '#000000',
-        red: '#cd3131',
-        green: '#0dbc79',
-        yellow: '#e5e510',
-        blue: '#2472c8',
-        magenta: '#bc3fbc',
-        cyan: '#11a8cd',
-        white: '#e5e5e5',
-        brightBlack: '#666666',
-        brightRed: '#f14c4c',
-        brightGreen: '#23d18b',
-        brightYellow: '#f5f543',
-        brightBlue: '#3b8eea',
-        brightMagenta: '#d670d6',
-        brightCyan: '#29b8db',
-        brightWhite: '#e5e5e5',
-      },
-      rows: 30,
-      cols: 120,
-      allowTransparency: true,
-    });
+        cursorBlink: true,
+        fontSize: fontSize,
+        fontFamily: 'Consolas, "Courier New", monospace',
+        // ✅ 设置字符编码为 UTF-8，避免中文乱码
+        convertEol: true,
+        // ✅ Windows PowerShell 模式禁用（使用 CMD）
+        windowsMode: false,
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#d4d4d4',
+          cursor: '#ffffff',
+          black: '#000000',
+          red: '#cd3131',
+          green: '#0dbc79',
+          yellow: '#e5e510',
+          blue: '#2472c8',
+          magenta: '#bc3fbc',
+          cyan: '#11a8cd',
+          white: '#e5e5e5',
+          brightBlack: '#666666',
+          brightRed: '#f14c4c',
+          brightGreen: '#23d18b',
+          brightYellow: '#f5f543',
+          brightBlue: '#3b8eea',
+          brightMagenta: '#d670d6',
+          brightCyan: '#29b8db',
+          brightWhite: '#e5e5e5',
+        },
+        rows: 30,
+        cols: 120,
+        allowTransparency: true,
+        // ✅ 性能优化：限制滚动缓冲区大小，避免内存占用过高
+        scrollback: 5000,
+      });
+
+      console.log(`[TerminalComponent] ⏱️ Terminal 对象创建耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
 
     // 添加插件
     const fitAddon = new FitAddon();
@@ -229,20 +246,31 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // 窗口大小改变时自适应
-    const handleResize = () => {
-      if (fitAddonRef.current && xtermRef.current) {
-        try {
-          fitAddonRef.current.fit();
-          // 通知后端调整PTY大小
-          const { cols, rows } = xtermRef.current;
-          window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
-            console.error('调整终端大小失败:', error);
-          });
-        } catch (error) {
-          console.error('终端自适应失败:', error);
-        }
+    // ✅ 防抖 fit() 调用，避免频繁调整导致性能问题
+    const debouncedFit = () => {
+      if (fitDebounceTimerRef.current) {
+        clearTimeout(fitDebounceTimerRef.current);
       }
+
+      fitDebounceTimerRef.current = setTimeout(() => {
+        if (fitAddonRef.current && xtermRef.current) {
+          try {
+            fitAddonRef.current.fit();
+            // 通知后端调整PTY大小
+            const { cols, rows } = xtermRef.current;
+            window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
+              console.error('调整终端大小失败:', error);
+            });
+          } catch (error) {
+            console.error('终端自适应失败:', error);
+          }
+        }
+      }, 200); // 200ms 防抖延迟
+    };
+
+    // 窗口大小改变时自适应（使用防抖）
+    const handleResize = () => {
+      debouncedFit();
     };
     window.addEventListener('resize', handleResize);
 
@@ -266,23 +294,14 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       terminalRef.current.addEventListener('contextmenu', handleContextMenu);
     }
 
-    // 监听终端容器可见性变化，自动调整尺寸
+    // 监听终端容器可见性变化，自动调整尺寸（使用防抖）
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           // 当终端变为可见时，重新调整尺寸
           if (entry.isIntersecting) {
             setTimeout(() => {
-              try {
-                fitAddon.fit();
-                // 同步通知后端调整PTY大小
-                const { cols, rows } = terminal;
-                window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
-                  console.error('调整终端大小失败:', error);
-                });
-              } catch (error) {
-                console.error('终端自适应失败:', error);
-              }
+              debouncedFit();
             }, 100); // 延迟 100ms 确保容器尺寸已稳定
           }
         });
@@ -299,6 +318,11 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       window.removeEventListener('resize', handleResize);
       observer.disconnect();
 
+      // 清理防抖定时器
+      if (fitDebounceTimerRef.current) {
+        clearTimeout(fitDebounceTimerRef.current);
+      }
+
       // 移除右键菜单监听
       if (terminalRef.current) {
         terminalRef.current.removeEventListener('contextmenu', handleContextMenu);
@@ -313,6 +337,9 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
 
       terminal.dispose();
     };
+
+    // ✅ 添加总的性能监控日志
+    console.log(`[TerminalComponent] ⏱️ ✅ 终端初始化完成，总耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
     }; // 闭合 initTerminal 函数
 
     // 调用异步初始化函数

@@ -261,6 +261,24 @@ public class SessionController {
     }
 
     /**
+     * 刷新会话的 MCP 配置
+     * 用于在不重启会话的情况下更新 .mcp.json 配置文件
+     *
+     * @param sessionId 会话ID
+     * @return 刷新结果
+     */
+    @PostMapping("/{sessionId}/refresh-mcp")
+    public ResponseEntity<ApiResponse<Object>> refreshMcpConfig(
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
+        log.info("刷新会话 MCP 配置: {}", sessionId);
+
+        sessionService.refreshMcpConfig(sessionId);
+        ApiResponse<Object> response = ApiResponse.success("MCP 配置已刷新，请重启 CLI 进程使配置生效");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 更新会话状态请求DTO
      */
     public static class UpdateSessionStatusRequest {

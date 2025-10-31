@@ -4,5 +4,6 @@ export { providerAPI } from './providerAPI';
 export { tokenAPI } from './tokenAPI';
 export { sessionAPI } from './sessionAPI';
 export { configAPI } from './configAPI';
+export { mcpAPI } from './mcpAPI';
 export { default as terminalAPI } from './terminalAPI';
 export { default as httpClient } from './httpClient';

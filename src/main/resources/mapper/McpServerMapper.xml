@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.McpServerMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.McpServer">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="type" property="type" jdbcType="VARCHAR"/>
+        <result column="command" property="command" jdbcType="VARCHAR"/>
+        <result column="args" property="args" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonListTypeHandler"/>
+        <result column="env" property="env" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonMapTypeHandler"/>
+        <result column="enabled" property="enabled" jdbcType="BOOLEAN"/>
+        <result column="is_template" property="isTemplate" jdbcType="BOOLEAN"/>
+        <result column="template_category" property="templateCategory" jdbcType="VARCHAR"/>
+        <result column="icon" property="icon" jdbcType="VARCHAR"/>
+        <result column="config_hints" property="configHints" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonMapTypeHandler"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, user_id, name, description, type, command, args, env, enabled,
+        is_template, template_category, icon, config_hints, created_at, updated_at
+    </sql>
+
+    <!-- 根据 ID 查询 MCP 服务器 -->
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有 MCP 服务器 -->
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据用户 ID 查询 MCP 服务器（不包括模板） -->
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE user_id = #{userId} AND is_template = 0
+        ORDER BY enabled DESC, created_at DESC
+    </select>
+
+    <!-- 查询所有模板 -->
+    <select id="findAllTemplates" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE is_template = 1 AND user_id IS NULL
+        ORDER BY template_category, name
+    </select>
+
+    <!-- 根据模板分类查询模板 -->
+    <select id="findTemplatesByCategory" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE is_template = 1 AND user_id IS NULL AND template_category = #{category}
+        ORDER BY name
+    </select>
+
+    <!-- 根据关键词搜索 MCP 服务器 -->
+    <select id="searchByKeyword" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE (name LIKE CONCAT('%', #{keyword}, '%')
+           OR description LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY enabled DESC, created_at DESC
+    </select>
+
+    <!-- 根据名称查询 MCP 服务器 -->
+    <select id="findByName" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE name = #{name}
+    </select>
+
+    <!-- 根据用户ID和名称查询 MCP 服务器 -->
+    <select id="findByUserIdAndName" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_servers
+        WHERE user_id = #{userId} AND name = #{name}
+    </select>
+
+    <!-- 插入 MCP 服务器 -->
+    <insert id="insert" parameterType="com.llmctl.entity.McpServer" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mcp_servers (
+            user_id, name, description, type, command, args, env, enabled,
+            is_template, template_category, icon, config_hints
+        )
+        VALUES (
+            #{userId}, #{name}, #{description}, #{type}, #{command},
+            #{args, typeHandler=com.llmctl.config.JsonListTypeHandler},
+            #{env, typeHandler=com.llmctl.config.JsonMapTypeHandler},
+            #{enabled}, #{isTemplate}, #{templateCategory}, #{icon},
+            #{configHints, typeHandler=com.llmctl.config.JsonMapTypeHandler}
+        )
+    </insert>
+
+    <!-- 更新 MCP 服务器 -->
+    <update id="update" parameterType="com.llmctl.entity.McpServer">
+        UPDATE mcp_servers
+        SET
+            name = #{name},
+            description = #{description},
+            type = #{type},
+            command = #{command},
+            args = #{args, typeHandler=com.llmctl.config.JsonListTypeHandler},
+            env = #{env, typeHandler=com.llmctl.config.JsonMapTypeHandler},
+            enabled = #{enabled},
+            template_category = #{templateCategory},
+            icon = #{icon},
+            config_hints = #{configHints, typeHandler=com.llmctl.config.JsonMapTypeHandler}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 MCP 服务器（仅删除非模板） -->
+    <delete id="deleteById">
+        DELETE FROM mcp_servers
+        WHERE id = #{id} AND is_template = 0
+    </delete>
+
+    <!-- 更新启用状态 -->
+    <update id="updateEnabled">
+        UPDATE mcp_servers
+        SET enabled = #{enabled}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.ProviderMcpMappingMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.llmctl.entity.ProviderMcpMapping">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="provider_id" property="providerId" jdbcType="VARCHAR"/>
+        <result column="mcp_server_id" property="mcpServerId" jdbcType="BIGINT"/>
+        <result column="cli_type" property="cliType" jdbcType="VARCHAR"/>
+        <result column="enabled" property="enabled" jdbcType="BOOLEAN"/>
+        <result column="priority" property="priority" jdbcType="INTEGER"/>
+        <result column="custom_config" property="customConfig" jdbcType="VARCHAR"
+                typeHandler="com.llmctl.config.JsonTypeHandler"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 结果映射（带 MCP 服务器信息） -->
+    <resultMap id="MappingWithServerMap" type="com.llmctl.entity.ProviderMcpMapping" extends="BaseResultMap">
+        <!-- 关联 MCP 服务器 -->
+        <association property="mcpServer" javaType="com.llmctl.entity.McpServer">
+            <id column="mcp_id" property="id" jdbcType="BIGINT"/>
+            <result column="mcp_name" property="name" jdbcType="VARCHAR"/>
+            <result column="mcp_description" property="description" jdbcType="VARCHAR"/>
+            <result column="mcp_type" property="type" jdbcType="VARCHAR"/>
+            <result column="mcp_command" property="command" jdbcType="VARCHAR"/>
+            <result column="mcp_args" property="args" jdbcType="VARCHAR"
+                    typeHandler="com.llmctl.config.JsonListTypeHandler"/>
+            <result column="mcp_env" property="env" jdbcType="VARCHAR"
+                    typeHandler="com.llmctl.config.JsonMapTypeHandler"/>
+            <result column="mcp_enabled" property="enabled" jdbcType="BOOLEAN"/>
+            <result column="mcp_is_template" property="isTemplate" jdbcType="BOOLEAN"/>
+            <result column="mcp_template_category" property="templateCategory" jdbcType="VARCHAR"/>
+            <result column="mcp_icon" property="icon" jdbcType="VARCHAR"/>
+            <result column="mcp_config_hints" property="configHints" jdbcType="VARCHAR"
+                    typeHandler="com.llmctl.config.JsonMapTypeHandler"/>
+            <result column="mcp_created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+            <result column="mcp_updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        </association>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, provider_id, mcp_server_id, cli_type, enabled, priority,
+        custom_config, created_at, updated_at
+    </sql>
+
+    <!-- MCP 服务器列（带前缀） -->
+    <sql id="MCP_Server_Column_List">
+        s.id AS mcp_id,
+        s.name AS mcp_name,
+        s.description AS mcp_description,
+        s.type AS mcp_type,
+        s.command AS mcp_command,
+        s.args AS mcp_args,
+        s.env AS mcp_env,
+        s.enabled AS mcp_enabled,
+        s.is_template AS mcp_is_template,
+        s.template_category AS mcp_template_category,
+        s.icon AS mcp_icon,
+        s.config_hints AS mcp_config_hints,
+        s.created_at AS mcp_created_at,
+        s.updated_at AS mcp_updated_at
+    </sql>
+
+    <!-- 根据 Provider ID 和 CLI 类型查询关联的 MCP 服务器 -->
+    <select id="findByProviderAndCli" resultMap="MappingWithServerMap">
+        SELECT
+            m.id, m.provider_id, m.mcp_server_id, m.cli_type, m.enabled, m.priority,
+            m.custom_config, m.created_at, m.updated_at,
+            <include refid="MCP_Server_Column_List"/>
+        FROM provider_mcp_mappings m
+        LEFT JOIN mcp_servers s ON m.mcp_server_id = s.id
+        WHERE m.provider_id = #{providerId} AND m.cli_type = #{cliType}
+        ORDER BY m.priority DESC, m.created_at
+    </select>
+
+    <!-- 根据 Provider ID 查询所有关联 -->
+    <select id="findByProviderId" resultMap="MappingWithServerMap">
+        SELECT
+            m.id, m.provider_id, m.mcp_server_id, m.cli_type, m.enabled, m.priority,
+            m.custom_config, m.created_at, m.updated_at,
+            <include refid="MCP_Server_Column_List"/>
+        FROM provider_mcp_mappings m
+        LEFT JOIN mcp_servers s ON m.mcp_server_id = s.id
+        WHERE m.provider_id = #{providerId}
+        ORDER BY m.priority DESC, m.created_at
+    </select>
+
+    <!-- 根据 ID 查询映射 -->
+    <select id="findById" resultMap="MappingWithServerMap">
+        SELECT
+            m.id, m.provider_id, m.mcp_server_id, m.cli_type, m.enabled, m.priority,
+            m.custom_config, m.created_at, m.updated_at,
+            <include refid="MCP_Server_Column_List"/>
+        FROM provider_mcp_mappings m
+        LEFT JOIN mcp_servers s ON m.mcp_server_id = s.id
+        WHERE m.id = #{id}
+    </select>
+
+    <!-- 插入 Provider MCP 映射 -->
+    <insert id="insert" parameterType="com.llmctl.entity.ProviderMcpMapping" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO provider_mcp_mappings (
+            provider_id, mcp_server_id, cli_type, enabled, priority, custom_config
+        )
+        VALUES (
+            #{providerId}, #{mcpServerId},
+            #{cliType, typeHandler=com.llmctl.config.CliTypeHandler},
+            #{enabled}, #{priority},
+            #{customConfig, typeHandler=com.llmctl.config.JsonTypeHandler}
+        )
+    </insert>
+
+    <!-- 更新 Provider MCP 映射 -->
+    <update id="update" parameterType="com.llmctl.entity.ProviderMcpMapping">
+        UPDATE provider_mcp_mappings
+        SET
+            enabled = #{enabled},
+            priority = #{priority},
+            custom_config = #{customConfig, typeHandler=com.llmctl.config.JsonTypeHandler}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 Provider MCP 映射 -->
+    <delete id="deleteById">
+        DELETE FROM provider_mcp_mappings
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 删除 Provider 的某个 CLI 类型的所有映射 -->
+    <delete id="deleteByProviderAndCli">
+        DELETE FROM provider_mcp_mappings
+        WHERE provider_id = #{providerId} AND cli_type = #{cliType}
+    </delete>
+
+    <!-- 更新优先级 -->
+    <update id="updatePriority">
+        UPDATE provider_mcp_mappings
+        SET priority = #{priority}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

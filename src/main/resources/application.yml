@@ -122,7 +122,7 @@ jasypt:
 # JWT配置
 jwt:
   secret: ${JWT_SECRET}
-  expiration: 86400000  # 1分钟（测试用） - 生产环境使用: 86400000 (24小时)
+  expiration: 604800000  # 7天（毫秒）
   refresh-expiration: 604800000  # 7天（毫秒）
 
 # 头像上传配置
