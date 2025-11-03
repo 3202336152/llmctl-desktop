@@ -3,17 +3,60 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 import axios from 'axios';
+import log from 'electron-log';
 import { createMenu, setMenuLanguage, setAuthenticationStatus, translate as t } from './menu';
 import terminalManager from './services/terminalManager';
 import AutoUpdater from './services/autoUpdater';
+
+// ========== electron-log 配置 ==========
+// 日志文件路径（根据操作系统不同）:
+// - Windows: %USERPROFILE%\AppData\Roaming\llmctl-desktop\logs\main.log
+// - macOS: ~/Library/Logs/llmctl-desktop/main.log
+// - Linux: ~/.config/llmctl-desktop/logs/main.log
+
+// 多级日志策略
+const isDev = process.env.NODE_ENV === 'development';
+const isDebugMode = process.argv.includes('--debug-logs');
+
+if (isDev) {
+  // 开发环境：完整的 DEBUG 日志
+  log.transports.file.level = 'debug';
+  log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
+  log.transports.console.level = 'debug';
+} else if (isDebugMode) {
+  // 生产环境（调试模式）：INFO 日志
+  log.transports.file.level = 'info';
+  log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
+  log.transports.console.level = 'info';
+} else {
+  // 生产环境（普通模式）：仅 ERROR 日志
+  log.transports.file.level = 'error';
+  log.transports.file.maxSize = 1 * 1024 * 1024; // 1MB
+  log.transports.console.level = 'warn';
+}
+
+// 自定义日志格式
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+log.transports.console.format = '[{h}:{i}:{s}.{ms}] [{level}] {text}';
+
+log.info('========================================');
+log.info('LLMctl Desktop 启动');
+log.info('应用版本:', app.getVersion());
+log.info('Electron 版本:', process.versions.electron);
+log.info('Node 版本:', process.versions.node);
+log.info('操作系统:', process.platform, process.arch);
+log.info('运行环境:', isDev ? '开发模式' : (isDebugMode ? '生产模式（调试）' : '生产模式'));
+log.info('日志级别:', log.transports.file.level);
+log.info('日志文件路径:', log.transports.file.getFile().path);
+log.info('========================================');
+
+// =========================================
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let minimizeToTray = false;
 let isQuitting = false; // 使用局部变量而不是 app.isQuitting
 let updater: AutoUpdater | null = null;
-
-const isDev = process.env.NODE_ENV === 'development';
 
 // 获取图标路径（兼容开发和生产环境）
 const getIconPath = (): string => {
@@ -243,6 +286,43 @@ ipcMain.handle('close-window', () => {
   mainWindow?.close();
 });
 
+// ==================== 日志 IPC Handlers ====================
+
+/**
+ * 渲染进程日志 - Info
+ */
+ipcMain.on('log-info', (_event, args: any[]) => {
+  log.info('[Renderer]', ...args);
+});
+
+/**
+ * 渲染进程日志 - Warn
+ */
+ipcMain.on('log-warn', (_event, args: any[]) => {
+  log.warn('[Renderer]', ...args);
+});
+
+/**
+ * 渲染进程日志 - Error
+ */
+ipcMain.on('log-error', (_event, args: any[]) => {
+  log.error('[Renderer]', ...args);
+});
+
+/**
+ * 渲染进程日志 - Debug
+ */
+ipcMain.on('log-debug', (_event, args: any[]) => {
+  log.debug('[Renderer]', ...args);
+});
+
+/**
+ * 获取日志文件路径
+ */
+ipcMain.handle('get-log-path', () => {
+  return log.transports.file.getFile().path;
+});
+
 // ==================== 系统功能 IPC Handlers ====================
 
 /**
@@ -365,16 +445,51 @@ ipcMain.handle('read-file', async (_event, filePath: string) => {
  * 写入文件内容
  */
 ipcMain.handle('write-file', async (_event, filePath: string, content: string) => {
-  try {
-    // ✅ 确保父目录存在
-    const dirPath = path.dirname(filePath);
-    await fs.promises.mkdir(dirPath, { recursive: true });
+  log.info('[IPC] ========== 文件写入请求 ==========');
+  log.info('[IPC] 目标路径:', filePath);
+  log.info('[IPC] 内容大小:', content.length, '字节');
+  log.info('[IPC] 操作系统:', process.platform);
+  log.info('[IPC] Node 版本:', process.version);
 
+  try {
+    // ✅ 解析路径
+    const dirPath = path.dirname(filePath);
+    const fileName = path.basename(filePath);
+    log.info('[IPC] 父目录:', dirPath);
+    log.info('[IPC] 文件名:', fileName);
+    log.info('[IPC] 绝对路径:', path.resolve(filePath));
+
+    // ✅ 检查父目录是否存在
+    try {
+      await fs.promises.access(dirPath);
+      log.info('[IPC] ✅ 父目录已存在');
+    } catch {
+      log.info('[IPC] ⚠️ 父目录不存在，开始创建...');
+      await fs.promises.mkdir(dirPath, { recursive: true });
+      log.info('[IPC] ✅ 父目录创建成功');
+    }
+
+    // ✅ 写入文件
+    log.info('[IPC] 💾 开始写入文件...');
     await fs.promises.writeFile(filePath, content, 'utf-8');
-    console.log('[IPC] ✅ 文件写入成功:', filePath);
+    log.info('[IPC] ✅ 文件写入成功');
+
+    // ✅ 验证写入结果
+    const stats = await fs.promises.stat(filePath);
+    log.info('[IPC] 验证: 文件大小', stats.size, '字节');
+    log.info('[IPC] 验证: 文件权限', stats.mode.toString(8));
+    log.info('[IPC] =========================================');
+
     return true;
   } catch (error) {
-    console.error('[IPC] write-file 失败:', error);
+    log.error('[IPC] ❌ ========== 文件写入失败 ==========');
+    log.error('[IPC] 目标路径:', filePath);
+    log.error('[IPC] 错误类型:', error instanceof Error ? error.constructor.name : typeof error);
+    log.error('[IPC] 错误消息:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      log.error('[IPC] 错误堆栈:', error.stack);
+    }
+    log.error('[IPC] =========================================');
     return false;
   }
 });

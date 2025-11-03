@@ -1,6 +1,6 @@
 {
   "name": "llmctl-desktop",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "LLM Control System Desktop Application",
   "main": "dist/main/main.js",
   "homepage": "./",
@@ -16,6 +16,7 @@
     "build:preload": "webpack --config webpack.preload.config.js --mode production",
     "build:renderer": "webpack --config webpack.renderer.config.js --mode production",
     "electron": "chcp 65001 && electron .",
+    "electron:debug": "chcp 65001 && electron . --debug-logs",
     "electron:dev": "electron . --inspect=5858",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",

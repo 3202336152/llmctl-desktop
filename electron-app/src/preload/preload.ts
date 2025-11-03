@@ -29,6 +29,13 @@ export interface ElectronAPI {
   openPath(path: string): Promise<void>;
   send(channel: string, data?: any): void;
 
+  // 日志功能（渲染进程日志会写入文件）
+  logInfo(...args: any[]): void;
+  logWarn(...args: any[]): void;
+  logError(...args: any[]): void;
+  logDebug(...args: any[]): void;
+  getLogPath(): Promise<string>;
+
   // 自动更新
   checkForUpdates(): Promise<{ success: boolean; message?: string }>;
   onUpdateStatus(callback: (message: string) => void): () => void;
@@ -104,6 +111,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   openPath: (pathToOpen: string) => ipcRenderer.invoke('open-path', pathToOpen),
   send: (channel: string, data?: any) => ipcRenderer.send(channel, data),
+
+  // ==================== 日志 API ====================
+  logInfo: (...args: any[]) => ipcRenderer.send('log-info', args),
+  logWarn: (...args: any[]) => ipcRenderer.send('log-warn', args),
+  logError: (...args: any[]) => ipcRenderer.send('log-error', args),
+  logDebug: (...args: any[]) => ipcRenderer.send('log-debug', args),
+  getLogPath: () => ipcRenderer.invoke('get-log-path'),
 
   // ==================== 自动更新 API ====================
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

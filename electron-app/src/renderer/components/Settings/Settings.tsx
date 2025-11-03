@@ -302,6 +302,60 @@ const Settings: React.FC = () => {
     });
   };
 
+  // ==================== 日志管理 ====================
+
+  /**
+   * 打开日志文件目录
+   */
+  const handleOpenLogFolder = async () => {
+    try {
+      const logPath = await window.electronAPI.getLogPath();
+      if (logPath) {
+        // 打开日志文件所在的目录
+        const logDir = logPath.substring(0, logPath.lastIndexOf('/') > 0 ? logPath.lastIndexOf('/') : logPath.lastIndexOf('\\'));
+        await window.electronAPI.openPath(logDir);
+        message.success('日志目录已打开');
+      } else {
+        message.error('无法获取日志路径');
+      }
+    } catch (error) {
+      message.error(`打开日志目录失败: ${error}`);
+    }
+  };
+
+  /**
+   * 显示日志文件路径
+   */
+  const handleShowLogPath = async () => {
+    try {
+      const logPath = await window.electronAPI.getLogPath();
+      if (logPath) {
+        Modal.info({
+          title: '日志文件路径',
+          content: (
+            <div>
+              <Text code style={{ wordBreak: 'break-all' }}>
+                {logPath}
+              </Text>
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary">
+                  💡 提示：可以直接在文件管理器中打开此路径查看日志文件
+                </Text>
+              </div>
+            </div>
+          ),
+          width: 600,
+        });
+      } else {
+        message.error('无法获取日志路径');
+      }
+    } catch (error) {
+      message.error(`获取日志路径失败: ${error}`);
+    }
+  };
+
+  // ==========================================
+
   // 归档表格列定义
   const archiveColumns = [
     {
@@ -458,6 +512,48 @@ const Settings: React.FC = () => {
                 {t('settings.exportCmdScript')}
               </Button>
             </Space>
+          </div>
+        </div>
+
+        <Divider />
+
+        <div>
+          <h4>
+            <FileOutlined /> 日志管理
+          </h4>
+          <Text type="secondary">
+            查看应用运行日志，诊断问题和调试错误。日志文件包含前端、IPC 和后端的详细信息。
+          </Text>
+          <div style={{ marginTop: 16 }}>
+            <Space wrap>
+              <Button type="primary" icon={<FolderOutlined />} onClick={handleOpenLogFolder}>
+                打开日志目录
+              </Button>
+              <Button icon={<FileOutlined />} onClick={handleShowLogPath}>
+                显示日志路径
+              </Button>
+            </Space>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Text type="warning" style={{ fontSize: '12px' }}>
+              📝 日志说明：
+              <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                <li>主进程日志：Electron 应用、IPC 通信、文件操作</li>
+                <li>渲染进程日志：前端应用、用户操作、API 调用</li>
+                <li>后端日志：Spring Boot 服务、数据库操作、业务逻辑</li>
+              </ul>
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px', marginTop: 8, display: 'block' }}>
+              💡 日志级别策略：
+              <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                <li><strong>开发模式</strong>：完整的 DEBUG 日志（10MB），包含所有操作细节</li>
+                <li><strong>生产模式</strong>：仅记录 ERROR 日志（1MB），减少磁盘占用</li>
+                <li><strong>调试模式</strong>：启动时添加 <code>--debug-logs</code> 参数，启用 INFO 日志（5MB）</li>
+              </ul>
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px', marginTop: 8, display: 'block' }}>
+              🔧 启用调试模式：在应用快捷方式目标中添加 <code>--debug-logs</code> 参数，或通过命令行启动时附加该参数
+            </Text>
           </div>
         </div>
 

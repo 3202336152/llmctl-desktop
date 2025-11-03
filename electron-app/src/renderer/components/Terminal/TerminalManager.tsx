@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { sessionAPI, tokenAPI } from '../../services/api';
 import { StartSessionRequest } from '../../types';
+import { writeMcpConfig } from '../../utils/mcpConfigHelper';
 
 /**
  * 终端管理器 - 独立页面
@@ -136,6 +137,13 @@ const TerminalManager: React.FC = () => {
           const response = await sessionAPI.startSession(newSessionRequest);
           if (response.data) {
             dispatch(addSession(response.data));
+
+            // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
+            await writeMcpConfig(
+              response.data.id,
+              currentSession.workingDirectory
+            );
+
             dispatch(openTerminal(response.data.id));
             message.success({ content: 'Token 切换成功，会话已重启', key: 'switch-token' });
           } else {

@@ -650,46 +650,57 @@ public class SessionServiceImpl implements ISessionService {
     /**
      * 注入 MCP 配置到会话工作目录
      *
+     * MCP 服务器配置应该是项目级别的统一配置，与具体使用的 CLI 工具无关。
+     * 所有 CLI 工具都统一使用项目根目录的 .mcp.json 文件。
+     *
      * @param session 会话对象
      * @param provider Provider对象
      * @param cliType CLI类型
      */
     private void injectMcpConfig(Session session, Provider provider, String cliType) {
-        log.info("开始注入 MCP 配置，Provider: {}, CLI类型: {}", provider.getName(), cliType);
+        log.info("========== MCP 配置注入开始 ==========");
+        log.info("Provider: {}, CLI类型: {}", provider.getName(), cliType);
+        log.info("会话 ID: {}", session.getId());
 
         String workingDir = session.getWorkingDirectory();
+        log.info("工作目录: {}", workingDir);
+        log.info("当前系统: {}", System.getProperty("os.name"));
 
         // ✅ 跨平台路径检测：如果是 Windows 路径但运行在非 Windows 系统，跳过文件写入
         // 由前端 Electron 负责写入本地文件
-        if (isWindowsPath(workingDir) && !isRunningOnWindows()) {
-            log.info("🔄 检测到跨平台场景（Windows 路径但运行在非 Windows 系统），跳过后端文件写入，由前端处理");
-            log.info("💡 前端应调用 GET /sessions/{sessionId}/mcp-config 获取配置内容并写入本地文件");
+        boolean isWindowsPath = isWindowsPath(workingDir);
+        boolean isRunningOnWindows = isRunningOnWindows();
+        log.info("路径类型检测: isWindowsPath={}, isRunningOnWindows={}", isWindowsPath, isRunningOnWindows);
+
+        if (isWindowsPath && !isRunningOnWindows) {
+            log.info("🔄 ========== 检测到跨平台场景 ==========");
+            log.info("Windows 路径: {}", workingDir);
+            log.info("运行系统: {}", System.getProperty("os.name"));
+            log.info("跳过后端文件写入，由前端 Electron 负责写入本地文件");
+            log.info("💡 前端应调用 GET /sessions/{}/mcp-config 获取配置内容", session.getId());
+            log.info("========================================");
             return;
         }
 
         // 生成 MCP 配置
+        log.info("📦 生成 MCP 配置...");
         Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
             provider.getId(),
             cliType
         );
 
+        log.info("生成的服务器数量: {}", mcpConfig.size());
+
         if (mcpConfig.isEmpty()) {
-            log.info("无需注入 MCP 配置（无关联的服务器）");
+            log.info("ℹ️ 无需注入 MCP 配置（无关联的服务器）");
+            log.info("========================================");
             return;
         }
 
-        // 根据不同 CLI 类型进行配置注入
-        if ("claude code".equalsIgnoreCase(cliType)) {
-            injectClaudeCodeMcpConfig(workingDir, mcpConfig);
-        } else if ("codex".equalsIgnoreCase(cliType)) {
-            injectCodexMcpConfig(workingDir, mcpConfig);
-        } else if ("gemini".equalsIgnoreCase(cliType)) {
-            injectGeminiMcpConfig(workingDir, mcpConfig);
-        } else if ("qoder".equalsIgnoreCase(cliType)) {
-            injectQoderMcpConfig(workingDir, mcpConfig);
-        } else {
-            log.warn("不支持的 CLI 类型: {}, 跳过 MCP 配置注入", cliType);
-        }
+        // ✅ 统一使用 .mcp.json 配置文件（项目级别配置，与 CLI 类型无关）
+        log.info("📝 调用统一配置注入方法...");
+        injectUnifiedMcpConfig(workingDir, mcpConfig);
+        log.info("========== MCP 配置注入完成 ==========");
     }
 
     /**
@@ -718,115 +729,80 @@ public class SessionServiceImpl implements ISessionService {
     }
 
     /**
-     * 注入 Claude Code MCP 配置
-     * 创建 .mcp.json 文件并写入 MCP 服务器配置（项目级配置）
+     * 注入统一的 MCP 配置
+     * 创建项目根目录的 .mcp.json 文件，所有 CLI 工具共享此配置
      *
      * @param workingDir 工作目录
      * @param mcpConfig MCP 配置
      */
-    private void injectClaudeCodeMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
-        try {
-            // ✅ 修复：使用 .mcp.json（项目级配置）而不是 .claude/config.json
-            Path configPath = Paths.get(workingDir, ".mcp.json");
+    private void injectUnifiedMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
+        log.info("---------- 统一 MCP 配置注入 ----------");
+        log.info("工作目录: {}", workingDir);
+        log.info("MCP 服务器数量: {}", mcpConfig.size());
 
-            // ✅ 修复：确保父目录存在
-            Files.createDirectories(configPath.getParent());
+        try {
+            // ✅ 统一使用 .mcp.json（项目级配置，与 CLI 类型无关）
+            Path configPath = Paths.get(workingDir, ".mcp.json");
+            log.info("目标配置文件: {}", configPath.toAbsolutePath());
+            log.info("文件是否存在: {}", Files.exists(configPath));
+
+            // 确保父目录存在
+            if (configPath.getParent() != null) {
+                Path parentDir = configPath.getParent();
+                log.info("父目录: {}", parentDir.toAbsolutePath());
+                log.info("父目录是否存在: {}", Files.exists(parentDir));
+
+                if (!Files.exists(parentDir)) {
+                    log.info("创建父目录: {}", parentDir);
+                    Files.createDirectories(parentDir);
+                    log.info("✅ 父目录创建成功");
+                }
+            }
 
             // 读取现有配置（如果存在）
             Map<String, Object> existingConfig = new HashMap<>();
             if (Files.exists(configPath)) {
+                log.info("📖 读取现有配置文件...");
                 String content = Files.readString(configPath);
+                log.info("现有文件大小: {} 字节", content.length());
                 existingConfig = objectMapper.readValue(content, new TypeReference<>() {});
+                log.info("现有配置键: {}", existingConfig.keySet());
+            } else {
+                log.info("配置文件不存在，将创建新文件");
             }
 
             // 添加 MCP 服务器配置
             existingConfig.put("mcpServers", mcpConfig);
+            log.info("合并后配置键: {}", existingConfig.keySet());
 
             // 写入配置文件
             String configJson = objectMapper.writerWithDefaultPrettyPrinter()
                 .writeValueAsString(existingConfig);
+            log.info("配置 JSON 大小: {} 字节", configJson.length());
+            log.info("配置内容预览: {}", configJson.length() > 200 ? configJson.substring(0, 200) + "..." : configJson);
+
+            log.info("💾 写入配置文件: {}", configPath.toAbsolutePath());
             Files.writeString(configPath, configJson);
+            log.info("✅ 文件写入成功");
 
-            log.info("Claude Code MCP 配置注入成功: {} ({} 个服务器)",
-                configPath, mcpConfig.size());
+            // 验证写入结果
+            if (Files.exists(configPath)) {
+                long fileSize = Files.size(configPath);
+                log.info("验证: 文件存在，大小 {} 字节", fileSize);
+                log.info("✅ MCP 配置注入成功: {} ({} 个服务器)", configPath, mcpConfig.size());
+            } else {
+                log.error("❌ 验证失败: 文件不存在");
+            }
+
+            log.info("---------------------------------------");
         } catch (Exception e) {
-            log.error("Claude Code MCP 配置注入失败", e);
-            throw new RuntimeException("MCP 配置注入失败", e);
-        }
-    }
-
-    /**
-     * 注入 Codex MCP 配置
-     * 创建 .codex/mcp.json 文件用于 MCP 服务器配置
-     *
-     * @param workingDir 工作目录
-     * @param mcpConfig MCP 配置
-     */
-    private void injectCodexMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
-        try {
-            Path configPath = Paths.get(workingDir, ".codex", "mcp.json");
-            Files.createDirectories(configPath.getParent());
-
-            // 写入 MCP 配置文件
-            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(mcpConfig);
-            Files.writeString(configPath, configJson);
-
-            log.info("Codex MCP 配置注入成功: {} ({} 个服务器)",
-                configPath, mcpConfig.size());
-        } catch (Exception e) {
-            log.error("Codex MCP 配置注入失败", e);
-            throw new RuntimeException("MCP 配置注入失败", e);
-        }
-    }
-
-    /**
-     * 注入 Gemini MCP 配置
-     * 创建 .gemini/mcp.json 文件用于 MCP 服务器配置
-     *
-     * @param workingDir 工作目录
-     * @param mcpConfig MCP 配置
-     */
-    private void injectGeminiMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
-        try {
-            Path configPath = Paths.get(workingDir, ".gemini", "mcp.json");
-            Files.createDirectories(configPath.getParent());
-
-            // 写入 MCP 配置文件
-            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(mcpConfig);
-            Files.writeString(configPath, configJson);
-
-            log.info("Gemini MCP 配置注入成功: {} ({} 个服务器)",
-                configPath, mcpConfig.size());
-        } catch (Exception e) {
-            log.error("Gemini MCP 配置注入失败", e);
-            throw new RuntimeException("MCP 配置注入失败", e);
-        }
-    }
-
-    /**
-     * 注入 Qoder MCP 配置
-     * 创建 .qoder/mcp.json 文件用于 MCP 服务器配置
-     *
-     * @param workingDir 工作目录
-     * @param mcpConfig MCP 配置
-     */
-    private void injectQoderMcpConfig(String workingDir, Map<String, Object> mcpConfig) {
-        try {
-            Path configPath = Paths.get(workingDir, ".qoder", "mcp.json");
-            Files.createDirectories(configPath.getParent());
-
-            // 写入 MCP 配置文件
-            String configJson = objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(mcpConfig);
-            Files.writeString(configPath, configJson);
-
-            log.info("Qoder MCP 配置注入成功: {} ({} 个服务器)",
-                configPath, mcpConfig.size());
-        } catch (Exception e) {
-            log.error("Qoder MCP 配置注入失败", e);
-            throw new RuntimeException("MCP 配置注入失败", e);
+            log.error("❌ ========== MCP 配置注入失败 ==========");
+            log.error("工作目录: {}", workingDir);
+            log.error("错误类型: {}", e.getClass().getName());
+            log.error("错误消息: {}", e.getMessage());
+            log.error("错误堆栈:", e);
+            log.error("=========================================");
+            throw new RuntimeException("MCP 配置注入失败: " + e.getMessage(), e);
         }
     }
 

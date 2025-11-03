@@ -5,6 +5,79 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.6] - 2025-11-03
+
+### Added 🎉
+- **多级日志系统** - 企业级三层日志架构，支持开发、生产、调试三种模式
+  - **前端日志**：Electron 主进程 + 渲染进程日志，基于 electron-log
+  - **后端日志**：Spring Boot 服务日志，基于 Logback (SLF4J)
+  - **日志级别策略**：
+    - 开发模式：DEBUG 级别，10MB 文件大小，完整的调试信息
+    - 生产模式：ERROR 级别，1MB 文件大小，仅记录错误，减少磁盘占用
+    - 调试模式：INFO 级别，5MB 文件大小，启动时添加 `--debug-logs` 参数启用
+  - **日志 IPC 通道**：渲染进程日志通过 IPC 传递到主进程，统一写入文件
+  - **日志文件路径**：
+    - Windows: `%USERPROFILE%\AppData\Roaming\llmctl-desktop\logs\main.log`
+    - macOS: `~/Library/Logs/llmctl-desktop/main.log`
+    - Linux: `~/.config/llmctl-desktop/logs/main.log`
+
+- **日志管理 UI** - Settings 页面新增日志管理功能
+  - **打开日志目录**：一键打开系统日志文件夹
+  - **显示日志路径**：弹窗显示完整的日志文件路径
+  - **日志说明**：详细的日志级别策略说明和调试模式使用指南
+  - **使用提示**：如何通过 `--debug-logs` 参数启用详细日志
+
+- **完整日志操作文档** - `docs/logging-guide.md`
+  - **后端日志（CentOS 服务器）**：
+    - 日志文件位置和查看命令（tail、journalctl、grep、less）
+    - 日志级别配置（临时和永久修改）
+    - 日志轮转配置（logrotate）
+    - 日志文件管理和清理
+  - **前端日志（Electron 应用）**：
+    - 跨平台日志路径（Windows/macOS/Linux）
+    - 通过 UI 和命令行查看日志
+    - 启用调试模式的方法
+  - **日志分析技巧**：
+    - 快速定位问题（50+ 实用命令）
+    - 追踪特定请求
+    - 性能分析和错误统计
+  - **常见问题排查**：
+    - MCP 配置无法写入
+    - Token 切换失败
+    - 数据库连接失败
+    - 日志文件过大
+  - **日志管理最佳实践**：
+    - 生产环境建议配置
+    - 日志轮转策略
+    - 日志监控告警脚本
+    - 安全注意事项
+
+### Changed 🔄
+- **MCP 配置写入日志优化** - 条件日志策略，减少生产环境日志输出
+  - `mcpConfigHelper.ts`：
+    - 开发环境：记录所有 INFO/WARN 日志，便于调试
+    - 生产环境：仅记录 ERROR 日志，减少磁盘占用
+    - 错误始终被记录：保证关键问题可追溯
+  - 详细的 MCP 配置写入流程日志（开发模式）
+  - 跨平台文件写入的完整调用链追踪
+
+- **日志格式统一** - 三层日志使用统一格式
+  - 时间戳：`[{y}-{m}-{d} {h}:{i}:{s}.{ms}]`
+  - 级别：`[INFO]` / `[WARN]` / `[ERROR]` / `[DEBUG]`
+  - 来源标签：`[Renderer]` / `[IPC]` / `[Backend]`
+
+### Improved 🚀
+- **生产环境用户体验** - 大幅减少普通用户的日志文件占用
+  - 生产模式日志从 10MB 降至 1MB
+  - 静默正常操作，仅在出错时记录
+  - 支持临时启用详细日志（不需要重新打包应用）
+
+- **开发体验** - 更强大的日志调试能力
+  - 详细的 MCP 配置写入日志
+  - IPC 通信过程完整记录
+  - 文件操作成功/失败的清晰日志
+  - 错误堆栈完整保存
+
 ## [2.3.0] - 2025-10-30
 
 ### Added 🎉

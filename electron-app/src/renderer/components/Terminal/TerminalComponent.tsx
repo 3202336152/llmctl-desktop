@@ -39,16 +39,16 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     createdRef.current = true;
 
     const initTerminal = async () => {
-      // ✅ 性能监控：记录初始化开始时间
+      // 性能监控：记录初始化开始时间
       const perfStart = performance.now();
-      console.log('[TerminalComponent] ⏱️ 开始初始化终端，Session ID:', sessionId);
+      console.log('[TerminalComponent] 开始初始化终端，Session ID:', sessionId);
 
       // 获取环境变量
       let envVars: Record<string, string> = env || {};
       try {
         const envStart = performance.now();
 
-        // ✅ 添加超时保护（5秒超时）
+        // 添加超时保护（5秒超时）
         const envResponse: any = await Promise.race([
           sessionAPI.getSessionEnvironment(sessionId),
           new Promise((_, reject) =>
@@ -56,16 +56,16 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
           )
         ]);
 
-        console.log(`[TerminalComponent] ⏱️ 获取环境变量耗时: ${(performance.now() - envStart).toFixed(2)}ms`);
+        console.log(`[TerminalComponent] 获取环境变量耗时: ${(performance.now() - envStart).toFixed(2)}ms`);
 
         if (envResponse.data) {
           envVars = { ...envVars, ...envResponse.data };
-          console.log('[TerminalComponent] ✅ 成功获取环境变量');
+          console.log('[TerminalComponent] 成功获取环境变量');
         }
       } catch (error: any) {
-        console.error('[TerminalComponent] ❌ 获取环境变量失败:', error);
+        console.error('[TerminalComponent] 获取环境变量失败:', error);
 
-        // ✅ 如果会话不存在（404错误），不继续初始化终端
+        // 如果会话不存在（404错误），不继续初始化终端
         if (error?.response?.status === 404 || error?.code === 404) {
           console.error('[TerminalComponent] 会话不存在，停止初始化终端:', sessionId);
           createdRef.current = false; // 重置标记，允许重试
@@ -80,9 +80,9 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         cursorBlink: true,
         fontSize: fontSize,
         fontFamily: 'Consolas, "Courier New", monospace',
-        // ✅ 设置字符编码为 UTF-8，避免中文乱码
+        // 设置字符编码为 UTF-8，避免中文乱码
         convertEol: true,
-        // ✅ Windows PowerShell 模式禁用（使用 CMD）
+        // Windows PowerShell 模式禁用（使用 CMD）
         windowsMode: false,
         theme: {
           background: '#1e1e1e',
@@ -108,11 +108,11 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         rows: 30,
         cols: 120,
         allowTransparency: true,
-        // ✅ 性能优化：限制滚动缓冲区大小，避免内存占用过高
+        // 性能优化：限制滚动缓冲区大小，避免内存占用过高
         scrollback: 5000,
       });
 
-      console.log(`[TerminalComponent] ⏱️ Terminal 对象创建耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
+      console.log(`[TerminalComponent] Terminal 对象创建耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
 
     // 添加插件
     const fitAddon = new FitAddon();
@@ -147,8 +147,8 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         if (result && !result.success) {
           terminal.write(`\r\n\x1b[1;31m[错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
         } else {
-          // ✅ 每次打开都是全新的 pty 进程，无历史记录恢复
-          // ✅ 如果会话配置了命令，自动执行该命令
+          // 每次打开都是全新的 pty 进程，无历史记录恢复
+          // 如果会话配置了命令，自动执行该命令
           if (command && command !== 'cmd.exe') {
             // 延迟100ms确保pty完全初始化后再发送命令
             setTimeout(() => {
@@ -178,7 +178,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       });
     });
 
-    // ✅ 优化的粘贴逻辑：直接发送全部内容，移除分块逻辑
+    // 优化的粘贴逻辑：直接发送全部内容，移除分块逻辑
     const handlePaste = async (text: string) => {
       if (!text) {
         console.log('[粘贴] 内容为空，跳过');
@@ -198,8 +198,96 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       }
     };
 
+    // 输入法组合状态跟踪
+    let isComposing = false;
+    let compositionText = '';
+    let lastInputValue = '';
+
+    // 输入法组合事件处理器
+    const handleCompositionStart = (event: CompositionEvent) => {
+      isComposing = true;
+      compositionText = '';
+    };
+
+    const handleCompositionUpdate = (event: CompositionEvent) => {
+      compositionText = event.data || '';
+    };
+
+    const handleCompositionEnd = (event: CompositionEvent) => {
+      isComposing = false;
+      const finalText = event.data || compositionText;
+
+      if (finalText) {
+        window.electronAPI.terminalInput(sessionId, finalText).catch((error) => {
+          console.error('[IME] 发送组合文本失败:', error);
+        });
+      }
+
+      compositionText = '';
+    };
+
+    // 处理 input 事件（某些输入法不触发 composition 事件，直接使用 input 事件）
+    const handleInput = (event: Event) => {
+      const inputEvent = event as InputEvent;
+      const target = event.target as HTMLTextAreaElement;
+
+      // 如果正在组合，跳过（由 compositionend 处理）
+      if (inputEvent.isComposing || isComposing) {
+        lastInputValue = target.value;
+        return;
+      }
+
+      // 检测输入法直接提交的文本（没有走 composition 流程）
+      if (inputEvent.inputType === 'insertText' && inputEvent.data) {
+        // 清空 textarea（防止文本累积）
+        target.value = '';
+        lastInputValue = '';
+
+        // 发送到终端
+        window.electronAPI.terminalInput(sessionId, inputEvent.data).catch((error) => {
+          console.error('[IME] 发送文本失败:', error);
+        });
+
+        // 阻止 xterm.js 的默认处理（避免重复）
+        event.preventDefault();
+        event.stopPropagation();
+      } else {
+        lastInputValue = target.value;
+      }
+    };
+
+    // 等待 terminal 初始化后，找到 xterm.js 内部的 textarea 并添加监听器
+    setTimeout(() => {
+      if (!terminalRef.current) return;
+
+      // xterm.js 的 textarea 通常有 class="xterm-helper-textarea"
+      const textarea = terminalRef.current.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+
+      if (textarea) {
+        // 使用捕获阶段（第三个参数为 true），在 xterm.js 处理之前拦截事件
+        textarea.addEventListener('compositionstart', handleCompositionStart as EventListener, true);
+        textarea.addEventListener('compositionupdate', handleCompositionUpdate as EventListener, true);
+        textarea.addEventListener('compositionend', handleCompositionEnd as EventListener, true);
+        textarea.addEventListener('input', handleInput, true);
+      } else {
+        console.error('[IME] 未找到 xterm textarea，IME 功能可能无法正常工作');
+        // 如果找不到，尝试添加到外层容器（回退方案）
+        if (terminalRef.current) {
+          terminalRef.current.addEventListener('compositionstart', handleCompositionStart as EventListener, true);
+          terminalRef.current.addEventListener('compositionupdate', handleCompositionUpdate as EventListener, true);
+          terminalRef.current.addEventListener('compositionend', handleCompositionEnd as EventListener, true);
+          terminalRef.current.addEventListener('input', handleInput, true);
+        }
+      }
+    }, 100);
+
     // 复制、粘贴和换行功能
     terminal.attachCustomKeyEventHandler((event) => {
+      // 如果正在使用输入法（IME 组合状态），不拦截任何键盘事件
+      if (isComposing) {
+        return true;
+      }
+
       // Ctrl+C 复制
       if ((event.ctrlKey || event.metaKey) && event.key === 'c' && event.type === 'keydown') {
         const selection = terminal.getSelection();
@@ -225,7 +313,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         return false;
       }
 
-      // ✅ Ctrl+Enter 换行（不执行命令）
+      // Ctrl+Enter 换行（不执行命令）
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && event.type === 'keydown') {
         event.preventDefault();
         // 发送换行符 \n，而不是回车符 \r
@@ -246,7 +334,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // ✅ 防抖 fit() 调用，避免频繁调整导致性能问题
+    // 防抖 fit() 调用，避免频繁调整导致性能问题
     const debouncedFit = () => {
       if (fitDebounceTimerRef.current) {
         clearTimeout(fitDebounceTimerRef.current);
@@ -274,7 +362,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     };
     window.addEventListener('resize', handleResize);
 
-    // ✅ 右键粘贴功能
+    // 右键粘贴功能
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault(); // 阻止默认右键菜单
 
@@ -289,7 +377,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       });
     };
 
-    // 添加右键菘贴监听
+    // 添加右键粘贴监听
     if (terminalRef.current) {
       terminalRef.current.addEventListener('contextmenu', handleContextMenu);
     }
@@ -324,22 +412,38 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       }
 
       // 移除右键菜单监听
-      if (terminalRef.current) {
-        terminalRef.current.removeEventListener('contextmenu', handleContextMenu);
+      const container = terminalRef.current;
+      if (container) {
+        container.removeEventListener('contextmenu', handleContextMenu);
+
+        // 移除 IME 事件监听器
+        const textarea = container.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.removeEventListener('compositionstart', handleCompositionStart as EventListener, true);
+          textarea.removeEventListener('compositionupdate', handleCompositionUpdate as EventListener, true);
+          textarea.removeEventListener('compositionend', handleCompositionEnd as EventListener, true);
+          textarea.removeEventListener('input', handleInput, true);
+        } else {
+          // 如果没找到 textarea，尝试从外层容器移除（回退方案）
+          container.removeEventListener('compositionstart', handleCompositionStart as EventListener, true);
+          container.removeEventListener('compositionupdate', handleCompositionUpdate as EventListener, true);
+          container.removeEventListener('compositionend', handleCompositionEnd as EventListener, true);
+          container.removeEventListener('input', handleInput, true);
+        }
       }
 
       // 取消监听输出
       unsubscribe();
 
-      // ✅ 组件卸载时仅清理前端资源
+      // 组件卸载时仅清理前端资源
       // pty 进程由 TerminalManager 的 handleCloseTerminal 显式终止
       createdRef.current = false;
 
       terminal.dispose();
     };
 
-    // ✅ 添加总的性能监控日志
-    console.log(`[TerminalComponent] ⏱️ ✅ 终端初始化完成，总耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
+    // 终端初始化完成
+    console.log(`[TerminalComponent] 终端初始化完成，耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
     }; // 闭合 initTerminal 函数
 
     // 调用异步初始化函数

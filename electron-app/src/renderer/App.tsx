@@ -34,6 +34,7 @@ import { ResizableSider, StatusBar, TopBar } from './components/Layout';
 import { configAPI, sessionAPI, tokenAPI, authAPI } from './services/api';
 import { ConfigImportRequest, StartSessionRequest } from './types';
 import { authStorage } from './utils/authStorage';
+import { writeMcpConfig } from './utils/mcpConfigHelper';
 import './i18n'; // 引入 i18n 配置
 import './styles/global.css'; // 引入全局样式
 import './styles/App.css'; // 引入应用样式
@@ -279,6 +280,13 @@ const AppContent: React.FC = () => {
         const response = await sessionAPI.startSession(newSessionRequest);
         if (response.data) {
           dispatch(addSession(response.data));
+
+          // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
+          await writeMcpConfig(
+            response.data.id,
+            failedSession.workingDirectory
+          );
+
           dispatch(openTerminal(response.data.id));
           message.success('会话已重启，已切换到新 Token');
         }
