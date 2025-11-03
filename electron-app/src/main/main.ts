@@ -788,8 +788,7 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
         }
       }
 
-      // ✅ 使用临时批处理文件的方式设置环境变量（更可靠）
-      // 创建临时批处理文件路径
+      // ✅ 方案：单一批处理文件 + 主进程延迟删除（最简单可靠）
       const tempDir = path.join(options.workingDirectory, '.llmctl-temp');
       const batchFile = path.join(tempDir, `launch-${Date.now()}.bat`);
 
@@ -801,20 +800,21 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
 
         // 构建批处理文件内容
         let batchContent = '@echo off\n';
-        batchContent += `chcp 65001 >nul\n`; // 设置 UTF-8 编码
-        batchContent += `cd /d "${options.workingDirectory}"\n`; // 切换到工作目录
+        batchContent += `chcp 65001 >nul\n`;
+        batchContent += `cd /d "${options.workingDirectory}"\n`;
+        batchContent += `\n`;
 
         // 添加环境变量设置
         if (options.env && Object.keys(options.env).length > 0) {
           console.log('[IPC] 设置环境变量:', options.env);
           for (const [key, value] of Object.entries(options.env)) {
-            // 跳过已处理的 Codex 配置变量和 CHCP
             if (key === 'CHCP' || key === 'CODEX_CONFIG_TOML' || key === 'CODEX_AUTH_JSON' || key === 'CODEX_API_KEY') {
               continue;
             }
-            // 不需要转义，直接写入批处理文件
-            batchContent += `set ${key}=${value}\n`;
+            const escapedValue = value.replace(/"/g, '""');
+            batchContent += `set "${key}=${escapedValue}"\n`;
           }
+          batchContent += `\n`;
         }
 
         // 添加最终命令
@@ -822,59 +822,46 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
 
         // 写入批处理文件
         fs.writeFileSync(batchFile, batchContent, { encoding: 'utf-8' });
-        console.log('[IPC] 已创建临时批处理文件:', batchFile);
+        console.log('[IPC] 已创建批处理文件:', batchFile);
 
-        // 使用 start 命令打开新的 CMD 窗口并执行批处理文件
-        const command = `start "LLMctl Terminal" cmd /K "${batchFile}"`;
+        // ✅ 使用 spawn 完全异步启动，不等待任何响应
+        console.log('[IPC] 准备启动外部终端，批处理文件:', batchFile);
 
-        child_process.exec(command, (error) => {
-          if (error) {
-            console.error('[IPC] 打开外部终端失败:', error);
-            // 清理批处理文件和临时目录
-            try {
-              // 删除批处理文件
-              if (fs.existsSync(batchFile)) {
-                fs.unlinkSync(batchFile);
-              }
-
-              // ✅ 检查临时目录是否为空，如果为空则删除
-              if (fs.existsSync(tempDir)) {
-                const files = fs.readdirSync(tempDir);
-                if (files.length === 0) {
-                  fs.rmSync(tempDir, { recursive: true, force: true });
-                  console.log('[IPC] 已清理临时目录（失败情况）');
-                }
-              }
-            } catch (e) {
-              // 忽略删除错误
-            }
-          } else {
-            console.log('[IPC] ✅ 外部终端已成功打开（已设置环境变量并创建 Codex 配置文件）');
-            // 延迟删除批处理文件（给终端一些时间启动）
-            setTimeout(() => {
-              try {
-                // 删除批处理文件
-                if (fs.existsSync(batchFile)) {
-                  fs.unlinkSync(batchFile);
-                  console.log('[IPC] 已清理临时批处理文件');
-                }
-
-                // ✅ 检查临时目录是否为空，如果为空则删除
-                if (fs.existsSync(tempDir)) {
-                  const files = fs.readdirSync(tempDir);
-                  if (files.length === 0) {
-                    fs.rmdirSync(tempDir);
-                    console.log('[IPC] 已清理临时目录:', tempDir);
-                  }
-                }
-              } catch (e) {
-                // 忽略删除错误
-              }
-            }, 5000); // 5秒后删除
-          }
+        // 使用 spawn 代替 exec，detached 参数让进程完全独立
+        const childProcess = child_process.spawn('cmd.exe', ['/c', 'start', 'LLMctl Terminal', 'cmd', '/K', batchFile], {
+          detached: true,
+          stdio: 'ignore', // 忽略所有输出，不等待
+          windowsHide: false,
         });
 
-        console.log('[IPC] 正在打开外部终端...');
+        // 立即断开连接，让子进程完全独立运行
+        childProcess.unref();
+
+        console.log('[IPC] ✅ 外部终端启动命令已发送（完全异步，不等待）');
+
+        // ✅ 异步延迟 3 秒删除批处理文件
+        setTimeout(() => {
+          try {
+            if (fs.existsSync(batchFile)) {
+              fs.unlinkSync(batchFile);
+              console.log('[IPC] ✅ 已删除批处理文件:', batchFile);
+            }
+
+            // 检查并清理空目录
+            if (fs.existsSync(tempDir)) {
+              const files = fs.readdirSync(tempDir);
+              if (files.length === 0) {
+                fs.rmdirSync(tempDir);
+                console.log('[IPC] ✅ 已清理临时目录:', tempDir);
+              } else {
+                console.log('[IPC] ⚠️  临时目录非空，剩余文件:', files);
+              }
+            }
+          } catch (e) {
+            console.error('[IPC] 延迟清理失败:', e);
+          }
+        }, 3000);
+
         return { success: true };
       } catch (err) {
         console.error('[IPC] 创建批处理文件失败:', err);

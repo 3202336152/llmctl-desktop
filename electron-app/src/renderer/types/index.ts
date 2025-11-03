@@ -105,6 +105,7 @@ export interface Session {
   startTime: string;
   endTime?: string;
   lastActivity?: string;
+  environmentVariables?: Record<string, string>;  // ✅ 环境变量（避免重复请求）
 }
 
 export interface StartSessionRequest {

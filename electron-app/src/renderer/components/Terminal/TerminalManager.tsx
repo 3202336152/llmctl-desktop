@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Card, Button, Tabs, Space, Tag, Empty, message, Modal } from 'antd';
 import {
   FolderOutlined,
@@ -28,6 +28,9 @@ const TerminalManager: React.FC = () => {
   const { t } = useTranslation();
   const { sessions, createdTerminalSessions, openTerminalSessions, activeTabKey, terminalSessionData, isTerminalFullscreen } = useAppSelector((state: RootState) => state.session);
 
+  // ✅ 防止重复点击：记录正在关闭的 sessionId
+  const closingSessionsRef = useRef<Set<string>>(new Set());
+
   // 如果没有打开的终端，检查是否有可用的会话
   const activeSessions = sessions.filter(s => s.status === 'active');
 
@@ -47,7 +50,16 @@ const TerminalManager: React.FC = () => {
 
   // 处理关闭终端
   const handleCloseTerminal = async (sessionId: string) => {
+    // ✅ 防止重复点击
+    if (closingSessionsRef.current.has(sessionId)) {
+      console.log('[TerminalManager] 正在关闭该终端，忽略重复点击:', sessionId);
+      return;
+    }
+
     try {
+      // 标记为正在关闭
+      closingSessionsRef.current.add(sessionId);
+
       // 1. 终止 Electron 端的 pty 进程
       await window.electronAPI.terminalKill(sessionId);
       console.log('[TerminalManager] 已终止 pty 进程:', sessionId);
@@ -73,6 +85,11 @@ const TerminalManager: React.FC = () => {
     } catch (error) {
       console.error('[TerminalManager] 关闭终端失败:', error);
       message.error('关闭终端失败，请重试');
+    } finally {
+      // ✅ 无论成功或失败，都要移除标记（延迟500ms，确保UI更新完成）
+      setTimeout(() => {
+        closingSessionsRef.current.delete(sessionId);
+      }, 500);
     }
   };
 

@@ -34,7 +34,10 @@
     "providers": "Providers",
     "tokens": "API Keys",
     "sessions": "Sessions",
+    "mcpServers": "MCP Servers",
+    "terminals": "Terminals",
     "notifications": "Notifications",
+    "profile": "Profile",
     "statistics": "Statistics",
     "settings": "Settings",
     "appTitle": "LLM Control System"

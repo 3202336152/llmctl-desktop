@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Card,
   Table,
@@ -71,6 +71,9 @@ const SessionManager: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [submitting, setSubmitting] = useState(false); // 防止重复提交
+
+  // ✅ 防止重复点击重启按钮：记录正在重启的 sessionId
+  const restartingSessionsRef = useRef<Set<string>>(new Set());
   const [form] = Form.useForm();
 
   // 可用的命令选项（根据选中的Provider动态更新）
@@ -435,7 +438,16 @@ const SessionManager: React.FC = () => {
     // 检查会话状态，如果是 inactive，先重新激活
     const session = sessions.find(s => s.id === sessionId);
     if (session?.status === 'inactive') {
+      // ✅ 防止重复点击
+      if (restartingSessionsRef.current.has(sessionId)) {
+        console.log('[SessionManager] 正在重启该会话，忽略重复点击:', sessionId);
+        return;
+      }
+
       try {
+        // 标记为正在重启
+        restartingSessionsRef.current.add(sessionId);
+
         // 1. 先销毁旧的终端实例（如果存在）
         dispatch(destroyTerminal(sessionId));
 
@@ -498,6 +510,11 @@ const SessionManager: React.FC = () => {
         }
       } catch (error) {
         message.error(`重新激活会话失败: ${error}`);
+      } finally {
+        // ✅ 无论成功或失败，都要移除标记（延迟500ms，确保UI更新完成）
+        setTimeout(() => {
+          restartingSessionsRef.current.delete(sessionId);
+        }, 500);
       }
       return;
     }
@@ -887,17 +904,6 @@ const SessionManager: React.FC = () => {
             <span style={{ fontWeight: 600, fontSize: 16, color: '#fa8c16' }}>{inactiveSessions.length}</span>
           </Space>
         </Space>
-
-        <div style={{
-          padding: '8px 16px',
-          background: '#e6f7ff',
-          border: '1px solid #91d5ff',
-          borderRadius: 4,
-          fontSize: 13,
-          color: '#1890ff',
-        }}>
-          💡 提示：需要为 AI 工具配置扩展能力？访问侧边栏的 <strong>MCP Servers</strong> 页面创建和管理 MCP 服务器
-        </div>
       </div>
 
       <Card

@@ -6,6 +6,30 @@ import '@xterm/xterm/css/xterm.css';
 import { Card, Button } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { sessionAPI } from '../../services/api';
+import { useAppSelector } from '../../store';
+
+// ✅ 全局 fit 锁：防止多个终端同时执行 fit() 导致性能问题
+let globalFitLock = false;
+const fitQueue: Array<() => void> = [];
+
+const processNextFit = () => {
+  if (globalFitLock || fitQueue.length === 0) return;
+
+  globalFitLock = true;
+  const nextFit = fitQueue.shift();
+
+  if (nextFit) {
+    try {
+      nextFit();
+    } catch (error) {
+      console.error('[TerminalComponent] fit() 执行失败:', error);
+    } finally {
+      globalFitLock = false;
+      // 延迟处理下一个，避免阻塞主线程
+      setTimeout(processNextFit, 50);
+    }
+  }
+};
 
 interface TerminalComponentProps {
   sessionId: string;
@@ -32,6 +56,15 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
   const createdRef = useRef<boolean>(false);
   const [fontSize, setFontSize] = useState<number>(16); // 默认字体大小
   const fitDebounceTimerRef = useRef<NodeJS.Timeout | null>(null); // ✅ fit() 防抖定时器
+  const intersectionTimerRef = useRef<NodeJS.Timeout | null>(null); // ✅ IntersectionObserver 延迟定时器
+
+  // ✅ 从 Redux store 获取 session 数据（包含 environmentVariables）
+  const session = useAppSelector((state) =>
+    state.session.sessions.find((s) => s.id === sessionId)
+  );
+
+  // ✅ 获取当前打开的终端列表（用于可见性判断）
+  const openTerminalSessions = useAppSelector((state) => state.session.openTerminalSessions);
 
   useEffect(() => {
     if (!terminalRef.current || createdRef.current) return;
@@ -39,50 +72,24 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     createdRef.current = true;
 
     const initTerminal = async () => {
+      // IME 输入法组合状态跟踪（声明在最前面，让所有后续代码都能访问）
+      let isComposing = false;
+      let compositionText = '';
+      let lastInputValue = '';
+      let lastIMEInput = ''; // 记录最后一次 IME 输入，防止重复发送
+      let imeInputTime = 0; // 记录 IME 输入时间
+      let pendingSend = new Set<string>(); // 记录待发送的文本（用于去重）
+
       // 性能监控：记录初始化开始时间
       const perfStart = performance.now();
-      console.log('[TerminalComponent] 开始初始化终端，Session ID:', sessionId);
+      console.log('[TerminalComponent] 🚀 开始初始化终端（乐观渲染），Session ID:', sessionId);
 
-      // 获取环境变量
-      let envVars: Record<string, string> = env || {};
-      try {
-        const envStart = performance.now();
-
-        // 添加超时保护（5秒超时）
-        const envResponse: any = await Promise.race([
-          sessionAPI.getSessionEnvironment(sessionId),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('获取环境变量超时(5秒)')), 5000)
-          )
-        ]);
-
-        console.log(`[TerminalComponent] 获取环境变量耗时: ${(performance.now() - envStart).toFixed(2)}ms`);
-
-        if (envResponse.data) {
-          envVars = { ...envVars, ...envResponse.data };
-          console.log('[TerminalComponent] 成功获取环境变量');
-        }
-      } catch (error: any) {
-        console.error('[TerminalComponent] 获取环境变量失败:', error);
-
-        // 如果会话不存在（404错误），不继续初始化终端
-        if (error?.response?.status === 404 || error?.code === 404) {
-          console.error('[TerminalComponent] 会话不存在，停止初始化终端:', sessionId);
-          createdRef.current = false; // 重置标记，允许重试
-          return;
-        }
-
-        // 其他错误只警告，继续初始化（使用默认环境变量）
-        console.warn('[TerminalComponent] 使用默认环境变量继续初始化');
-      }
-
+      // ✅ 步骤1：立即创建并渲染 Terminal UI（不等待环境变量）
       const terminal = new Terminal({
         cursorBlink: true,
         fontSize: fontSize,
         fontFamily: 'Consolas, "Courier New", monospace',
-        // 设置字符编码为 UTF-8，避免中文乱码
         convertEol: true,
-        // Windows PowerShell 模式禁用（使用 CMD）
         windowsMode: false,
         theme: {
           background: '#1e1e1e',
@@ -108,32 +115,91 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         rows: 30,
         cols: 120,
         allowTransparency: true,
-        // 性能优化：限制滚动缓冲区大小，避免内存占用过高
         scrollback: 5000,
       });
 
-      console.log(`[TerminalComponent] Terminal 对象创建耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
+      console.log(`[TerminalComponent] ✅ Terminal 对象创建耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
 
-    // 添加插件
-    const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+      // 添加插件
+      const fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
 
-    terminal.loadAddon(fitAddon);
-    terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(fitAddon);
+      terminal.loadAddon(webLinksAddon);
 
-    // 打开终端
-    if (terminalRef.current) {
-      terminal.open(terminalRef.current);
-    }
-
-    // 延迟调用 fit，确保终端完全初始化
-    setTimeout(() => {
-      try {
-        fitAddon.fit();
-      } catch (error) {
-        console.error('终端自适应失败:', error);
+      // ✅ 步骤2：立即打开终端（渲染到DOM，用户立刻看到）
+      if (terminalRef.current) {
+        terminal.open(terminalRef.current);
+        console.log(`[TerminalComponent] ✅ 终端UI渲染完成，耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
       }
-    }, 0);
+
+      // ✅ 步骤3：显示初始化提示
+      terminal.writeln('\x1b[1;34m🚀 正在初始化会话...\x1b[0m');
+      terminal.writeln('');
+
+      // 延迟调用 fit，确保终端完全初始化
+      setTimeout(() => {
+        try {
+          fitAddon.fit();
+        } catch (error) {
+          console.error('终端自适应失败:', error);
+        }
+      }, 0);
+
+      // ✅ 步骤4：异步获取环境变量（不阻塞UI）
+      const getEnvVars = async (): Promise<Record<string, string>> => {
+        let envVars: Record<string, string> = env || {};
+
+        if (session?.environmentVariables) {
+          // 如果 session 中已包含环境变量（来自 startSession 响应），直接使用
+          envVars = { ...envVars, ...session.environmentVariables };
+          console.log('[TerminalComponent] ✅ 使用 session 中的环境变量，无需额外请求');
+          return envVars;
+        }
+
+        // 如果没有环境变量（旧会话或异常情况），回退到 API 请求
+        try {
+          const envStart = performance.now();
+          terminal.writeln('\x1b[33m⏳ 正在获取环境配置...\x1b[0m');
+
+          const envResponse: any = await Promise.race([
+            sessionAPI.getSessionEnvironment(sessionId),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('获取环境变量超时(5秒)')), 5000)
+            )
+          ]);
+
+          console.log(`[TerminalComponent] API 获取环境变量耗时: ${(performance.now() - envStart).toFixed(2)}ms`);
+
+          if (envResponse.data) {
+            envVars = { ...envVars, ...envResponse.data };
+            console.log('[TerminalComponent] ⚠️ 通过 API 获取环境变量（回退方案）');
+          }
+        } catch (error: any) {
+          console.error('[TerminalComponent] 获取环境变量失败:', error);
+
+          // 如果会话不存在（404错误），不继续初始化终端
+          if (error?.response?.status === 404 || error?.code === 404) {
+            console.error('[TerminalComponent] 会话不存在，停止初始化终端:', sessionId);
+            terminal.writeln('\x1b[1;31m❌ 会话不存在，请重新创建\x1b[0m');
+            createdRef.current = false;
+            throw error;
+          }
+
+          // 其他错误只警告，继续初始化（使用默认环境变量）
+          console.warn('[TerminalComponent] 使用默认环境变量继续初始化');
+          terminal.writeln('\x1b[33m⚠️  使用默认配置继续...\x1b[0m');
+        }
+
+        return envVars;
+      };
+
+      // ✅ 步骤5：并行执行环境变量获取和 PTY 创建准备
+      try {
+        const envVars = await getEnvVars();
+
+        terminal.writeln('\x1b[33m⏳ 正在启动终端进程...\x1b[0m');
+        terminal.writeln('');
 
     // 创建Electron终端会话
     window.electronAPI
@@ -145,12 +211,16 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       })
       .then((result) => {
         if (result && !result.success) {
-          terminal.write(`\r\n\x1b[1;31m[错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
+          terminal.write(`\r\n\x1b[1;31m❌ [错误] 创建失败: ${(result as any).error}\x1b[0m\r\n`);
         } else {
-          // 每次打开都是全新的 pty 进程，无历史记录恢复
+          // ✅ 成功初始化，显示欢迎信息
+          terminal.write('\x1b[2K\r'); // 清除当前行
+          terminal.writeln('\x1b[1;32m✅ 会话初始化完成\x1b[0m');
+          terminal.writeln('');
+          console.log(`[TerminalComponent] ✅ 终端初始化完成，总耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
+
           // 如果会话配置了命令，自动执行该命令
           if (command && command !== 'cmd.exe') {
-            // 延迟100ms确保pty完全初始化后再发送命令
             setTimeout(() => {
               window.electronAPI.terminalInput(sessionId, `${command}\r`).catch((error) => {
                 console.error('自动执行命令失败:', error);
@@ -161,8 +231,14 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       })
       .catch((error) => {
         console.error('创建终端会话失败:', error);
-        terminal.write('\r\n\x1b[1;31m[错误] 无法创建终端会话\x1b[0m\r\n');
+        terminal.write('\r\n\x1b[1;31m❌ [错误] 无法创建终端会话\x1b[0m\r\n');
       });
+    } catch (error) {
+      // 捕获 getEnvVars 的异常（如会话不存在）
+      console.error('[TerminalComponent] 初始化失败:', error);
+      terminal.writeln('\x1b[1;31m❌ 初始化失败，请重试\x1b[0m');
+      return; // 停止初始化
+    }
 
     // 监听终端输出
     const unsubscribe = window.electronAPI.onTerminalOutput((data) => {
@@ -173,35 +249,37 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
 
     // 处理用户输入
     terminal.onData((data) => {
-      window.electronAPI.terminalInput(sessionId, data).catch((error) => {
-        console.error('发送输入失败:', error);
-      });
+      // 延迟 20ms 发送，让 input 事件有机会先处理
+      setTimeout(() => {
+        const now = Date.now();
+        const timeDiff = now - imeInputTime;
+
+        // 如果在 pendingSend 中，说明 input 事件正在处理，跳过
+        if (pendingSend.has(data)) {
+          return;
+        }
+
+        // 如果是刚刚发送过的 IME 输入（200ms 内），跳过
+        if (data === lastIMEInput && timeDiff < 200) {
+          return;
+        }
+
+        window.electronAPI.terminalInput(sessionId, data).catch((error) => {
+          console.error('发送输入失败:', error);
+        });
+      }, 20);
     });
 
-    // 优化的粘贴逻辑：直接发送全部内容，移除分块逻辑
+    // 优化的粘贴逻辑：直接发送全部内容
     const handlePaste = async (text: string) => {
-      if (!text) {
-        console.log('[粘贴] 内容为空，跳过');
-        return;
-      }
+      if (!text) return;
 
-      // 打印调试信息
-      console.log(`[粘贴] 接收到内容，长度: ${text.length} 字符`);
-      console.log(`[粘贴] 内容预览（前100字符）: ${text.substring(0, 100)}...`);
-
-      // 直接发送全部内容，不分块
       try {
         await window.electronAPI.terminalInput(sessionId, text);
-        console.log(`[粘贴] 发送完成`);
       } catch (error) {
         console.error('[粘贴] 发送失败:', error);
       }
     };
-
-    // 输入法组合状态跟踪
-    let isComposing = false;
-    let compositionText = '';
-    let lastInputValue = '';
 
     // 输入法组合事件处理器
     const handleCompositionStart = (event: CompositionEvent) => {
@@ -216,14 +294,38 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     const handleCompositionEnd = (event: CompositionEvent) => {
       isComposing = false;
       const finalText = event.data || compositionText;
+      const target = event.target as HTMLTextAreaElement;
 
       if (finalText) {
-        window.electronAPI.terminalInput(sessionId, finalText).catch((error) => {
-          console.error('[IME] 发送组合文本失败:', error);
-        });
+        // 立即加入 pendingSend，阻止 onData 发送
+        pendingSend.add(finalText);
+
+        // 记录这次 IME 输入
+        lastIMEInput = finalText;
+        imeInputTime = Date.now();
+
+        // 发送到终端
+        window.electronAPI.terminalInput(sessionId, finalText)
+          .then(() => {
+            // 发送成功后，延迟 50ms 移除（确保 onData 有足够时间检查）
+            setTimeout(() => {
+              pendingSend.delete(finalText);
+            }, 50);
+          })
+          .catch((error) => {
+            console.error('[IME] 发送组合文本失败:', error);
+            pendingSend.delete(finalText);
+          });
+
+        // 清空 textarea，防止 xterm.js 重复读取
+        target.value = '';
       }
 
       compositionText = '';
+
+      // 阻止事件继续传播
+      event.preventDefault();
+      event.stopImmediatePropagation();
     };
 
     // 处理 input 事件（某些输入法不触发 composition 事件，直接使用 input 事件）
@@ -239,18 +341,35 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
 
       // 检测输入法直接提交的文本（没有走 composition 流程）
       if (inputEvent.inputType === 'insertText' && inputEvent.data) {
+        const text = inputEvent.data;
+
+        // 立即加入 pendingSend，阻止 onData 发送
+        pendingSend.add(text);
+
+        // 记录这次 IME 输入
+        lastIMEInput = text;
+        imeInputTime = Date.now();
+
         // 清空 textarea（防止文本累积）
         target.value = '';
         lastInputValue = '';
 
         // 发送到终端
-        window.electronAPI.terminalInput(sessionId, inputEvent.data).catch((error) => {
-          console.error('[IME] 发送文本失败:', error);
-        });
+        window.electronAPI.terminalInput(sessionId, text)
+          .then(() => {
+            // 发送成功后，延迟 50ms 移除（确保 onData 有足够时间检查）
+            setTimeout(() => {
+              pendingSend.delete(text);
+            }, 50);
+          })
+          .catch((error) => {
+            console.error('[IME] 发送文本失败:', error);
+            pendingSend.delete(text);
+          });
 
         // 阻止 xterm.js 的默认处理（避免重复）
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
       } else {
         lastInputValue = target.value;
       }
@@ -334,30 +453,53 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // 防抖 fit() 调用，避免频繁调整导致性能问题
+    // ✅ 防抖 fit() 调用，使用全局锁避免并发执行
     const debouncedFit = () => {
       if (fitDebounceTimerRef.current) {
         clearTimeout(fitDebounceTimerRef.current);
       }
 
       fitDebounceTimerRef.current = setTimeout(() => {
-        if (fitAddonRef.current && xtermRef.current) {
-          try {
-            fitAddonRef.current.fit();
-            // 通知后端调整PTY大小
-            const { cols, rows } = xtermRef.current;
-            window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
-              console.error('调整终端大小失败:', error);
-            });
-          } catch (error) {
-            console.error('终端自适应失败:', error);
+        // 加入全局队列，确保串行执行
+        fitQueue.push(() => {
+          if (fitAddonRef.current && xtermRef.current) {
+            try {
+              fitAddonRef.current.fit();
+              // 通知后端调整PTY大小
+              const { cols, rows } = xtermRef.current;
+              window.electronAPI.terminalResize(sessionId, cols, rows).catch((error) => {
+                console.error('[TerminalComponent] 调整终端大小失败:', error);
+              });
+            } catch (error) {
+              console.error('[TerminalComponent] 终端自适应失败:', error);
+            }
           }
-        }
-      }, 200); // 200ms 防抖延迟
+        });
+        processNextFit(); // 触发队列处理
+      }, 300); // ✅ 增加防抖延迟到 300ms
     };
 
-    // 窗口大小改变时自适应（使用防抖）
+    // ✅ 窗口大小改变时自适应（只在终端可见时执行）
     const handleResize = () => {
+      // ✅ 检查终端是否在打开列表中，避免隐藏终端触发 fit()
+      if (!openTerminalSessions.includes(sessionId)) {
+        console.log(`[TerminalComponent] resize 事件忽略（终端未打开）: ${sessionId}`);
+        return;
+      }
+
+      // ✅ 检查 DOM 元素是否真正可见
+      if (terminalRef.current) {
+        const rect = terminalRef.current.getBoundingClientRect();
+        const isVisible = rect.width > 0 && rect.height > 0 &&
+                          window.getComputedStyle(terminalRef.current).visibility !== 'hidden';
+
+        if (!isVisible) {
+          console.log(`[TerminalComponent] resize 事件忽略（DOM 不可见）: ${sessionId}`);
+          return;
+        }
+      }
+
+      console.log(`[TerminalComponent] resize 事件触发 fit(): ${sessionId}`);
       debouncedFit();
     };
     window.addEventListener('resize', handleResize);
@@ -382,19 +524,32 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       terminalRef.current.addEventListener('contextmenu', handleContextMenu);
     }
 
-    // 监听终端容器可见性变化，自动调整尺寸（使用防抖）
+    // ✅ 监听终端容器可见性变化，自动调整尺寸
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          // 当终端变为可见时，重新调整尺寸
-          if (entry.isIntersecting) {
-            setTimeout(() => {
+          // ✅ 严格的可见性检查：
+          // 1. DOM 可见（isIntersecting）
+          // 2. 至少 20% 可见（intersectionRatio）
+          // 3. 在 Redux openTerminalSessions 列表中
+          const isTerminalOpen = openTerminalSessions.includes(sessionId);
+          const isActuallyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
+
+          if (isActuallyVisible && isTerminalOpen) {
+            // 清除旧的延迟定时器
+            if (intersectionTimerRef.current) {
+              clearTimeout(intersectionTimerRef.current);
+            }
+
+            // ✅ 增加延迟到 500ms，确保容器尺寸稳定且避免频繁触发
+            intersectionTimerRef.current = setTimeout(() => {
+              console.log(`[TerminalComponent] IntersectionObserver 触发 fit()，Session ID: ${sessionId}`);
               debouncedFit();
-            }, 100); // 延迟 100ms 确保容器尺寸已稳定
+            }, 500);
           }
         });
       },
-      { threshold: 0.1 } // 当至少 10% 的元素可见时触发
+      { threshold: [0, 0.2, 0.5, 1.0] } // ✅ 增加检测阈值，避免误触发
     );
 
     if (terminalRef.current) {
@@ -406,9 +561,12 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
       window.removeEventListener('resize', handleResize);
       observer.disconnect();
 
-      // 清理防抖定时器
+      // ✅ 清理所有定时器
       if (fitDebounceTimerRef.current) {
         clearTimeout(fitDebounceTimerRef.current);
+      }
+      if (intersectionTimerRef.current) {
+        clearTimeout(intersectionTimerRef.current);
       }
 
       // 移除右键菜单监听
@@ -441,9 +599,6 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
 
       terminal.dispose();
     };
-
-    // 终端初始化完成
-    console.log(`[TerminalComponent] 终端初始化完成，耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
     }; // 闭合 initTerminal 函数
 
     // 调用异步初始化函数

@@ -3,6 +3,7 @@ package com.llmctl.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Session展示用DTO
@@ -78,4 +79,9 @@ public class SessionDTO {
      * 会话持续时间（分钟）
      */
     private Long durationMinutes;
+
+    /**
+     * 环境变量（用于终端初始化）
+     */
+    private Map<String, String> environmentVariables;
 }

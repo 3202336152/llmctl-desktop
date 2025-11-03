@@ -156,7 +156,24 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         log.info("成功创建会话记录: {} (ID: {})", session.getCommand(), session.getId());
-        return convertToDTO(session);
+
+        // ✅ 构建环境变量并设置到 DTO 中（避免重复查询）
+        SessionDTO sessionDTO = convertToDTO(session);
+        try {
+            Map<String, String> envVars = buildEnvironmentVariables(
+                provider,
+                selectedToken,
+                request.getWorkingDirectory(),
+                session.getId()
+            );
+            sessionDTO.setEnvironmentVariables(envVars);
+            log.debug("已在 startSession 响应中包含环境变量，避免重复查询");
+        } catch (Exception e) {
+            log.error("构建环境变量失败，会话ID: {}", session.getId(), e);
+            // 环境变量构建失败不影响会话创建，前端可通过 getSessionEnvironment 获取
+        }
+
+        return sessionDTO;
     }
 
     @Override

@@ -34,7 +34,8 @@ interface Props {
 const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
   const [form] = Form.useForm();
   const dispatch = useAppDispatch();
-  const [submitting, setSubmitting] = React.useState(false); // ✅ 添加提交状态
+  const [submitting, setSubmitting] = React.useState(false);
+  const [showCustomCommand, setShowCustomCommand] = React.useState(false); // 控制自定义命令输入框显示
 
   // Icon 映射表
   const iconOptions = [
@@ -51,6 +52,54 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
     { value: 'hdd', label: '硬盘', icon: <HddOutlined /> }
   ];
 
+  // MCP Transport 类型选项
+  const transportTypes = [
+    { value: 'stdio', label: 'stdio', description: '标准输入输出（最常用）' },
+    { value: 'sse', label: 'sse', description: 'Server-Sent Events' },
+    { value: 'http', label: 'http', description: 'HTTP RESTful' },
+    { value: 'websocket', label: 'websocket', description: 'WebSocket 双向通信' },
+    { value: 'grpc', label: 'grpc', description: 'gRPC 高性能 RPC' },
+    { value: 'tcp', label: 'tcp', description: 'TCP Socket 直连' },
+    { value: 'pipe', label: 'pipe', description: '命名管道' },
+    { value: 'ssh', label: 'ssh', description: '远程 SSH 执行' },
+    { value: 'nats', label: 'nats', description: 'NATS 消息总线' },
+    { value: 'container', label: 'container', description: '容器运行时' },
+    { value: 'worker', label: 'worker', description: 'Worker 线程' },
+    { value: 'wasm', label: 'wasm', description: 'WebAssembly 沙盒' }
+  ];
+
+  // 启动命令模板选项
+  const commandTemplates = [
+    { label: '📦 包管理器', options: [
+      { value: 'npx', label: 'npx', description: 'npm 包执行器' },
+      { value: 'uvx', label: 'uvx', description: 'Python uv 执行器' },
+      { value: 'pipx', label: 'pipx', description: 'Python pipx 执行器' }
+    ]},
+    { label: '🔧 解释器', options: [
+      { value: 'node', label: 'node', description: 'Node.js 执行' },
+      { value: 'python', label: 'python', description: 'Python 2/3 执行' },
+      { value: 'python3', label: 'python3', description: 'Python 3 执行' },
+      { value: 'ruby', label: 'ruby', description: 'Ruby 执行' },
+      { value: 'go run', label: 'go run', description: 'Go 执行' }
+    ]},
+    { label: '🐳 容器', options: [
+      { value: 'docker run', label: 'docker run', description: 'Docker 容器' },
+      { value: 'podman run', label: 'podman run', description: 'Podman 容器' }
+    ]},
+    { label: '🌐 远程/URL', options: [
+      { value: 'http://', label: 'http://', description: 'HTTP 服务地址' },
+      { value: 'https://', label: 'https://', description: 'HTTPS 服务地址' },
+      { value: 'grpc://', label: 'grpc://', description: 'gRPC 服务地址' },
+      { value: 'ssh', label: 'ssh', description: 'SSH 远程执行' }
+    ]},
+    { label: '⚡ 其他', options: [
+      { value: 'bash', label: 'bash', description: 'Bash 脚本' },
+      { value: 'sh', label: 'sh', description: 'Shell 脚本' },
+      { value: 'wasmtime', label: 'wasmtime', description: 'WebAssembly 运行时' },
+      { value: 'custom', label: '自定义命令', description: '输入自定义命令' }
+    ]}
+  ];
+
   useEffect(() => {
     if (visible && server) {
       // 转换 env 对象为数组格式
@@ -61,14 +110,23 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
           }))
         : [];
 
+      // 检查 command 是否在预设列表中
+      const allPresetCommands = commandTemplates.flatMap(group =>
+        group.options.map(opt => opt.value)
+      );
+      const isCustomCommand = server.command && !allPresetCommands.includes(server.command);
+
+      setShowCustomCommand(Boolean(isCustomCommand));
+
       form.setFieldsValue({
         ...server,
         envVars
       });
     } else if (visible) {
       form.resetFields();
+      setShowCustomCommand(false);
     }
-  }, [visible, server, form]);
+  }, [visible, server, form, commandTemplates]);
 
   const handleSubmit = async () => {
     // ✅ 防止重复提交
@@ -223,26 +281,101 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
 
           <Form.Item
             name="type"
-            label={<span style={{ fontWeight: 500 }}>类型</span>}
+            label={<span style={{ fontWeight: 500 }}>Transport 类型</span>}
             initialValue="stdio"
+            tooltip="MCP 通信协议类型"
           >
-            <Select size="large">
-              <Select.Option value="stdio">stdio (标准输入输出)</Select.Option>
-              <Select.Option value="sse">sse (Server-Sent Events)</Select.Option>
+            <Select
+              size="large"
+              showSearch
+              optionFilterProp="label"
+              optionLabelProp="label"
+            >
+              {transportTypes.map(type => (
+                <Select.Option
+                  key={type.value}
+                  value={type.value}
+                  label={`${type.label} - ${type.description}`}
+                >
+                  <div style={{ padding: '4px 0' }}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{type.label}</div>
+                    <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+                      {type.description}
+                    </div>
+                  </div>
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
 
           <Form.Item
-            name="command"
             label={<span style={{ fontWeight: 500 }}>启动命令</span>}
-            rules={[{ required: true, message: '请输入启动命令' }]}
-            tooltip="例如: npx, node, python, uvx"
+            tooltip="选择预设命令或输入自定义命令"
+            required
           >
-            <Input
-              placeholder="例如: npx"
-              size="large"
-              style={{ fontFamily: 'Monaco, monospace' }}
-            />
+            <Space direction="vertical" style={{ width: '100%' }} size={12}>
+              <Select
+                size="large"
+                showSearch
+                placeholder="选择启动命令模板"
+                style={{ fontFamily: 'Monaco, monospace', width: '100%' }}
+                value={showCustomCommand ? 'custom' : form.getFieldValue('command')}
+                defaultValue="npx"
+                optionLabelProp="label"
+                onChange={(value: string) => {
+                  if (value === 'custom') {
+                    setShowCustomCommand(true);
+                    form.setFieldsValue({ command: '' });
+                  } else {
+                    setShowCustomCommand(false);
+                    form.setFieldsValue({ command: value });
+                  }
+                }}
+              >
+                {commandTemplates.map(group => (
+                  <Select.OptGroup key={group.label} label={group.label}>
+                    {group.options.map(cmd => (
+                      <Select.Option
+                        key={cmd.value}
+                        value={cmd.value}
+                        label={cmd.label}
+                      >
+                        <div style={{ padding: '4px 0' }}>
+                          <div style={{ fontWeight: 500, fontFamily: 'Monaco, monospace', fontSize: 14 }}>
+                            {cmd.label}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+                            {cmd.description}
+                          </div>
+                        </div>
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                ))}
+              </Select>
+
+              {/* 自定义命令输入框 */}
+              {showCustomCommand && (
+                <Form.Item
+                  name="command"
+                  rules={[{ required: true, message: '请输入自定义命令' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Input
+                    placeholder="例如: ./my-mcp-server 或 /usr/local/bin/server"
+                    size="large"
+                    style={{ fontFamily: 'Monaco, monospace' }}
+                    prefix={<span style={{ color: '#999' }}>⚙️</span>}
+                  />
+                </Form.Item>
+              )}
+
+              {!showCustomCommand && (
+                <Form.Item name="command" hidden initialValue="npx">
+                  <Input />
+                </Form.Item>
+              )}
+            </Space>
           </Form.Item>
         </div>
 

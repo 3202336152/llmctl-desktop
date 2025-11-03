@@ -397,11 +397,6 @@ const AppContent: React.FC = () => {
       label: t('nav.tokens'),
     },
     {
-      key: '/mcp-servers',
-      icon: <AppstoreOutlined />,
-      label: t('nav.mcpServers', 'MCP Servers'),
-    },
-    {
       key: '/sessions',
       icon: <DesktopOutlined />,
       label: t('nav.sessions'),
@@ -410,6 +405,11 @@ const AppContent: React.FC = () => {
       key: '/terminals',
       icon: <CodeOutlined />,
       label: t('nav.terminals', 'Terminals'),
+    },
+    {
+      key: '/mcp-servers',
+      icon: <AppstoreOutlined />,
+      label: t('nav.mcpServers', 'MCP Servers'),
     },
     {
       key: '/notifications',

@@ -31,11 +31,11 @@
     "settings": "系统设置"
   },
   "nav": {
-    "providers": "Providers",
-    "tokens": "API Keys",
-    "sessions": "Sessions",
-    "mcpServers": "MCP Servers",
-    "terminals": "Terminals",
+    "providers": "服务商",
+    "tokens": "API 密钥",
+    "sessions": "会话管理",
+    "mcpServers": "MCP 服务器",
+    "terminals": "终端",
     "notifications": "通知中心",
     "profile": "用户信息",
     "settings": "系统设置",

@@ -13,7 +13,7 @@
 
     <groupId>com.llmctl</groupId>
     <artifactId>LLMctl</artifactId>
-    <version>2.2.0</version>
+    <version>2.2.7</version>
     <packaging>jar</packaging>
     <name>LLMctl</name>
     <description>LLM Control System</description>

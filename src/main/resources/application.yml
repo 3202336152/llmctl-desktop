@@ -23,6 +23,65 @@ spring:
     password: ENC(P4JtACctTK7jRQERpp3ODF31VeH080Ak)
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+    # ✅ HikariCP 连接池配置（解决连接超时问题）
+    hikari:
+      # 连接池名称
+      pool-name: HikariPool-LLMctl
+
+      # 最小空闲连接数（建议 >= 2）
+      minimum-idle: 5
+
+      # 最大连接数（根据应用负载调整）
+      maximum-pool-size: 20
+
+      # 连接超时时间（30秒）
+      connection-timeout: 30000
+
+      # 空闲连接超时时间（10分钟）
+      # MySQL 默认 wait_timeout=28800秒（8小时），这里设置 10 分钟确保在 MySQL 超时前回收
+      idle-timeout: 600000
+
+      # 连接最大生命周期（30分钟）
+      # 必须小于 MySQL 的 wait_timeout，建议设置为 wait_timeout 的 60%-80%
+      max-lifetime: 1800000
+
+      # 连接保活时间（5分钟）
+      # 定期发送心跳查询，保持连接活跃
+      keepalive-time: 300000
+
+      # 连接测试查询（验证连接是否有效）
+      connection-test-query: SELECT 1
+
+      # 自动提交
+      auto-commit: true
+
+      # 连接初始化SQL（可选）
+      # connection-init-sql: SET NAMES utf8mb4
+
+      # 泄露检测阈值（15秒，用于发现连接泄露）
+      leak-detection-threshold: 15000
+
+      # 数据源属性（MySQL 驱动级别配置）
+      data-source-properties:
+        # 缓存预编译语句
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        # 使用服务器端预编译语句
+        useServerPrepStmts: true
+        # 使用本地会话状态
+        useLocalSessionState: true
+        # 重写批量语句
+        rewriteBatchedStatements: true
+        # 缓存结果集元数据
+        cacheResultSetMetadata: true
+        # 缓存服务器配置
+        cacheServerConfiguration: true
+        # 启用查询超时检测
+        elideSetAutoCommits: true
+        # 维护连接时间统计
+        maintainTimeStats: false
+
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -109,7 +168,7 @@ info:
   app:
     name: LLMctl
     description: LLM Control System
-    version: 2.2.0
+    version: 2.2.7
     author: Liu Yifan
 
 # Jasypt加密配置
