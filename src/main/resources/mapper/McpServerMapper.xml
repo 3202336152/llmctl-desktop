@@ -119,17 +119,44 @@
     <!-- 更新 MCP 服务器 -->
     <update id="update" parameterType="com.llmctl.entity.McpServer">
         UPDATE mcp_servers
-        SET
-            name = #{name},
-            description = #{description},
-            type = #{type},
-            command = #{command},
-            args = #{args, typeHandler=com.llmctl.config.JsonListTypeHandler},
-            env = #{env, typeHandler=com.llmctl.config.JsonMapTypeHandler},
-            enabled = #{enabled},
-            template_category = #{templateCategory},
-            icon = #{icon},
-            config_hints = #{configHints, typeHandler=com.llmctl.config.JsonMapTypeHandler}
+        <set>
+            <if test="userId != null">
+                user_id = #{userId},
+            </if>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="description != null">
+                description = #{description},
+            </if>
+            <if test="type != null">
+                type = #{type},
+            </if>
+            <if test="command != null">
+                command = #{command},
+            </if>
+            <if test="args != null">
+                args = #{args, typeHandler=com.llmctl.config.JsonListTypeHandler},
+            </if>
+            <if test="env != null">
+                env = #{env, typeHandler=com.llmctl.config.JsonMapTypeHandler},
+            </if>
+            <if test="enabled != null">
+                enabled = #{enabled},
+            </if>
+            <if test="isTemplate != null">
+                is_template = #{isTemplate},
+            </if>
+            <if test="templateCategory != null">
+                template_category = #{templateCategory},
+            </if>
+            <if test="icon != null">
+                icon = #{icon},
+            </if>
+            <if test="configHints != null">
+                config_hints = #{configHints, typeHandler=com.llmctl.config.JsonMapTypeHandler}
+            </if>
+        </set>
         WHERE id = #{id}
     </update>
 

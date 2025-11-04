@@ -172,11 +172,48 @@ public class McpServerServiceImpl implements McpServerService {
         }
 
         // 检查名称是否与其他服务器冲突（用户范围内）
-        if (!existingServer.getName().equals(mcpServer.getName())) {
+        if (mcpServer.getName() != null && !existingServer.getName().equals(mcpServer.getName())) {
             McpServer duplicateServer = mcpServerMapper.findByUserIdAndName(existingServer.getUserId(), mcpServer.getName());
             if (duplicateServer != null && !duplicateServer.getId().equals(mcpServer.getId())) {
                 throw new IllegalArgumentException("您已创建过同名的 MCP 服务器: " + mcpServer.getName());
             }
+        }
+
+        // ✅ 【Bug修复】合并数据：只更新提交的字段，保留其他字段不变
+        // 保留核心字段，防止被意外清空
+        mcpServer.setUserId(existingServer.getUserId());           // 保留用户 ID
+        mcpServer.setIsTemplate(existingServer.getIsTemplate());   // 保留模板标识
+
+        // 对于可选字段，如果前端没有提交（为 null），则使用现有值
+        if (mcpServer.getName() == null) {
+            mcpServer.setName(existingServer.getName());
+        }
+        if (mcpServer.getDescription() == null) {
+            mcpServer.setDescription(existingServer.getDescription());
+        }
+        if (mcpServer.getType() == null) {
+            mcpServer.setType(existingServer.getType());
+        }
+        if (mcpServer.getCommand() == null) {
+            mcpServer.setCommand(existingServer.getCommand());
+        }
+        if (mcpServer.getArgs() == null) {
+            mcpServer.setArgs(existingServer.getArgs());
+        }
+        if (mcpServer.getEnv() == null) {
+            mcpServer.setEnv(existingServer.getEnv());
+        }
+        if (mcpServer.getEnabled() == null) {
+            mcpServer.setEnabled(existingServer.getEnabled());
+        }
+        if (mcpServer.getTemplateCategory() == null) {
+            mcpServer.setTemplateCategory(existingServer.getTemplateCategory());
+        }
+        if (mcpServer.getIcon() == null) {
+            mcpServer.setIcon(existingServer.getIcon());
+        }
+        if (mcpServer.getConfigHints() == null) {
+            mcpServer.setConfigHints(existingServer.getConfigHints());
         }
 
         mcpServerMapper.update(mcpServer);
