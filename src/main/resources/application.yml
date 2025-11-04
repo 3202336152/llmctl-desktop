@@ -168,7 +168,7 @@ info:
   app:
     name: LLMctl
     description: LLM Control System
-    version: 2.2.7
+    version: 2.2.8
     author: Liu Yifan
 
 # Jasypt加密配置

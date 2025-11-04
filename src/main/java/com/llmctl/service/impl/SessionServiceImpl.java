@@ -52,6 +52,7 @@ public class SessionServiceImpl implements ISessionService {
 
     private final SessionMapper sessionMapper;
     private final ProviderMapper providerMapper;
+    private final ProviderServiceImpl providerService;  // ✅ 注入 Provider 缓存服务
     private final ProviderConfigMapper providerConfigMapper;
     private final TokenMapper tokenMapper;
     private final TokenService tokenService;
@@ -95,7 +96,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -109,7 +110,7 @@ public class SessionServiceImpl implements ISessionService {
         log.info("创建新的会话记录: Provider: {}, WorkingDir: {}, 用户ID: {}", request.getProviderId(), request.getWorkingDirectory(), userId);
 
         // 检查Provider是否存在且属于当前用户（使用带配置的查询）
-        Provider provider = providerMapper.findByIdWithConfigs(request.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(request.getProviderId(), userId);
         if (provider == null) {
             throw new ResourceNotFoundException("Provider不存在或无权访问", request.getProviderId());
         }
@@ -187,7 +188,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -221,7 +222,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -275,7 +276,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -300,7 +301,7 @@ public class SessionServiceImpl implements ISessionService {
             throw new ResourceNotFoundException("会话", sessionId);
         }
 
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -372,7 +373,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -406,7 +407,7 @@ public class SessionServiceImpl implements ISessionService {
         }
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -438,7 +439,7 @@ public class SessionServiceImpl implements ISessionService {
         Session session = sessionMapper.findById(sessionId);
 
         // 验证会话关联的Provider是否属于当前用户
-        Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+        Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
         if (provider == null) {
             throw new IllegalArgumentException("无权访问该会话");
         }
@@ -594,7 +595,7 @@ public class SessionServiceImpl implements ISessionService {
         // 获取Provider名称
         try {
             Long userId = UserContext.getUserId();
-            Provider provider = providerMapper.findByIdWithConfigs(session.getProviderId(), userId);
+            Provider provider = providerService.getProviderWithConfigsCached(session.getProviderId(), userId);
             if (provider != null) {
                 dto.setProviderName(provider.getName());
             }

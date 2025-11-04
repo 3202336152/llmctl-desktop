@@ -943,6 +943,15 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
 
 // 清理所有会话
 app.on('before-quit', async (event) => {
+  // ✅ 修复：更新安装时跳过耗时操作，允许立即退出
+  // 解决问题：Windows 安装程序等待应用关闭时超时报错 "LLMctl 无法关闭"
+  if ((global as any).isUpdating) {
+    console.log('[App] 正在安装更新，跳过耗时的资源清理操作');
+    // 只执行快速的同步清理（不阻止退出）
+    terminalManager.cleanup();
+    return; // 立即返回，允许应用正常退出
+  }
+
   // 如果已经处理过了，直接返回（避免重复处理）
   if (isQuitting) {
     return;

@@ -10,11 +10,14 @@ import com.llmctl.mapper.ProviderMapper;
 import com.llmctl.mapper.TokenMapper;
 import com.llmctl.service.TokenService;
 import com.llmctl.service.ITokenEncryptionService;
+import com.llmctl.service.ICacheService;
 import com.llmctl.exception.ServiceException;
 import com.llmctl.exception.ResourceNotFoundException;
 import com.llmctl.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,9 +46,17 @@ public class TokenServiceImpl implements TokenService {
     private final TokenMapper tokenMapper;
     private final ProviderMapper providerMapper;
     private final ITokenEncryptionService encryptionService;
+    private final ICacheService cacheService;  // ✅ 注入缓存服务
     private final Random random = new Random();
 
+    /**
+     * ✅ Redis 缓存优化：Token 列表缓存
+     * 缓存策略：5分钟 TTL，前端主要调用此接口获取 Token 列表
+     * 缓存 Key：provider-tokens-{providerId}
+     * 清除时机：创建、更新、删除 Token 时自动清除
+     */
     @Override
+    @Cacheable(value = "provider:tokens", key = "#providerId", unless = "#result == null || #result.isEmpty()")
     public List<TokenDTO> getTokensByProviderId(String providerId) {
         Long userId = UserContext.getUserId();
         log.debug("根据Provider ID获取Token列表: {}, 用户ID: {}", providerId, userId);
@@ -64,6 +75,7 @@ public class TokenServiceImpl implements TokenService {
             // Provider存在但没有Token，返回空列表
         }
 
+        log.info("✅ [Token缓存] 查询数据库获取Token列表，Provider: {}, 数量: {}", providerId, tokens.size());
         return tokens.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -105,11 +117,18 @@ public class TokenServiceImpl implements TokenService {
         return convertToDTO(token);
     }
 
+    /**
+     * ✅ 清除 Token 列表缓存和可用列表缓存（创建时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "provider:tokens", key = "#providerId")
     public TokenDTO createToken(String providerId, CreateTokenRequest request) {
         Long userId = UserContext.getUserId();
         log.info("为Provider创建新Token: {} (Provider ID: {}), 用户ID: {}", request.getAlias(), providerId, userId);
+
+        // ✅ 清除 Token 可用列表缓存
+        cacheService.evictTokenAvailableList(providerId);
 
         // 检查Provider是否存在且属于当前用户
         Provider provider = providerMapper.findById(providerId, userId);
@@ -157,11 +176,18 @@ public class TokenServiceImpl implements TokenService {
         return convertToDTO(token);
     }
 
+    /**
+     * ✅ 清除 Token 列表缓存和可用列表缓存（更新时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "provider:tokens", key = "#providerId")
     public TokenDTO updateToken(String providerId, String tokenId, UpdateTokenRequest request) {
         Long userId = UserContext.getUserId();
         log.info("更新Token: {} (ID: {}), 用户ID: {}", request.getAlias(), tokenId, userId);
+
+        // ✅ 清除 Token 可用列表缓存
+        cacheService.evictTokenAvailableList(providerId);
 
         // 验证Provider是否属于当前用户
         Provider provider = providerMapper.findById(providerId, userId);
@@ -225,11 +251,18 @@ public class TokenServiceImpl implements TokenService {
         return convertToDTO(existingToken);
     }
 
+    /**
+     * ✅ 清除 Token 列表缓存和可用列表缓存（删除时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "provider:tokens", key = "#providerId")
     public void deleteToken(String providerId, String tokenId) {
         Long userId = UserContext.getUserId();
         log.info("删除Token: {} (Provider ID: {}), 用户ID: {}", tokenId, providerId, userId);
+
+        // ✅ 清除 Token 可用列表缓存
+        cacheService.evictTokenAvailableList(providerId);
 
         // 验证Provider是否属于当前用户
         Provider provider = providerMapper.findById(providerId, userId);
@@ -264,8 +297,20 @@ public class TokenServiceImpl implements TokenService {
             throw new IllegalArgumentException("Provider不存在或无权访问: " + providerId);
         }
 
-        // 获取可用的Token列表
-        List<Token> availableTokens = tokenMapper.findAvailableByProviderId(providerId);
+        // ✅ 使用缓存服务读取 Token 可用列表
+        List<Token> availableTokens = cacheService.getTokenAvailableList(providerId);
+
+        // 缓存未命中，查询数据库
+        if (availableTokens == null) {
+            availableTokens = tokenMapper.findAvailableByProviderId(providerId);
+            log.info("✅ [Token可用列表缓存] 查询数据库获取可用Token，Provider: {}, 数量: {}", providerId, availableTokens.size());
+
+            // 写入缓存（15分钟TTL）
+            if (!availableTokens.isEmpty()) {
+                cacheService.setTokenAvailableList(providerId, availableTokens, java.time.Duration.ofMinutes(15));
+            }
+        }
+
         if (availableTokens.isEmpty()) {
             log.warn("Provider {} 没有可用的Token", providerId);
             return null;
@@ -318,6 +363,7 @@ public class TokenServiceImpl implements TokenService {
 
         return selectedToken;
     }
+
 
     /**
      * 在新事务中异步更新Token最后使用时间

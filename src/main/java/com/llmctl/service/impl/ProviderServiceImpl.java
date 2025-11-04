@@ -15,6 +15,9 @@ import com.llmctl.service.TokenService;
 import com.llmctl.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,13 +48,21 @@ public class ProviderServiceImpl implements ProviderService {
     private final TokenService tokenService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * ✅ Redis 缓存优化：Provider 列表缓存
+     * 缓存策略：5分钟 TTL，前端主要调用此接口获取列表
+     * 缓存 Key：provider-list-{userId}
+     * 清除时机：创建、更新、删除 Provider 时自动清除
+     */
     @Override
+    @Cacheable(value = "provider:list", key = "T(com.llmctl.context.UserContext).getUserId()", unless = "#result == null || #result.isEmpty()")
     public List<ProviderDTO> getAllProviders() {
         Long userId = UserContext.getUserId();
         log.debug("获取所有Provider列表, 用户ID: {}", userId);
 
         // 使用关联查询一次获取完整数据
         List<Provider> providers = providerMapper.findAllWithConfigs(userId);
+        log.info("✅ [Provider缓存] 查询数据库获取Provider列表，用户: {}, 数量: {}", userId, providers.size());
         return providers.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -62,13 +73,27 @@ public class ProviderServiceImpl implements ProviderService {
         Long userId = UserContext.getUserId();
         log.debug("根据ID获取Provider详情: {}, 用户ID: {}", id, userId);
 
-        // 使用关联查询获取Provider及其configs
-        Provider provider = providerMapper.findByIdWithConfigs(id, userId);
+        // 使用缓存方法
+        Provider provider = getProviderWithConfigsCached(id, userId);
         if (provider == null) {
             throw new IllegalArgumentException("Provider不存在或无权访问: " + id);
         }
 
         return convertToDTO(provider);
+    }
+
+    /**
+     * ✅ Redis 缓存优化：Provider 配置缓存（内部方法）
+     * 缓存策略：30分钟 TTL，Provider 配置变更频率低
+     * 缓存 Key：provider:config:{providerId}
+     * 清除时机：创建、更新、删除 Provider 时自动清除
+     *
+     * 注意：此方法返回 Provider 实体（非 DTO），主要供 SessionService 使用
+     */
+    @Cacheable(value = "provider:config", key = "#id", unless = "#result == null")
+    public Provider getProviderWithConfigsCached(String id, Long userId) {
+        log.info("✅ [Provider配置缓存] 查询数据库获取Provider配置，ID: {}, 用户: {}", id, userId);
+        return providerMapper.findByIdWithConfigs(id, userId);
     }
 
     @Override
@@ -91,11 +116,16 @@ public class ProviderServiceImpl implements ProviderService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * ✅ 清除 Provider 列表缓存（创建时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "provider:list", key = "T(com.llmctl.context.UserContext).getUserId()")
     public ProviderDTO createProvider(CreateProviderRequest request) {
         Long userId = UserContext.getUserId();
         log.info("创建新的Provider: {}, 用户ID: {}", request.getName(), userId);
+        log.info("🔄 [缓存清除] 创建Provider时清除列表缓存，用户: {}", userId);
 
         // 检查名称是否已存在（同一用户下）
         if (providerMapper.existsByName(request.getName(), userId)) {
@@ -185,11 +215,19 @@ public class ProviderServiceImpl implements ProviderService {
         return convertToDTO(provider);
     }
 
+    /**
+     * ✅ 清除 Provider 列表缓存和配置缓存（更新时）
+     */
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "provider:list", key = "T(com.llmctl.context.UserContext).getUserId()"),
+        @CacheEvict(value = "provider:config", key = "#id")
+    })
     public ProviderDTO updateProvider(String id, UpdateProviderRequest request) {
         Long userId = UserContext.getUserId();
         log.info("更新Provider: {} (ID: {}), 用户ID: {}", request.getName(), id, userId);
+        log.info("🔄 [缓存清除] 更新Provider时清除列表缓存和配置缓存，用户: {}, Provider: {}", userId, id);
 
         // 检查Provider是否存在且属于当前用户
         Provider existingProvider = providerMapper.findById(id, userId);
@@ -274,11 +312,19 @@ public class ProviderServiceImpl implements ProviderService {
         return convertToDTO(existingProvider);
     }
 
+    /**
+     * ✅ 清除 Provider 列表缓存和配置缓存（删除时）
+     */
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "provider:list", key = "T(com.llmctl.context.UserContext).getUserId()"),
+        @CacheEvict(value = "provider:config", key = "#id")
+    })
     public void deleteProvider(String id) {
         Long userId = UserContext.getUserId();
         log.info("删除Provider: {}, 用户ID: {}", id, userId);
+        log.info("🔄 [缓存清除] 删除Provider时清除列表缓存和配置缓存，用户: {}, Provider: {}", userId, id);
 
         // 检查Provider是否存在且属于当前用户
         Provider provider = providerMapper.findById(id, userId);

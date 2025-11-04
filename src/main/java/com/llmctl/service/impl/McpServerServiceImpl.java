@@ -6,6 +6,8 @@ import com.llmctl.mapper.McpServerMapper;
 import com.llmctl.service.McpServerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,10 +69,15 @@ public class McpServerServiceImpl implements McpServerService {
         return mcpServerMapper.findByName(name);
     }
 
+    /**
+     * ✅ 清除所有 MCP 配置缓存（创建时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "mcp:config", allEntries = true)
     public McpServer createServer(McpServer mcpServer) {
         log.info("创建 MCP 服务器: {}", mcpServer.getName());
+        log.info("🔄 [缓存清除] 创建 MCP Server 时清除所有 MCP 配置缓存");
 
         // 检查名称是否已存在（用户范围内）
         McpServer existingServer = mcpServerMapper.findByUserIdAndName(mcpServer.getUserId(), mcpServer.getName());
@@ -139,10 +146,15 @@ public class McpServerServiceImpl implements McpServerService {
         return newServer;
     }
 
+    /**
+     * ✅ 清除所有 MCP 配置缓存（更新时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "mcp:config", allEntries = true)
     public McpServer updateServer(McpServer mcpServer) {
         log.info("更新 MCP 服务器，ID: {}", mcpServer.getId());
+        log.info("🔄 [缓存清除] 更新 MCP Server 时清除所有 MCP 配置缓存");
 
         // 检查是否存在
         McpServer existingServer = mcpServerMapper.findById(mcpServer.getId());
@@ -172,10 +184,15 @@ public class McpServerServiceImpl implements McpServerService {
         return mcpServer;
     }
 
+    /**
+     * ✅ 清除所有 MCP 配置缓存（删除时）
+     */
     @Override
     @Transactional
+    @CacheEvict(value = "mcp:config", allEntries = true)
     public void deleteServer(Long id) {
         log.info("删除 MCP 服务器，ID: {}", id);
+        log.info("🔄 [缓存清除] 删除 MCP Server 时清除所有 MCP 配置缓存");
 
         // 检查是否存在
         McpServer existingServer = mcpServerMapper.findById(id);
@@ -232,7 +249,16 @@ public class McpServerServiceImpl implements McpServerService {
         }
     }
 
+    /**
+     * ✅ Redis 缓存优化：MCP 配置缓存
+     * 缓存策略：15分钟 TTL，MCP Server 变更频率中等
+     * 缓存 Key：mcp:config:{providerId}:{cliType}:{clientOs}
+     * 清除时机：创建、更新、删除 MCP Server 时清除所有 MCP 配置缓存
+     */
     @Override
+    @Cacheable(value = "mcp:config",
+               key = "#providerId + '-' + #cliType.replace(' ', '-') + '-' + (#clientOs != null ? #clientOs : 'default')",
+               unless = "#result == null || #result.isEmpty()")
     public Map<String, Object> generateMcpConfig(String providerId, String cliType, String clientOs) {
         log.info("生成 MCP 配置（全局模式），Provider ID: {}, CLI 类型: {}, 客户端系统: {}", providerId, cliType, clientOs);
 
@@ -284,7 +310,7 @@ public class McpServerServiceImpl implements McpServerService {
             mcpConfig.put(server.getName(), serverConfig);
         }
 
-        log.info("生成 MCP 配置成功（全局模式），包含 {} 个服务器", mcpConfig.size());
+        log.info("✅ [MCP缓存] 查询数据库生成 MCP 配置（全局模式），包含 {} 个服务器", mcpConfig.size());
         return mcpConfig;
     }
 

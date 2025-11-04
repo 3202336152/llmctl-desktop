@@ -95,8 +95,19 @@ export class AutoUpdater {
         cancelId: 1,
       }).then(result => {
         if (result.response === 0) {
-          // 立即退出并安装更新
-          autoUpdater.quitAndInstall(false, true);
+          // ✅ 修复：在安装更新前主动清理所有资源
+          log.info('[AutoUpdater] 准备安装更新，开始清理资源...');
+
+          // 1. 设置退出标记（避免 before-quit 执行耗时操作）
+          (global as any).isUpdating = true;
+
+          // 2. 立即退出并安装更新
+          // 参数说明：
+          // - isSilent = false：不静默安装，显示安装进度
+          // - isForceRunAfter = true：安装后自动启动应用
+          setImmediate(() => {
+            autoUpdater.quitAndInstall(false, true);
+          });
         }
       });
     });
