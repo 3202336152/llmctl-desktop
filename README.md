@@ -4,7 +4,7 @@
 
 **强大的 LLM Provider、Token 和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.2.4-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.2.8-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -58,6 +58,8 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 - **国际化** - 中英文双语切换
 - **配置管理** - 导入导出配置，方便迁移备份
 - **帮助中心** - 完整的应用内帮助文档
+- **多级日志系统** - 前端 + 后端三层日志架构，支持开发/生产/调试模式
+- **Redis 缓存优化** - 统一的缓存服务架构，提升性能和代码质量
 
 ---
 
@@ -106,7 +108,8 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 
 **后端**
 - Spring Boot 3.1.5 + MyBatis 3.0.2
-- MySQL 8.x + Lombok
+- MySQL 8.x + Redis (可选)
+- Lombok + Spring Security Crypto
 
 ### 项目结构
 
@@ -138,6 +141,19 @@ LLMctl/
 
 ## 🔄 最新更新
 
+### v2.2.8 (2025-11-04)
+
+- 🏗️ **Redis 缓存服务架构** - 统一的缓存管理接口，遵循 DRY 原则，代码质量显著提升
+- 🔌 **MCP 配置文件支持** - 支持为 MCP 服务器配置独立的配置文件（JSON/YAML/TOML）
+- 🐛 **自动更新安装修复** - 修复 Windows 安装程序报错 "LLMctl 无法关闭"
+- 📖 **文档完善** - 更新 Redis 使用指南，新增缓存服务架构说明
+
+### v2.2.7 (2025-11-04)
+
+- 🐛 **外部终端启动优化** - 响应时间从 10-30 秒降至 < 10ms
+- 🐛 **Electron 终端崩溃修复** - 修复快速切换页面导致的"未响应"问题
+- 🐛 **MySQL 连接池优化** - 修复长时间运行后的连接失败问题
+
 ### v2.2.6 (2025-11-03)
 
 - 📊 **多级日志系统** - 企业级三层日志架构（前端 + 后端），支持开发/生产/调试三种模式
@@ -160,18 +176,6 @@ LLMctl/
 - 🗂️ **归档管理系统** - Settings 页面新增归档清理功能，支持 10/20/30 天和全部清理选项
 - 📊 **归档统计展示** - 显示归档数量、占用空间、会话列表
 - 🛠️ **智能目录检测** - 自动修正用户选择的目录路径，避免路径错误
-
-### v2.2.0 (2025-10-23)
-
-- 🏗️ **Provider 配置分离架构** - 一个 Provider 支持多个 CLI 工具，配置独立存储
-- 🎯 **Codex 配置优化** - 简化配置输入，自动生成 auth.json，CODEX_HOME 支持
-- 🐛 **Bug 修复** - 修复 Redux sessionId 不匹配、Codex 配置路径、Provider 编辑等问题
-- 🎨 **UI 优化** - Provider 表单改为下拉多选，动态显示配置项
-
-### v2.1.7 (2025-10-17)
-
-- 🎨 **暗色主题** - 完整的深色模式支持，实时切换无需重启
-- 🌙 **视觉优化** - 夜间模式保护眼睛，降低屏幕亮度
 
 [查看完整更新日志](CHANGELOG.md)
 

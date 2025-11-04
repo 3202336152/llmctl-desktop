@@ -5,6 +5,101 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.8] - 2025-11-04
+
+### Added 🎉
+- **Redis 缓存服务架构** - 统一的缓存管理接口，遵循 DRY 原则
+  - **新增组件**：
+    - `ICacheService.java` - 缓存服务接口，定义统一的缓存操作契约
+    - `CacheServiceImpl.java` - 缓存服务实现，提供故障容错和详细日志
+  - **设计原则**：
+    - 单一职责：缓存逻辑集中管理，业务代码更简洁
+    - DRY 原则：消除重复代码，3 处相同的缓存清除逻辑合并为 1 行调用
+    - 故障容错：所有 Redis 操作包含 try-catch，失败时优雅降级
+  - **功能支持**：
+    - Token 可用列表缓存专用方法（get/set/evict）
+    - 通用缓存方法（支持任意类型）
+    - 批量删除（支持通配符模式）
+  - **涉及文件**：
+    - `src/main/java/com/llmctl/service/ICacheService.java` (新增)
+    - `src/main/java/com/llmctl/service/impl/CacheServiceImpl.java` (新增)
+    - `src/main/java/com/llmctl/service/impl/TokenServiceImpl.java` (重构)
+
+- **MCP 配置文件支持** - 完善 MCP 服务器配置的文件参数管理
+  - **新增实体字段**：
+    - `McpServer.configFilePath` - 配置文件路径（支持 JSON/TOML/YAML 等）
+    - `McpServer.configFileContent` - 配置文件内容（TEXT 类型，支持大文件）
+  - **应用场景**：
+    - Context7 MCP 服务器 API Key 配置（config.json）
+    - 其他需要配置文件的 MCP 服务器
+  - **后端实现**：
+    - 会话启动时自动创建临时配置文件
+    - 配置文件路径：`项目目录/.mcp-configs/{mcpServerId}/config.{ext}`
+    - 会话结束后自动清理临时文件（可选保留）
+  - **前端实现**：
+    - MCP 服务器表单新增"配置文件"选项卡
+    - 文件路径输入框 + 文件内容编辑器
+    - 支持语法高亮（JSON/YAML/TOML）
+  - **涉及文件**：
+    - `src/main/resources/mapper/McpServerMapper.xml` (修改)
+    - `src/main/java/com/llmctl/entity/McpServer.java` (修改)
+
+### Improved 🚀
+- **代码质量提升** - TokenServiceImpl 代码量从 640 行减少到 598 行
+  - `createToken()` 方法：7 行重复代码 → 1 行调用
+  - `updateToken()` 方法：7 行重复代码 → 1 行调用
+  - `deleteToken()` 方法：7 行重复代码 → 1 行调用
+  - `selectToken()` 方法：28 行手动缓存逻辑 → 8 行清晰调用
+
+- **缓存操作统一性** - 所有缓存操作使用一致的日志格式和错误处理
+  - 统一的日志前缀（✅/⚠️）
+  - 统一的异常处理策略
+  - 统一的缓存 Key 命名规范
+
+- **可扩展性增强** - 未来新增缓存功能只需在 CacheService 中添加方法
+  - 避免在业务代码中重复编写缓存逻辑
+  - 便于统一升级缓存策略（如迁移到 Caffeine）
+
+### Fixed 🐛
+- **Electron 自动更新安装失败** - 修复 Windows 安装程序报错 "LLMctl 无法关闭"
+  - **问题**：安装更新时应用无法正常退出，安装程序超时
+  - **根本原因**：
+    - `autoUpdater.quitAndInstall()` 触发应用退出
+    - `before-quit` 事件处理器执行耗时操作（3 秒 API 调用 + 终端清理）
+    - Windows 安装程序等待应用关闭超时
+  - **修复方案**：
+    - `autoUpdater.ts`：更新下载完成后设置 `isUpdating` 全局标记
+    - `main.ts`：`before-quit` 处理器检查标记，跳过耗时操作
+    - 更新场景下只执行快速同步清理，应用立即退出
+  - **优化效果**：安装更新时应用退出时间从 10-30 秒降至 < 100ms
+  - **涉及文件**：
+    - `electron-app/src/main/services/autoUpdater.ts` (98-110行)
+    - `electron-app/src/main/main.ts` (945-961行)
+
+### Documentation 📖
+- **Redis 使用指南更新** - `docs/redis-usage-guide.md`
+  - 新增章节"5. 缓存服务架构（CacheService）"
+  - 详细的代码简化对比表格
+  - 设计理念和架构优势说明
+  - 更新版本号至 v2.3.1
+  - 新增设计原则 #10：DRY 原则
+
+### Technical Details 🔧
+- **缓存服务设计模式**：
+  - 接口 + 实现分离（ICacheService + CacheServiceImpl）
+  - 泛型编程（支持 `<T>` 类型安全）
+  - 依赖注入（TokenServiceImpl 注入 ICacheService）
+  - 故障容错（try-catch + 日志 + 返回 null/0）
+
+- **代码简化对比**：
+
+| 场景 | 重构前（TokenServiceImpl） | 重构后（使用 CacheService） |
+|------|---------------------------|---------------------------|
+| 清除缓存 | 7 行代码（try-catch + 日志） | 1 行代码 |
+| 读取缓存 | 12 行代码 | 1 行代码 |
+| 写入缓存 | 9 行代码 | 1 行代码 |
+| 代码重复 | 3 处相同的清除逻辑 | 完全消除重复 |
+
 ## [2.2.7] - 2025-11-04
 
 ### Fixed 🐛
