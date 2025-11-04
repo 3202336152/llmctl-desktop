@@ -392,12 +392,13 @@ public class SessionServiceImpl implements ISessionService {
      * 新增方法：解决跨平台文件路径问题，由前端负责写入本地文件
      *
      * @param sessionId 会话ID
+     * @param clientOs 客户端操作系统（可选）：windows, mac, linux，默认为当前服务器系统
      * @return MCP 配置内容（包含 mcpServers 配置的完整 JSON 对象）
      */
     @Override
-    public Map<String, Object> getMcpConfigContent(String sessionId) {
+    public Map<String, Object> getMcpConfigContent(String sessionId, String clientOs) {
         Long userId = UserContext.getUserId();
-        log.info("获取会话 MCP 配置内容: {}, 用户ID: {}", sessionId, userId);
+        log.info("获取会话 MCP 配置内容: {}, 用户ID: {}, 客户端系统: {}", sessionId, userId, clientOs);
 
         Session session = sessionMapper.findById(sessionId);
         if (session == null) {
@@ -410,17 +411,18 @@ public class SessionServiceImpl implements ISessionService {
             throw new IllegalArgumentException("无权访问该会话");
         }
 
-        // 生成 MCP 配置
+        // 生成 MCP 配置，传递客户端操作系统参数
         Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
             provider.getId(),
-            session.getType()
+            session.getType(),
+            clientOs
         );
 
         // 构建完整的配置对象（与文件格式一致）
         Map<String, Object> fullConfig = new HashMap<>();
         fullConfig.put("mcpServers", mcpConfig);
 
-        log.info("成功生成会话 {} 的 MCP 配置内容，包含 {} 个服务器", sessionId, mcpConfig.size());
+        log.info("成功生成会话 {} 的 MCP 配置内容（客户端系统: {}），包含 {} 个服务器", sessionId, clientOs, mcpConfig.size());
         return fullConfig;
     }
 
@@ -701,9 +703,11 @@ public class SessionServiceImpl implements ISessionService {
 
         // 生成 MCP 配置
         log.info("📦 生成 MCP 配置...");
+        // ✅ 后端本地写入配置，使用服务器系统检测（传 null）
         Map<String, Object> mcpConfig = mcpServerService.generateMcpConfig(
             provider.getId(),
-            cliType
+            cliType,
+            null
         );
 
         log.info("生成的服务器数量: {}", mcpConfig.size());

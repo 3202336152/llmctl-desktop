@@ -233,8 +233,8 @@ public class McpServerServiceImpl implements McpServerService {
     }
 
     @Override
-    public Map<String, Object> generateMcpConfig(String providerId, String cliType) {
-        log.info("生成 MCP 配置（全局模式），Provider ID: {}, CLI 类型: {}", providerId, cliType);
+    public Map<String, Object> generateMcpConfig(String providerId, String cliType, String clientOs) {
+        log.info("生成 MCP 配置（全局模式），Provider ID: {}, CLI 类型: {}, 客户端系统: {}", providerId, cliType, clientOs);
 
         // 全局模式：获取当前用户所有启用的 MCP 服务器
         Long userId = getCurrentUserId();
@@ -244,6 +244,10 @@ public class McpServerServiceImpl implements McpServerService {
 
         Map<String, Object> mcpConfig = new LinkedHashMap<>();
 
+        // 确定是否为 Windows 系统
+        boolean isClientWindows = isClientWindows(clientOs);
+        log.info("客户端系统判断: clientOs={}, isClientWindows={}", clientOs, isClientWindows);
+
         for (McpServer server : enabledServers) {
             // 构建服务器配置
             Map<String, Object> serverConfig = new LinkedHashMap<>();
@@ -252,7 +256,7 @@ public class McpServerServiceImpl implements McpServerService {
             String command = server.getCommand();
             List<String> args = server.getArgs();
 
-            if (isWindows() && needsCmdWrapper(command)) {
+            if (isClientWindows && needsCmdWrapper(command)) {
                 // Windows 上需要 cmd /c 包装
                 serverConfig.put("command", "cmd");
 
@@ -292,7 +296,26 @@ public class McpServerServiceImpl implements McpServerService {
     }
 
     /**
-     * 检查是否为 Windows 系统
+     * 检查客户端是否为 Windows 系统
+     * 优先使用客户端传递的参数，如果未传递则回退到服务器系统检测
+     *
+     * @param clientOs 客户端操作系统参数（可选）
+     * @return 是否为 Windows 系统
+     */
+    private boolean isClientWindows(String clientOs) {
+        if (clientOs != null && !clientOs.trim().isEmpty()) {
+            // 客户端传递了操作系统参数，使用客户端参数
+            String normalizedOs = clientOs.toLowerCase().trim();
+            return normalizedOs.equals("windows") || normalizedOs.startsWith("win");
+        }
+
+        // 未传递客户端参数，回退到服务器系统检测（兼容旧版本）
+        log.warn("客户端未传递操作系统参数，使用服务器系统检测（可能不准确）");
+        return isWindows();
+    }
+
+    /**
+     * 检查是否为 Windows 系统（服务器端检测）
      */
     private boolean isWindows() {
         String os = System.getProperty("os.name").toLowerCase();

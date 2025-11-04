@@ -283,14 +283,16 @@ public class SessionController {
      * 新增 API：解决跨平台文件路径问题，由前端负责写入本地文件
      *
      * @param sessionId 会话ID
+     * @param clientOs 客户端操作系统（可选）：windows, mac, linux，默认为当前服务器系统
      * @return MCP 配置内容（JSON 格式）
      */
     @GetMapping("/{sessionId}/mcp-config")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMcpConfig(
-            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId) {
-        log.info("获取会话 MCP 配置内容: {}", sessionId);
+            @PathVariable @NotBlank(message = "会话ID不能为空") String sessionId,
+            @RequestParam(required = false) String clientOs) {
+        log.info("获取会话 MCP 配置内容: {}, 客户端系统: {}", sessionId, clientOs);
 
-        Map<String, Object> mcpConfig = sessionService.getMcpConfigContent(sessionId);
+        Map<String, Object> mcpConfig = sessionService.getMcpConfigContent(sessionId, clientOs);
         ApiResponse<Map<String, Object>> response = ApiResponse.success(mcpConfig, "MCP 配置内容获取成功");
 
         return ResponseEntity.ok(response);

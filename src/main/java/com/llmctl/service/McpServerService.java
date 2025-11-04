@@ -130,7 +130,8 @@ public interface McpServerService {
      *
      * @param providerId Provider ID
      * @param cliType    CLI 类型
+     * @param clientOs   客户端操作系统（可选）：windows, mac, linux，默认为当前服务器系统
      * @return MCP 配置 Map
      */
-    Map<String, Object> generateMcpConfig(String providerId, String cliType);
+    Map<String, Object> generateMcpConfig(String providerId, String cliType, String clientOs);
 }

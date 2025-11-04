@@ -73,7 +73,8 @@ export const sessionAPI = {
   },
 
   // 获取会话的 MCP 配置内容（供前端写入文件）
-  getMcpConfig: (sessionId: string): Promise<ApiResponse<Record<string, any>>> => {
-    return httpClient.get(`/sessions/${sessionId}/mcp-config`).then(response => response.data);
+  getMcpConfig: (sessionId: string, clientOs?: string): Promise<ApiResponse<Record<string, any>>> => {
+    const params = clientOs ? { clientOs } : {};
+    return httpClient.get(`/sessions/${sessionId}/mcp-config`, { params }).then(response => response.data);
   },
 };

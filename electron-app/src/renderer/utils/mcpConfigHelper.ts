@@ -43,7 +43,7 @@ export const getConfigFileName = (): string => {
  * 写入 MCP 配置到本地文件（跨平台兼容）
  *
  * 工作流程：
- * 1. 调用后端接口获取 MCP 配置内容
+ * 1. 调用后端接口获取 MCP 配置内容，传递客户端操作系统信息
  * 2. 统一写入项目根目录的 .mcp.json 文件
  * 3. 使用 Electron IPC 写入本地文件
  *
@@ -67,9 +67,13 @@ export const writeMcpConfig = async (
   logInfo('[MCP]   用户代理:', navigator.userAgent);
 
   try {
-    // 1. 获取 MCP 配置内容
+    // ✅ 检测客户端操作系统
+    const clientOs = getClientOs();
+    logInfo('[MCP] 📡 检测到客户端系统:', clientOs);
+
+    // 1. 获取 MCP 配置内容，传递客户端操作系统信息
     logInfo('[MCP] 📡 调用后端接口获取配置内容...');
-    const mcpResponse = await sessionAPI.getMcpConfig(sessionId);
+    const mcpResponse = await sessionAPI.getMcpConfig(sessionId, clientOs);
 
     if (!mcpResponse.data) {
       logWarn('[MCP] ⚠️ 后端返回空数据，会话', sessionId);
@@ -124,5 +128,27 @@ export const writeMcpConfig = async (
     }
 
     return false;
+  }
+};
+
+/**
+ * 检测客户端操作系统
+ * 返回标准化的操作系统名称：windows, mac, linux
+ *
+ * @returns 操作系统名称
+ */
+const getClientOs = (): string => {
+  const platform = navigator.platform.toLowerCase();
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  if (platform.includes('win') || userAgent.includes('windows')) {
+    return 'windows';
+  } else if (platform.includes('mac') || userAgent.includes('mac')) {
+    return 'mac';
+  } else if (platform.includes('linux') || userAgent.includes('linux')) {
+    return 'linux';
+  } else {
+    // 默认返回 linux（类 Unix 系统）
+    return 'linux';
   }
 };

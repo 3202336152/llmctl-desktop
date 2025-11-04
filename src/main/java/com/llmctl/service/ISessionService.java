@@ -143,10 +143,11 @@ public interface ISessionService {
      * 新增方法：解决跨平台文件路径问题，由前端负责写入本地文件
      *
      * @param sessionId 会话ID
+     * @param clientOs 客户端操作系统（可选）：windows, mac, linux，默认为当前服务器系统
      * @return MCP 配置内容（包含 mcpServers 配置的完整 JSON 对象）
      * @throws IllegalArgumentException 如果会话不存在
      */
-    Map<String, Object> getMcpConfigContent(String sessionId);
+    Map<String, Object> getMcpConfigContent(String sessionId, String clientOs);
 
     /**
      * 会话统计信息

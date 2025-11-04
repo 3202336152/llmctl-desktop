@@ -291,17 +291,19 @@ public class McpServerController {
      *
      * @param providerId Provider ID
      * @param cliType    CLI 类型
+     * @param clientOs   客户端操作系统（可选）：windows, mac, linux，默认为当前服务器系统
      * @return 响应对象，包含生成的 MCP 配置
      */
     @GetMapping("/provider/{providerId}/cli/{cliType}/config")
     public ResponseEntity<Map<String, Object>> generateMcpConfig(
             @PathVariable String providerId,
-            @PathVariable String cliType) {
+            @PathVariable String cliType,
+            @RequestParam(required = false) String clientOs) {
         try {
-            Map<String, Object> config = mcpServerService.generateMcpConfig(providerId, cliType);
+            Map<String, Object> config = mcpServerService.generateMcpConfig(providerId, cliType, clientOs);
             return ResponseEntity.ok(buildSuccessResponse("配置生成成功", config));
         } catch (Exception e) {
-            log.error("生成 MCP 配置失败，Provider ID: {}, CLI 类型: {}", providerId, cliType, e);
+            log.error("生成 MCP 配置失败，Provider ID: {}, CLI 类型: {}, 客户端系统: {}", providerId, cliType, clientOs, e);
             return ResponseEntity.ok(buildErrorResponse("配置生成失败: " + e.getMessage()));
         }
     }
