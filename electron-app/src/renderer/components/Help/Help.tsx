@@ -255,7 +255,7 @@ const Help: React.FC = () => {
               'MCP 服务器 - 管理 Model Context Protocol 服务器',
               '查看通知 - 查看系统通知和消息中心',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
           <Alert
             message="智能禁用状态"
@@ -277,7 +277,7 @@ const Help: React.FC = () => {
               'Provider 统计 - 显示启用数/总数,快速了解配置情况',
               'MCP 服务器统计 - 显示启用数/总数,掌握扩展状态',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>数据可视化图表</Title>
@@ -290,7 +290,7 @@ const Help: React.FC = () => {
               '鼠标悬停查看详细数据(日期、平均时长、会话数)',
               '自适应图表高度,响应式设计',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Paragraph strong style={{ marginTop: 16 }}>Provider 使用统计图</Paragraph>
@@ -303,7 +303,7 @@ const Help: React.FC = () => {
               'Tooltip 显示详细信息(Provider 名称、总会话数、活跃会话数、成功率)',
               '浅蓝色配色方案 (#4DA3FF),视觉协调',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>最近会话列表</Title>
@@ -317,7 +317,7 @@ const Help: React.FC = () => {
               '支持快速打开终端,一键进入工作状态',
               '操作按钮:「打开终端」 / 「查看全部」',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>最近活动日志</Title>
@@ -333,7 +333,7 @@ const Help: React.FC = () => {
               'Timeline 时间线展示,操作历史清晰可追溯',
               '无需额外 API 请求,基于本地状态生成',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>使用技巧</Title>
@@ -346,7 +346,7 @@ const Help: React.FC = () => {
               '点击「刷新数据」按钮可以强制重新加载所有数据',
               '最近会话列表可以快速访问常用项目,提升工作效率',
             ]}
-            renderItem={item => <List.Item>{item}</List.Item>}
+            renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Alert
