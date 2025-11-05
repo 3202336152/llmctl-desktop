@@ -4,7 +4,9 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { Card, Button } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+} from '@ant-design/icons';
 import { sessionAPI } from '../../services/api';
 import { useAppSelector } from '../../store';
 
@@ -661,6 +663,24 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
     };
   }, []);
 
+  // ✅ 监听来自 TerminalManager 的滚动到底部事件
+  useEffect(() => {
+    const handleScrollEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.sessionId === sessionId) {
+        if (xtermRef.current) {
+          xtermRef.current.scrollToBottom();
+        }
+      }
+    };
+
+    window.addEventListener('terminal-scroll-to-bottom', handleScrollEvent);
+
+    return () => {
+      window.removeEventListener('terminal-scroll-to-bottom', handleScrollEvent);
+    };
+  }, [sessionId]);
+
   const terminalDiv = (
     <div
       ref={terminalRef}
@@ -668,6 +688,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         width: '100%',
         height: showCard ? '500px' : '100%',
         minHeight: showCard ? '500px' : '100%',
+        position: 'relative',
       }}
     />
   );

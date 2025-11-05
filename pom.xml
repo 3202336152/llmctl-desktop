@@ -13,7 +13,6 @@
 
     <groupId>com.llmctl</groupId>
     <artifactId>LLMctl</artifactId>
-    <version>2.2.8</version>
     <packaging>jar</packaging>
     <name>LLMctl</name>
     <description>LLM Control System</description>
@@ -126,6 +125,9 @@
     </dependencies>
 
     <build>
+        <!-- 固定 JAR 名称为 app.jar，方便部署脚本引用 -->
+        <finalName>app</finalName>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

@@ -126,7 +126,9 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
       form.resetFields();
       setShowCustomCommand(false);
     }
-  }, [visible, server, form, commandTemplates]);
+    // ✅ 【Bug修复】移除 commandTemplates 依赖，避免重复触发导致用户修改被覆盖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, server]);
 
   const handleSubmit = async () => {
     // ✅ 防止重复提交
@@ -148,16 +150,20 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
         });
       }
 
-      // 构建提交数据
+      // 【Bug修复】构建提交数据，使用解构删除 envVars 字段
+      const { envVars, ...restValues } = values;
       const submitData = {
-        ...values,
-        env,
-        envVars: undefined // 移除临时字段
+        ...restValues,
+        env
       };
 
+      // console.log('[McpServerForm] 提交数据:', JSON.stringify(submitData, null, 2));
+
       if (server) {
+        console.log('[McpServerForm] 更新 MCP 服务器，ID:', server.id);
         await dispatch(updateMcpServer({ id: server.id!, server: submitData })).unwrap();
       } else {
+        console.log('[McpServerForm] 创建 MCP 服务器');
         await dispatch(createMcpServer(submitData)).unwrap();
       }
       form.resetFields();
@@ -188,11 +194,11 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
       onCancel={onClose}
       confirmLoading={submitting}  // ✅ 添加加载状态
       width={800}
-      destroyOnClose
+      destroyOnHidden  // ✅ 【Ant Design 5.x】使用 destroyOnHidden 替代 destroyOnClose
       okText="保存"
       cancelText="取消"
       styles={{
-        body: { padding: '24px 24px 0' }
+        body: { padding: '24px 24px 0' }  // ✅ 【Ant Design 5.x】使用 styles.body 替代 bodyStyle
       }}
     >
       {/* 说明卡片 */}
@@ -412,8 +418,10 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
           <Form.List name="args">
             {(fields: any[], { add, remove }: any) => (
               <>
-                {fields.map((field: any, index: number) => (
-                  <div key={field.key} style={{
+                {fields.map((field: any, index: number) => {
+                  const { key, ...restField } = field; // ✅ 解构 key，避免 React 警告
+                  return (
+                  <div key={key} style={{
                     background: 'white',
                     padding: '12px 16px',
                     borderRadius: 6,
@@ -425,7 +433,7 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
                         参数 {index + 1}
                       </div>
                       <Form.Item
-                        {...field}
+                        {...restField}
                         style={{ marginBottom: 0, flex: 1 }}
                       >
                         <Input
@@ -445,7 +453,8 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
                       />
                     </Space>
                   </div>
-                ))}
+                  );
+                })}
                 <Form.Item style={{ marginBottom: 0 }}>
                   <Button
                     type="dashed"
@@ -500,6 +509,7 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
             {(fields: any[], { add, remove }: any) => (
               <>
                 {fields.map((field: any) => {
+                  const { key, ...restField } = field; // ✅ 解构 key，避免 React 警告
                   const currentKey = form.getFieldValue(['envVars', field.name, 'key']);
 
                   // 判断是否为敏感信息（需要隐藏）
@@ -512,7 +522,7 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
 
                   return (
                     <div
-                      key={field.key}
+                      key={key}
                       style={{
                         background: 'white',
                         padding: '12px 16px',
@@ -532,7 +542,7 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
                             变量名
                           </div>
                           <Form.Item
-                            {...field}
+                            {...restField}
                             name={[field.name, 'key']}
                             rules={[{ required: true, message: '请输入变量名' }]}
                             style={{ marginBottom: 0 }}
@@ -571,7 +581,7 @@ const McpServerForm: React.FC<Props> = ({ visible, server, onClose }) => {
                             )}
                           </div>
                           <Form.Item
-                            {...field}
+                            {...restField}
                             name={[field.name, 'value']}
                             rules={[{ required: true, message: '请输入变量值' }]}
                             style={{ marginBottom: 0 }}

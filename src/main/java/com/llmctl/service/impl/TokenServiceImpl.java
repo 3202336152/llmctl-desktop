@@ -307,7 +307,7 @@ public class TokenServiceImpl implements TokenService {
 
             // 写入缓存（15分钟TTL）
             if (!availableTokens.isEmpty()) {
-                cacheService.setTokenAvailableList(providerId, availableTokens, java.time.Duration.ofMinutes(15));
+                cacheService.setTokenAvailableList(providerId, availableTokens, java.time.Duration.ofMinutes(720));
             }
         }
 

@@ -7,6 +7,7 @@ import {
   DesktopOutlined,
   SwapOutlined,
   ExportOutlined,
+  VerticalAlignBottomOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
@@ -253,6 +254,17 @@ const TerminalManager: React.FC = () => {
     });
   };
 
+  // ✅ 滚动到底部功能
+  const handleScrollToBottom = () => {
+    if (!activeTabKey) {
+      return;
+    }
+    // 触发自定义事件，让当前激活的终端滚动到底部
+    window.dispatchEvent(new CustomEvent('terminal-scroll-to-bottom', {
+      detail: { sessionId: activeTabKey }
+    }));
+  };
+
   // ✅ 快捷键支持：Ctrl+1/2/3 切换标签页，Ctrl+W 关闭当前标签页
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -292,11 +304,12 @@ const TerminalManager: React.FC = () => {
     if (!session) return null;
 
     const workingDirName = session.workingDirectory.split(/[\\/]/).filter(Boolean).pop() || 'Terminal';
+    const fullTitle = `${workingDirName} - ${session.providerName || session.id.substring(0, 8)}`;
 
     return {
       key: sessionId,
       label: (
-        <Space size={4}>
+        <Space size={4} title={fullTitle}>
           <FolderOutlined />
           <span>{workingDirName}</span>
           <Tag color={getStatusColor(session.status)} style={{ marginLeft: 4, marginRight: 0 }}>
@@ -350,7 +363,7 @@ const TerminalManager: React.FC = () => {
         </div>
       );
     });
-  }, [createdTerminalSessions, terminalSessionData, openTerminalSessions, activeTabKey]);
+  }, [createdTerminalSessions, terminalSessionData, openTerminalSessions, activeTabKey, isTerminalFullscreen, dispatch]);
 
   // 空状态：没有打开的终端
   if (openTerminalSessions.length === 0) {
@@ -415,10 +428,22 @@ const TerminalManager: React.FC = () => {
             marginBottom: 0,
             paddingLeft: 16,
             paddingRight: 16,
-            background: '#f5f5f5',
+            background: '#e6f7ff',
+            borderBottom: '2px solid #91d5ff',
           }}
+          className="terminal-tabs"
           tabBarExtraContent={
             <Space size="small">
+              <Button
+                type="text"
+                size={isTerminalFullscreen ? 'small' : 'middle'}
+                icon={<VerticalAlignBottomOutlined />}
+                onClick={handleScrollToBottom}
+                title="滚动到底部"
+                disabled={!activeTabKey || openTerminalSessions.length === 0}
+              >
+                {!isTerminalFullscreen && '滚动到底部'}
+              </Button>
               <Button
                 type="text"
                 size={isTerminalFullscreen ? 'small' : 'middle'}
@@ -453,7 +478,7 @@ const TerminalManager: React.FC = () => {
         {/* 所有终端实例容器 */}
         <div style={{
           position: 'absolute',
-          top: isTerminalFullscreen ? '48px' : '56px',
+          top: isTerminalFullscreen ? '40px' : '44px',
           left: 0,
           right: 0,
           bottom: 0,

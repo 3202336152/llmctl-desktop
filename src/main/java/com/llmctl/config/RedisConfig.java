@@ -144,24 +144,24 @@ public class RedisConfig {
         // ✅ 为不同的缓存空间设置不同的 TTL（根据前端实际调用的接口配置）
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        // 1. Provider 列表缓存：5分钟 TTL（前端主要调用 getAllProviders 获取列表）
+        // 1. Provider 列表缓存：240分钟 TTL（前端主要调用 getAllProviders 获取列表）
         cacheConfigurations.put("provider:list",
-            defaultConfig.entryTtl(Duration.ofMinutes(5))
+            defaultConfig.entryTtl(Duration.ofMinutes(240))
         );
 
-        // 2. Provider 配置缓存：30分钟 TTL（会话启动时调用，配置变更频率低）
+        // 2. Provider 配置缓存：1440分钟 TTL（会话启动时调用，配置变更频率低）
         cacheConfigurations.put("provider:config",
-            defaultConfig.entryTtl(Duration.ofMinutes(30))
+            defaultConfig.entryTtl(Duration.ofMinutes(1440))
         );
 
-        // 3. Token 列表缓存：5分钟 TTL（前端主要调用 getTokensByProviderId 获取列表）
+        // 3. Token 列表缓存：240分钟 TTL（前端主要调用 getTokensByProviderId 获取列表）
         cacheConfigurations.put("provider:tokens",
-            defaultConfig.entryTtl(Duration.ofMinutes(5))
+            defaultConfig.entryTtl(Duration.ofMinutes(240))
         );
 
-        // 4. Token 可用列表缓存：15分钟 TTL（会话启动时调用，Token 状态变更频率中等）
+        // 4. Token 可用列表缓存：720分钟 TTL（会话启动时调用，Token 状态变更频率中等）
         cacheConfigurations.put("token:available",
-            defaultConfig.entryTtl(Duration.ofMinutes(15))
+            defaultConfig.entryTtl(Duration.ofMinutes(720))
         );
 
         // 5. MCP 配置缓存：15分钟 TTL（会话启动时调用，中等频率）

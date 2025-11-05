@@ -179,7 +179,7 @@ public class McpServerServiceImpl implements McpServerService {
             }
         }
 
-        // ✅ 【Bug修复】合并数据：只更新提交的字段，保留其他字段不变
+        // 【Bug修复】合并数据：只更新提交的字段，保留其他字段不变
         // 保留核心字段，防止被意外清空
         mcpServer.setUserId(existingServer.getUserId());           // 保留用户 ID
         mcpServer.setIsTemplate(existingServer.getIsTemplate());   // 保留模板标识

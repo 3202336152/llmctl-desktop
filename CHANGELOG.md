@@ -5,6 +5,64 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.2.9] - 2025-11-04
+
+### Improved 🚀
+- **终端 UI/UX 优化** - 简化界面，统一操作位置
+  - **标签页字体优化**：
+    - 标签页文本改为系统默认字体，与操作系统风格更一致
+    - 保持浅灰色 (#6b6b6b) 和普通粗细 (font-weight: 500)
+  - **工具栏功能集中**：
+    - 在右上角工具栏添加"滚动到底部"按钮
+    - 统一的操作位置：滚动到底部 → 切换 Token → 外部终端 → 全屏显示
+    - 所有终端操作都在工具栏中，操作更集中便捷
+  - **涉及文件**：
+    - `electron-app/src/renderer/styles/global.css` (375-425行)
+    - `electron-app/src/renderer/components/Terminal/TerminalManager.tsx` (10行, 257-266行, 466-507行)
+    - `electron-app/src/renderer/components/Terminal/TerminalComponent.tsx` (681-697行)
+
+### Removed ❌
+- **删除半圆形悬浮菜单** - 简化界面，减少视觉干扰
+  - 移除右下角的半圆形扇形菜单及其所有相关代码
+  - 移除菜单状态管理 (`isMenuOpen`, `menuRef`)
+  - 移除菜单配置数组和处理函数
+  - 删除相关 CSS 样式（约 100 字节）
+  - 简化 `TerminalComponentProps` 接口，移除不必要的回调参数
+  - **涉及文件**：
+    - `electron-app/src/renderer/components/Terminal/TerminalComponent.tsx` (1-11行, 36-44行, 681-697行)
+    - `electron-app/src/renderer/components/Terminal/TerminalManager.tsx` (343-366行)
+    - `electron-app/src/renderer/styles/global.css` (删除 634-698行的菜单样式)
+
+### Technical Details 🔧
+- **组件间通信优化**：
+  - 使用 `CustomEvent` 实现 TerminalManager 到 TerminalComponent 的滚动到底部功能
+  - 事件名称：`terminal-scroll-to-bottom`
+  - 事件数据：`{ sessionId: string }`
+  - 优势：解耦组件，避免通过 props 层层传递回调函数
+
+- **代码简化成果**：
+  - TerminalComponent.tsx：删除约 80 行菜单相关代码
+  - TerminalManager.tsx：删除 24 行回调包装函数
+  - global.css：删除 65 行半圆形菜单样式
+  - 总计减少约 169 行代码，提升代码可维护性
+
+- **接口简化**：
+  ```typescript
+  // 重构前
+  interface TerminalComponentProps {
+    // ... 基础属性
+    onSwitchToken?: () => void;
+    onOpenExternalTerminal?: () => void;
+    onToggleFullscreen?: () => void;
+    isFullscreen?: boolean;
+  }
+
+  // 重构后
+  interface TerminalComponentProps {
+    // ... 基础属性（移除所有回调函数）
+  }
+  ```
+
 ## [2.2.8] - 2025-11-04
 
 ### Added 🎉

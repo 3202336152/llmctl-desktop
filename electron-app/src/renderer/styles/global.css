@@ -172,13 +172,14 @@ pre {
   padding: 1px;
   background: var(--gradient-border);
   border-radius: inherit;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
+  mask:
+          linear-gradient(to right, #fff 0%, #fff 100%) content-box,
+          linear-gradient(to right, #fff 0%, #fff 100%);
   mask-composite: exclude;
   pointer-events: none;
 }
+
+
 
 /* 发光容器 */
 .glow-container {
@@ -367,4 +368,332 @@ pre {
   .no-print {
     display: none !important;
   }
+}
+
+/* ==================== 终端组件样式 ==================== */
+
+/* 终端标签页样式优化 - Chrome 风格圆角矩形标签页 */
+.terminal-tabs .ant-tabs-tab {
+  background: #e6f7ff !important;
+  border: none !important;
+  color: #6b6b6b !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-right: 4px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  line-height: 1.4 !important;
+  height: auto !important;
+  min-height: 36px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
+  width: 180px !important;
+  border-radius: 12px 12px 0 0 !important;
+  position: relative !important;
+}
+
+/* 标签页文本省略 */
+.terminal-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+  max-width: 128px !important;
+}
+
+.terminal-tabs .ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+
+.terminal-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  padding: 0 !important;
+}
+
+.terminal-tabs .ant-tabs-tab:hover {
+  background: #f0f7ff !important;
+  color: #40a9ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(145, 213, 255, 0.3);
+}
+
+.terminal-tabs .ant-tabs-tab-active {
+  background: #ffffff !important;
+  color: #6b6b6b !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 8px rgba(145, 213, 255, 0.3) !important;
+  z-index: 2 !important;
+  padding-bottom: 10px !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* 选中标签页下边缘向外扩散的圆角 - 左侧 */
+.terminal-tabs .ant-tabs-tab-active::before {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: -12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: transparent !important;
+  border-bottom-right-radius: 12px !important;
+  box-shadow: 6px 0 0 0 #ffffff !important;
+}
+
+/* 选中标签页下边缘向外扩散的圆角 - 右侧 */
+.terminal-tabs .ant-tabs-tab-active::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: -12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: transparent !important;
+  border-bottom-left-radius: 12px !important;
+  box-shadow: -6px 0 0 0 #ffffff !important;
+}
+
+.terminal-tabs .ant-tabs-tab-active:hover {
+  background: #ffffff !important;
+  color: #595959 !important;
+  transform: translateY(-1px);
+}
+
+/* 选中标签的文字和图标颜色 */
+.terminal-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #6b6b6b !important;
+}
+
+.terminal-tabs .ant-tabs-tab-active .anticon,
+.terminal-tabs .ant-tabs-tab-active .ant-tag {
+  color: #6b6b6b !important;
+  background: rgba(107, 107, 107, 0.05) !important;
+  border-color: rgba(107, 107, 107, 0.1) !important;
+}
+
+/* 关闭按钮样式 */
+.terminal-tabs .ant-tabs-tab-remove {
+  color: #6b6b6b !important;
+  transition: all 0.2s;
+}
+
+.terminal-tabs .ant-tabs-tab-active .ant-tabs-tab-remove {
+  color: #6b6b6b !important;
+}
+
+.terminal-tabs .ant-tabs-tab-remove:hover {
+  color: #ff4d4f !important;
+  background: rgba(255, 77, 79, 0.1) !important;
+  border-radius: 4px;
+}
+
+/* xterm.js 终端滚动条样式优化 */
+.xterm-viewport::-webkit-scrollbar {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: #2d2d2d !important;
+  border-radius: 7px !important;
+  border: 1px solid #1a1a1a !important;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%) !important;
+  border-radius: 7px !important;
+  border: 2px solid #2d2d2d !important;
+  transition: background 0.3s ease !important;
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.1) !important;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5a5a5a 0%, #4a4a4a 100%) !important;
+  border-color: #1a1a1a !important;
+  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.2) !important;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #1890ff 0%, #096dd9 100%) !important;
+  border-color: #096dd9 !important;
+}
+
+/* Firefox 滚动条 */
+.xterm-viewport {
+  scrollbar-width: auto !important;
+  scrollbar-color: #4a4a4a #2d2d2d !important;
+}
+
+/* 滚动到底部按钮样式 */
+.scroll-to-bottom-btn,
+button.scroll-to-bottom-btn,
+.scroll-to-bottom-btn.ant-btn {
+  position: absolute !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 100 !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 4px 12px rgba(102, 126, 234, 0.4),
+    0 0 0 0 rgba(102, 126, 234, 0.7) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  opacity: 0.92 !important;
+  overflow: visible !important;
+  line-height: 1 !important;
+}
+
+/* 半圆环绕效果 - 外环 */
+.scroll-to-bottom-btn::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -6px !important;
+  left: -6px !important;
+  right: -6px !important;
+  bottom: -6px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(102, 126, 234, 0.4) !important;
+  z-index: -1 !important;
+  opacity: 0 !important;
+  transition: all 0.3s ease !important;
+  background: transparent !important;
+}
+
+/* 半圆环绕效果 - 内环动画 */
+.scroll-to-bottom-btn::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 130% !important;
+  height: 130% !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  opacity: 1 !important;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+  z-index: -1 !important;
+}
+
+.scroll-to-bottom-btn:hover,
+button.scroll-to-bottom-btn:hover,
+.scroll-to-bottom-btn.ant-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.08) !important;
+  box-shadow:
+    0 6px 20px rgba(102, 126, 234, 0.5),
+    0 0 0 8px rgba(102, 126, 234, 0.15) !important;
+}
+
+.scroll-to-bottom-btn:hover::before,
+button.scroll-to-bottom-btn:hover::before,
+.scroll-to-bottom-btn.ant-btn:hover::before {
+  opacity: 1 !important;
+}
+
+.scroll-to-bottom-btn:active,
+button.scroll-to-bottom-btn:active,
+.scroll-to-bottom-btn.ant-btn:active {
+  transform: scale(1.02) !important;
+}
+
+.scroll-to-bottom-btn .anticon,
+button.scroll-to-bottom-btn .anticon,
+.scroll-to-bottom-btn.ant-btn .anticon {
+  font-size: 18px !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) !important;
+  color: #ffffff !important;
+}
+
+/* 脉冲环动画 */
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ==================== 半圆形扇形菜单 ==================== */
+
+/* 菜单容器 */
+.circular-menu-container {
+  position: absolute !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 100 !important;
+}
+
+/* 菜单项按钮（沿半圆弧分布） */
+.circular-menu-item,
+button.circular-menu-item,
+.circular-menu-item.ant-btn {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: auto !important;
+  line-height: 1 !important;
+}
+
+.circular-menu-item .anticon,
+button.circular-menu-item .anticon,
+.circular-menu-item.ant-btn .anticon {
+  font-size: 20px !important;
+  color: #ffffff !important;
+}
+
+.circular-menu-item:hover,
+button.circular-menu-item:hover,
+.circular-menu-item.ant-btn:hover {
+  transform: scale(1.15) !important;
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
+  background: linear-gradient(135deg, #5fbdff 0%, #1ff3fe 100%) !important;
+}
+
+/* 半透明遮罩 */
+.circular-menu-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  z-index: 99 !important;
+  transition: opacity 0.3s ease !important;
 }
