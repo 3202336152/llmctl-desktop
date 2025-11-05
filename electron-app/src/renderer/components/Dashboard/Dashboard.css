@@ -1,0 +1,20 @@
+.dashboard-container {
+  padding: 0;
+}
+
+.quick-action-card {
+  transition: all 0.3s ease;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-action-card:hover:not(.disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-card.disabled {
+  background-color: #f5f5f5;
+}

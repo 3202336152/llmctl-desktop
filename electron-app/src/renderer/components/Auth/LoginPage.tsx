@@ -26,7 +26,7 @@ const LoginPage: React.FC = () => {
                 authStorage.saveAuth(response.data.data);
                 message.success('登录成功！');
                 setTimeout(() => {
-                    navigate('/providers');
+                    navigate('/');
                     window.location.reload();
                 }, 500);
             }

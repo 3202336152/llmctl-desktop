@@ -74,6 +74,10 @@ const SessionManager: React.FC = () => {
 
   // ✅ 防止重复点击重启按钮：记录正在重启的 sessionId
   const restartingSessionsRef = useRef<Set<string>>(new Set());
+
+  // ✅ 新增：防止快速双击打开终端，记录正在打开的 sessionId
+  const openingSessionsRef = useRef<Set<string>>(new Set());
+
   const [form] = Form.useForm();
 
   // 可用的命令选项（根据选中的Provider动态更新）
@@ -435,95 +439,112 @@ const SessionManager: React.FC = () => {
   };
 
   const handleOpenTerminal = async (sessionId: string) => {
-    // 检查会话状态，如果是 inactive，先重新激活
-    const session = sessions.find(s => s.id === sessionId);
-    if (session?.status === 'inactive') {
-      // ✅ 防止重复点击
-      if (restartingSessionsRef.current.has(sessionId)) {
-        console.log('[SessionManager] 正在重启该会话，忽略重复点击:', sessionId);
-        return;
-      }
-
-      try {
-        // 标记为正在重启
-        restartingSessionsRef.current.add(sessionId);
-
-        // 1. 先销毁旧的终端实例（如果存在）
-        dispatch(destroyTerminal(sessionId));
-
-        // 2. 尝试终止终端进程（如果还在运行）
-        try {
-          await window.electronAPI.terminalKill(sessionId);
-        } catch (error) {
-          console.log('终端进程已终止或不存在:', error);
-        }
-
-        // 2.5. ✅ 归档 Codex 配置（如果适用）
-        if (session.type === 'codex' && session.workingDirectory) {
-          try {
-            const codexDir = `${session.workingDirectory}/.codex-sessions/${sessionId}`;
-            const archivedDir = `${session.workingDirectory}/.codex-sessions/archived/${sessionId}`;
-
-            console.log('[SessionManager] 检查 Codex 配置目录:', codexDir);
-
-            // 尝试移动到归档目录（如果目录存在）
-            const moveResult = await window.electronAPI.moveDirectory(codexDir, archivedDir);
-            if (moveResult.success) {
-              console.log('[SessionManager] ✅ Codex 配置已归档:', archivedDir);
-            } else {
-              console.log('[SessionManager] ℹ️ Codex 配置目录不存在或已删除');
-            }
-          } catch (error) {
-            console.warn('[SessionManager] 归档 Codex 配置失败（忽略）:', error);
-          }
-        }
-
-        // 3. ✅ 删除旧会话记录（避免 terminalManager 误判为 resume）
-        await sessionAPI.deleteSession(sessionId);
-        dispatch(removeSession(sessionId));
-
-        // 4. ✅ 创建全新的会话（使用相同的配置）
-        const newSessionRequest: StartSessionRequest = {
-          providerId: session.providerId,
-          workingDirectory: session.workingDirectory,
-          command: session.command,
-          type: session.type,
-        };
-
-        const response = await sessionAPI.startSession(newSessionRequest);
-        if (response.data) {
-          dispatch(addSession(response.data));
-
-          // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
-          await writeMcpConfig(
-            response.data.id,
-            session.workingDirectory
-          );
-
-          // 打开新会话的终端
-          dispatch(openTerminal(response.data.id));
-          // 跳转到 Terminals 页面
-          navigate('/terminals');
-          message.success('会话已重新启动');
-        } else {
-          message.error('创建新会话失败');
-        }
-      } catch (error) {
-        message.error(`重新激活会话失败: ${error}`);
-      } finally {
-        // ✅ 无论成功或失败，都要移除标记（延迟500ms，确保UI更新完成）
-        setTimeout(() => {
-          restartingSessionsRef.current.delete(sessionId);
-        }, 500);
-      }
+    // ✅ 防止快速双击或重复点击（统一的防重复检查）
+    if (openingSessionsRef.current.has(sessionId)) {
+      console.log('[SessionManager] 会话正在打开中，忽略重复请求:', sessionId);
+      message.warning('正在打开终端，请稍候...');
       return;
     }
 
-    // 如果会话是 active 状态，直接打开终端
-    dispatch(openTerminal(sessionId));
+    // ✅ 标记为正在打开
+    openingSessionsRef.current.add(sessionId);
 
-    // 跳转到 Terminals 页面
-    navigate('/terminals');
+    try {
+      // 检查会话状态，如果是 inactive，先重新激活
+      const session = sessions.find(s => s.id === sessionId);
+      if (session?.status === 'inactive') {
+        // ✅ 额外的防重复检查（兼容旧逻辑）
+        if (restartingSessionsRef.current.has(sessionId)) {
+          console.log('[SessionManager] 正在重启该会话，忽略重复点击:', sessionId);
+          return;
+        }
+
+        try {
+          // 标记为正在重启
+          restartingSessionsRef.current.add(sessionId);
+
+          // 1. 先销毁旧的终端实例（如果存在）
+          dispatch(destroyTerminal(sessionId));
+
+          // 2. 尝试终止终端进程（如果还在运行）
+          try {
+            await window.electronAPI.terminalKill(sessionId);
+          } catch (error) {
+            console.log('终端进程已终止或不存在:', error);
+          }
+
+          // 2.5. ✅ 归档 Codex 配置（如果适用）
+          if (session.type === 'codex' && session.workingDirectory) {
+            try {
+              const codexDir = `${session.workingDirectory}/.codex-sessions/${sessionId}`;
+              const archivedDir = `${session.workingDirectory}/.codex-sessions/archived/${sessionId}`;
+
+              console.log('[SessionManager] 检查 Codex 配置目录:', codexDir);
+
+              // 尝试移动到归档目录（如果目录存在）
+              const moveResult = await window.electronAPI.moveDirectory(codexDir, archivedDir);
+              if (moveResult.success) {
+                console.log('[SessionManager] ✅ Codex 配置已归档:', archivedDir);
+              } else {
+                console.log('[SessionManager] ℹ️ Codex 配置目录不存在或已删除');
+              }
+            } catch (error) {
+              console.warn('[SessionManager] 归档 Codex 配置失败（忽略）:', error);
+            }
+          }
+
+          // 3. ✅ 删除旧会话记录（避免 terminalManager 误判为 resume）
+          await sessionAPI.deleteSession(sessionId);
+          dispatch(removeSession(sessionId));
+
+          // 4. ✅ 创建全新的会话（使用相同的配置）
+          const newSessionRequest: StartSessionRequest = {
+            providerId: session.providerId,
+            workingDirectory: session.workingDirectory,
+            command: session.command,
+            type: session.type,
+          };
+
+          const response = await sessionAPI.startSession(newSessionRequest);
+          if (response.data) {
+            dispatch(addSession(response.data));
+
+            // ✅ 写入 MCP 配置文件到本地（跨平台兼容）
+            await writeMcpConfig(
+              response.data.id,
+              session.workingDirectory
+            );
+
+            // 打开新会话的终端
+            dispatch(openTerminal(response.data.id));
+            // 跳转到 Terminals 页面
+            navigate('/terminals');
+            message.success('会话已重新启动');
+          } else {
+            message.error('创建新会话失败');
+          }
+        } catch (error) {
+          message.error(`重新激活会话失败: ${error}`);
+        } finally {
+          // ✅ 无论成功或失败，都要移除标记（延迟500ms，确保UI更新完成）
+          setTimeout(() => {
+            restartingSessionsRef.current.delete(sessionId);
+          }, 500);
+        }
+        return;
+      }
+
+      // 如果会话是 active 状态，直接打开终端
+      dispatch(openTerminal(sessionId));
+
+      // 跳转到 Terminals 页面
+      navigate('/terminals');
+    } finally {
+      // ✅ 延迟1秒后移除"正在打开"标记，防止快速重复操作
+      setTimeout(() => {
+        openingSessionsRef.current.delete(sessionId);
+      }, 1000);
+    }
   };
 
   const getStatusColor = (status: string) => {

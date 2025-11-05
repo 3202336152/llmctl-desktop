@@ -4,7 +4,7 @@
 
 **强大的 LLM Provider、Token 和会话管理桌面应用**
 
-[![Version](https://img.shields.io/badge/version-2.2.8-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/3202336152/llmctl-desktop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/3202336152/llmctl-desktop)
 
@@ -60,6 +60,7 @@ LLMctl 是一个专业的 LLM CLI 工具管理平台，提供统一的 Provider 
 - **帮助中心** - 完整的应用内帮助文档
 - **多级日志系统** - 前端 + 后端三层日志架构，支持开发/生产/调试模式
 - **Redis 缓存优化** - 统一的缓存服务架构，提升性能和代码质量
+- **Dashboard 仪表盘** - 系统运行状态实时概览，数据可视化展示
 
 ---
 
@@ -141,6 +142,37 @@ LLMctl/
 
 ## 🔄 最新更新
 
+### v2.3.0 (2025-11-05)
+
+- 📊 **Dashboard 仪表盘** - 全新的数据可视化主页
+  - 快速操作卡片：创建会话、配置 Provider、MCP 管理、查看通知
+  - 系统状态概览：活跃会话、Token 健康度、Provider 统计、MCP 统计
+  - 会话时长趋势图：折线图展示，支持 7/30/90 天切换
+  - Provider 使用统计：柱状图展示，支持 7/30/90 天切换
+  - 最近会话列表：快速打开终端，查看会话状态
+  - 最近活动日志：实时显示系统操作记录
+- 🎨 **图表视觉优化** - 提升数据可视化体验
+  - 柱状图颜色调整为浅蓝色 (#4DA3FF)，视觉更协调
+  - 柱体顶部显示数值，数据一目了然
+  - Tooltip 增强显示，包含成功率等详细信息
+  - 字体大小优化，图表更易阅读
+- 🖌️ **UI 布局优化** - 统一卡片高度，改善视觉体验
+  - SystemOverview 卡片统一 140px 高度
+  - 最近活动与最近会话卡片高度一致
+  - 终端标签页内容居中显示
+- 🐛 **Bug 修复** - 修复多个 UI 显示问题
+  - 修复图表标题动态括号显示
+  - 修复 Provider 统计时间范围选项
+  - 修复最近活动无数据问题
+  - 修复 Tooltip 多余分号显示
+
+### v2.2.9 (2025-11-04)
+
+- 🎨 **终端UI优化** - 统一图标显示，全屏和非全屏模式UI一致
+- ✨ **Tooltip支持** - 所有终端操作按钮添加鼠标悬停提示
+- 🗑️ **批量关闭终端** - 新增"关闭所有终端"按钮，支持批量操作
+- 🎯 **简化侧边栏** - 删除应用名称显示（LLMctl/CTL），界面更简洁
+
 ### v2.2.8 (2025-11-04)
 
 - 🏗️ **Redis 缓存服务架构** - 统一的缓存管理接口，遵循 DRY 原则，代码质量显著提升
@@ -169,13 +201,6 @@ LLMctl/
 - 🔗 **智能关联** - 为每个 Provider 的不同 CLI 工具配置专属 MCP 服务器
 - 🔄 **配置刷新** - 右键菜单一键刷新 MCP 配置，无需重启会话
 - 🐛 **Bug 修复** - 修复重复提交、图标显示、删除确认等问题
-
-### v2.2.1 (2025-10-23)
-
-- 🔐 **Codex 会话配置隔离** - 每个会话使用独立的 `.codex-sessions/{sessionId}/` 配置目录
-- 🗂️ **归档管理系统** - Settings 页面新增归档清理功能，支持 10/20/30 天和全部清理选项
-- 📊 **归档统计展示** - 显示归档数量、占用空间、会话列表
-- 🛠️ **智能目录检测** - 自动修正用户选择的目录路径，避免路径错误
 
 [查看完整更新日志](CHANGELOG.md)
 

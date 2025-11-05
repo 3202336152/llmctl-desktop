@@ -618,7 +618,7 @@ const Settings: React.FC = () => {
             >
               <div style={{ textAlign: 'center', color: 'white' }}>
                 <RocketOutlined style={{ fontSize: '32px', marginBottom: '8px' }} />
-                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>v2.2.4</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>v2.3.0</div>
                 <div style={{ fontSize: '12px', opacity: 0.9 }}>{t('settings.version')}</div>
               </div>
             </Card>

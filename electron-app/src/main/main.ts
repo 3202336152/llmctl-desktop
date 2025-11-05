@@ -58,6 +58,11 @@ let minimizeToTray = false;
 let isQuitting = false; // 使用局部变量而不是 app.isQuitting
 let updater: AutoUpdater | null = null;
 
+// ✅ 全局创建中的终端会话集合（防止并发创建同一会话）
+const creatingTerminals = new Set<string>();
+// ✅ 创建计数器（用于调试日志）
+let terminalCreationCounter = 0;
+
 // 获取图标路径（兼容开发和生产环境）
 const getIconPath = (): string => {
   return 'http://117.72.200.2/downloads/llmctl/icon.png';
@@ -682,21 +687,61 @@ ipcMain.handle('terminal-create', async (_event, options: {
   cwd?: string;
   env?: Record<string, string>;
 }) => {
+  const { sessionId } = options;
+  const startTime = Date.now();
+  const currentCreationId = ++terminalCreationCounter;
+
+  log.info('[IPC] ========== 终端创建请求 ==========');
+  log.info(`[IPC] 🚀 开始创建终端 #${currentCreationId}`);
+  log.info(`[IPC] Session ID: ${sessionId}`);
+  log.info(`[IPC] 当前并发创建数: ${creatingTerminals.size}`);
+  log.info(`[IPC] 工作目录: ${options.cwd || '未指定'}`);
+  log.info('[IPC] =========================================');
+
+  // ✅ 防止重复创建同一会话
+  if (creatingTerminals.has(sessionId)) {
+    log.warn(`[IPC] ⚠️  会话正在创建中，跳过重复请求 #${currentCreationId}: ${sessionId}`);
+    return { success: false, error: '会话正在创建中，请稍候' };
+  }
+
+  // ✅ 添加到创建中集合
+  creatingTerminals.add(sessionId);
+
   try {
     if (!mainWindow) {
       throw new Error('Main window not available');
     }
 
-    await terminalManager.createSession(options.sessionId, mainWindow, {
+    // ✅ 创建终端的Promise
+    const createPromise = terminalManager.createSession(sessionId, mainWindow, {
       command: options.command,
       cwd: options.cwd,
       env: options.env,
     });
 
+    // ✅ 10秒超时保护
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('创建终端超时（10秒），可能是磁盘IO阻塞或系统资源不足'));
+      }, 10000);
+    });
+
+    // ✅ 竞速：哪个先完成用哪个
+    await Promise.race([createPromise, timeoutPromise]);
+
+    const elapsedTime = Date.now() - startTime;
+    log.info(`[IPC] ✅ 完成创建终端 #${currentCreationId}, 耗时: ${elapsedTime}ms`);
+
     return { success: true, sessionId: options.sessionId };
   } catch (error) {
-    console.error('[IPC] terminal-create 失败:', error);
+    const elapsedTime = Date.now() - startTime;
+    log.error(`[IPC] ❌ 创建终端失败 #${currentCreationId}, 耗时: ${elapsedTime}ms`);
+    log.error('[IPC] 错误信息:', error);
     return { success: false, error: (error as Error).message };
+  } finally {
+    // ✅ 完成后从集合移除（无论成功或失败）
+    creatingTerminals.delete(sessionId);
+    log.info(`[IPC] 📊 创建完成，当前并发数: ${creatingTerminals.size}`);
   }
 });
 

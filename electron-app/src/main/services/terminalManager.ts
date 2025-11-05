@@ -26,6 +26,74 @@ interface TerminalSession {
   exitListener?: pty.IDisposable;
 }
 
+/**
+ * ✅ 文件操作队列
+ * 防止并发文件操作阻塞磁盘IO，特别是在机械硬盘或杀毒软件扫描时
+ */
+class FileOperationQueue {
+  private queue: Array<() => Promise<void>> = [];
+  private running = false;
+  private operationCounter = 0;
+
+  /**
+   * 添加文件操作到队列
+   * @param operation 要执行的异步操作
+   * @returns 操作结果
+   */
+  async add<T>(operation: () => Promise<T>): Promise<T> {
+    const operationId = ++this.operationCounter;
+    console.log(`[FileQueue] 📥 添加操作 #${operationId} 到队列，当前队列长度: ${this.queue.length}`);
+
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        const startTime = Date.now();
+        console.log(`[FileQueue] ▶️  开始执行操作 #${operationId}`);
+        try {
+          const result = await operation();
+          const elapsedTime = Date.now() - startTime;
+          console.log(`[FileQueue] ✅ 操作 #${operationId} 完成，耗时: ${elapsedTime}ms`);
+          resolve(result);
+        } catch (error) {
+          const elapsedTime = Date.now() - startTime;
+          console.error(`[FileQueue] ❌ 操作 #${operationId} 失败，耗时: ${elapsedTime}ms`, error);
+          reject(error);
+        }
+      });
+
+      // 如果队列未运行，立即开始处理
+      if (!this.running) {
+        this.processQueue();
+      }
+    });
+  }
+
+  /**
+   * 处理队列中的操作（串行执行）
+   */
+  private async processQueue() {
+    if (this.running || this.queue.length === 0) {
+      return;
+    }
+
+    this.running = true;
+    console.log(`[FileQueue] 🏃 开始处理队列，队列长度: ${this.queue.length}`);
+
+    while (this.queue.length > 0) {
+      const task = this.queue.shift();
+      if (task) {
+        try {
+          await task();
+        } catch (error) {
+          console.error('[FileQueue] 任务执行失败:', error);
+        }
+      }
+    }
+
+    this.running = false;
+    console.log('[FileQueue] ✅ 队列处理完成');
+  }
+}
+
 // Token/API 错误检测模式
 const TOKEN_ERROR_PATTERNS = [
   // ===== Claude/Anthropic API 错误 =====
@@ -84,20 +152,53 @@ const TOKEN_ERROR_PATTERNS = [
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
   private instanceCounter: number = 0; // 实例计数器
+  private fileQueue = new FileOperationQueue(); // ✅ 文件操作队列
+  private readonly MAX_SESSIONS = 10; // ✅ 最大并发终端数量限制
 
   async createSession(sessionId: string, window: BrowserWindow, options: {
     command?: string;
     cwd?: string;
     env?: Record<string, string>;
   } = {}): Promise<{ existed: boolean }> {
-    // ✅ 检查是否已存在会话
+    // ✅ 检查是否超过最大会话数量（排除当前正在重建的会话）
     const existingSession = this.sessions.get(sessionId);
-    const isResumed = !!existingSession; // 如果会话已存在，说明是 /resume 重建
+    const isResumed = !!existingSession;
+
+    if (!isResumed && this.sessions.size >= this.MAX_SESSIONS) {
+      const errorMsg = `已达到最大终端数量限制（${this.MAX_SESSIONS}），请先关闭部分终端`;
+      console.error('[TerminalManager]', errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    // ✅ 检查是否已存在会话
 
     if (existingSession) {
       console.log('[TerminalManager] ⚠️ 会话已存在，销毁旧进程并创建新的 (resume):', sessionId);
 
-      // ✅ 先移除监听器，防止 EPIPE 错误
+      // ✅ 优化清理顺序，避免EPIPE错误：
+      // 1. 先清除定时器
+      // 2. 再kill进程（停止数据流）
+      // 3. 等待100ms让pending的IO操作完成
+      // 4. 最后dispose监听器
+
+      // Step 1: 清除错误检测定时器
+      if (existingSession.errorDetectionTimer) {
+        clearTimeout(existingSession.errorDetectionTimer);
+        console.log('[TerminalManager] ✅ 已清除旧的错误检测定时器');
+      }
+
+      // Step 2: 尝试kill进程（停止数据流）
+      try {
+        existingSession.process.kill();
+        console.log('[TerminalManager] ✅ 已终止旧的PTY进程');
+      } catch (error) {
+        console.error('[TerminalManager] 销毁旧进程失败:', error);
+      }
+
+      // Step 3: 等待100ms，让pending的IO操作完成
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Step 4: 移除监听器（此时数据流已停止，不会触发EPIPE）
       if (existingSession.dataListener) {
         existingSession.dataListener.dispose();
         console.log('[TerminalManager] ✅ 已移除旧的 dataListener');
@@ -107,17 +208,6 @@ class TerminalManager {
         console.log('[TerminalManager] ✅ 已移除旧的 exitListener');
       }
 
-      // ✅ 清除之前的错误检测定时器
-      if (existingSession.errorDetectionTimer) {
-        clearTimeout(existingSession.errorDetectionTimer);
-        console.log('[TerminalManager] ✅ 已清除旧的错误检测定时器');
-      }
-
-      try {
-        existingSession.process.kill();
-      } catch (error) {
-        console.error('[TerminalManager] 销毁旧进程失败:', error);
-      }
       this.sessions.delete(sessionId);
     }
 
@@ -144,86 +234,101 @@ class TerminalManager {
       console.log('[TerminalManager] 检测到 Windows 系统，已添加完整的 UTF-8 编码环境变量');
     }
 
-    // ✅ Codex 配置文件处理（会话独立方案）- 异步化优化
+    // ✅ Codex 配置文件处理（会话独立方案）- 使用队列和超时保护
     // 目录结构: 工作目录/.codex-sessions/{sessionId}/
     let codexConfigPath: string | undefined;
     if (fullEnv.CODEX_CONFIG_TOML || fullEnv.CODEX_AUTH_JSON) {
       console.log('[TerminalManager] 检测到 Codex 配置，开始创建会话独立的配置文件');
-      const perfStart = Date.now(); // ✅ 性能监控
+      const perfStart = Date.now();
 
       try {
-        // ✅ 从环境变量中获取 CODEX_HOME（已由后端设置为 .codex-sessions/{sessionId}）
-        // 格式: /path/to/project/.codex-sessions/{sessionId}
-        const codexDir = fullEnv.CODEX_HOME || path.join(cwd, '.codex-sessions', sessionId);
+        // ✅ 使用文件操作队列，避免并发文件操作阻塞磁盘
+        await this.fileQueue.add(async () => {
+          // ✅ 从环境变量中获取 CODEX_HOME（已由后端设置为 .codex-sessions/{sessionId}）
+          const codexDir = fullEnv.CODEX_HOME || path.join(cwd, '.codex-sessions', sessionId);
 
-        // ✅ 异步创建目录（避免阻塞主进程）
-        await fsPromises.mkdir(codexDir, { recursive: true });
-        console.log(`[TerminalManager] 创建 Codex 会话独立配置目录耗时: ${Date.now() - perfStart}ms`);
+          // ✅ 文件创建Promise
+          const createFilesPromise = (async () => {
+            // 异步创建目录（避免阻塞主进程）
+            await fsPromises.mkdir(codexDir, { recursive: true });
+            console.log(`[TerminalManager] 创建 Codex 配置目录耗时: ${Date.now() - perfStart}ms`);
 
-        // 保存配置路径用于后续清理
-        codexConfigPath = codexDir;
+            // 保存配置路径用于后续清理
+            codexConfigPath = codexDir;
 
-        // ✅ 异步写入 config.toml
-        if (fullEnv.CODEX_CONFIG_TOML) {
-          const configPath = path.join(codexDir, 'config.toml');
-          const writeStart = Date.now();
+            // 异步写入 config.toml
+            if (fullEnv.CODEX_CONFIG_TOML) {
+              const configPath = path.join(codexDir, 'config.toml');
+              const writeStart = Date.now();
 
-          await fsPromises.writeFile(configPath, fullEnv.CODEX_CONFIG_TOML, 'utf-8');
-          console.log(`[TerminalManager] 写入 config.toml 耗时: ${Date.now() - writeStart}ms`);
+              await fsPromises.writeFile(configPath, fullEnv.CODEX_CONFIG_TOML, 'utf-8');
+              console.log(`[TerminalManager] 写入 config.toml 耗时: ${Date.now() - writeStart}ms`);
 
-          // ✅ 异步验证文件是否真的存在
-          try {
-            const fileContent = await fsPromises.readFile(configPath, 'utf-8');
-            console.log('[TerminalManager] ✅ 验证成功，文件大小:', fileContent.length, '字符');
-            console.log('[TerminalManager] 📄 配置内容预览（前200字符）:', fileContent.substring(0, 200));
-          } catch (verifyError) {
-            console.error('[TerminalManager] ❌ 文件验证失败：', verifyError);
-          }
-
-          // 从环境变量中移除（已写入文件）
-          delete fullEnv.CODEX_CONFIG_TOML;
-        }
-
-        // ✅ 异步写入 auth.json
-        if (fullEnv.CODEX_AUTH_JSON) {
-          const authPath = path.join(codexDir, 'auth.json');
-
-          // 如果有 CODEX_API_KEY 环境变量，需要替换 auth.json 中的 Token
-          let authContent = fullEnv.CODEX_AUTH_JSON;
-          if (fullEnv.CODEX_API_KEY) {
-            try {
-              // 解析 auth.json
-              const authObj = JSON.parse(authContent);
-
-              // 替换 OPENAI_API_KEY 为实际的 Token
-              if ('OPENAI_API_KEY' in authObj) {
-                authObj.OPENAI_API_KEY = fullEnv.CODEX_API_KEY;
-                authContent = JSON.stringify(authObj, null, 2);
-                console.log('[TerminalManager] 已将 auth.json 中的 OPENAI_API_KEY 替换为实际 Token');
+              // 异步验证文件是否真的存在
+              try {
+                const fileContent = await fsPromises.readFile(configPath, 'utf-8');
+                console.log('[TerminalManager] ✅ 验证成功，文件大小:', fileContent.length, '字符');
+                console.log('[TerminalManager] 📄 配置内容预览（前200字符）:', fileContent.substring(0, 200));
+              } catch (verifyError) {
+                console.error('[TerminalManager] ❌ 文件验证失败：', verifyError);
               }
-            } catch (parseError) {
-              console.error('[TerminalManager] 解析 auth.json 失败，使用原始内容:', parseError);
+
+              // 从环境变量中移除（已写入文件）
+              delete fullEnv.CODEX_CONFIG_TOML;
             }
-          }
 
-          const authWriteStart = Date.now();
-          await fsPromises.writeFile(authPath, authContent, 'utf-8');
-          console.log(`[TerminalManager] 写入 auth.json 耗时: ${Date.now() - authWriteStart}ms`);
+            // 异步写入 auth.json
+            if (fullEnv.CODEX_AUTH_JSON) {
+              const authPath = path.join(codexDir, 'auth.json');
 
-          // ✅ 异步验证文件是否真的存在
-          try {
-            await fsPromises.access(authPath, fs.constants.F_OK);
-            console.log('[TerminalManager] ✅ 验证成功，auth.json 已创建');
-          } catch (verifyError) {
-            console.error('[TerminalManager] ❌ 文件验证失败：auth.json 不存在!');
-          }
+              // 如果有 CODEX_API_KEY 环境变量，需要替换 auth.json 中的 Token
+              let authContent = fullEnv.CODEX_AUTH_JSON;
+              if (fullEnv.CODEX_API_KEY) {
+                try {
+                  // 解析 auth.json
+                  const authObj = JSON.parse(authContent);
 
-          // 从环境变量中移除（已写入文件）
-          delete fullEnv.CODEX_AUTH_JSON;
-          delete fullEnv.CODEX_API_KEY; // 也删除 Token 环境变量
-        }
+                  // 替换 OPENAI_API_KEY 为实际的 Token
+                  if ('OPENAI_API_KEY' in authObj) {
+                    authObj.OPENAI_API_KEY = fullEnv.CODEX_API_KEY;
+                    authContent = JSON.stringify(authObj, null, 2);
+                    console.log('[TerminalManager] 已将 auth.json 中的 OPENAI_API_KEY 替换为实际 Token');
+                  }
+                } catch (parseError) {
+                  console.error('[TerminalManager] 解析 auth.json 失败，使用原始内容:', parseError);
+                }
+              }
 
-        console.log(`[TerminalManager] ✅ Codex 配置文件创建成功，总耗时: ${Date.now() - perfStart}ms`);
+              const authWriteStart = Date.now();
+              await fsPromises.writeFile(authPath, authContent, 'utf-8');
+              console.log(`[TerminalManager] 写入 auth.json 耗时: ${Date.now() - authWriteStart}ms`);
+
+              // 异步验证文件是否真的存在
+              try {
+                await fsPromises.access(authPath, fs.constants.F_OK);
+                console.log('[TerminalManager] ✅ 验证成功，auth.json 已创建');
+              } catch (verifyError) {
+                console.error('[TerminalManager] ❌ 文件验证失败：auth.json 不存在!');
+              }
+
+              // 从环境变量中移除（已写入文件）
+              delete fullEnv.CODEX_AUTH_JSON;
+              delete fullEnv.CODEX_API_KEY; // 也删除 Token 环境变量
+            }
+
+            console.log(`[TerminalManager] ✅ Codex 配置文件创建成功，总耗时: ${Date.now() - perfStart}ms`);
+          })();
+
+          // ✅ 3秒超时保护（防止磁盘IO慢导致长时间阻塞）
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('创建 Codex 配置文件超时（3秒），可能是磁盘IO慢或杀毒软件扫描'));
+            }, 3000);
+          });
+
+          // ✅ 竞速：哪个先完成用哪个
+          await Promise.race([createFilesPromise, timeoutPromise]);
+        });
       } catch (error) {
         console.error('[TerminalManager] ❌ 创建 Codex 配置文件失败:', error);
         throw new Error(`创建 Codex 配置文件失败: ${error}`);

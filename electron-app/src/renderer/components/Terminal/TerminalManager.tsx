@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Card, Button, Tabs, Space, Tag, Empty, message, Modal } from 'antd';
+import { Card, Button, Tabs, Space, Tag, Empty, message, Modal, Tooltip, Divider } from 'antd';
 import {
   FolderOutlined,
   ExpandOutlined,
@@ -8,6 +8,7 @@ import {
   SwapOutlined,
   ExportOutlined,
   VerticalAlignBottomOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
@@ -265,6 +266,72 @@ const TerminalManager: React.FC = () => {
     }));
   };
 
+  // ✅ 关闭所有终端
+  const handleCloseAllTerminals = () => {
+    if (openTerminalSessions.length === 0) {
+      return;
+    }
+
+    Modal.confirm({
+      title: '关闭所有终端',
+      content: (
+        <div>
+          <p>确定要关闭所有 {openTerminalSessions.length} 个终端吗？</p>
+          <p style={{ marginTop: 8, color: '#ff4d4f', fontSize: '13px' }}>
+            ⚠️ 注意：所有会话状态将更新为"非活跃"
+          </p>
+        </div>
+      ),
+      okText: '确认关闭',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          message.loading({ content: `正在关闭 ${openTerminalSessions.length} 个终端...`, key: 'close-all', duration: 0 });
+
+          // 复制一份会话列表，避免在遍历过程中修改数组
+          const sessionsToClose = [...openTerminalSessions];
+          let successCount = 0;
+          let errorCount = 0;
+
+          // 逐个关闭终端
+          for (const sessionId of sessionsToClose) {
+            try {
+              // 1. 终止 Electron 端的 pty 进程
+              await window.electronAPI.terminalKill(sessionId);
+
+              // 2. 调用后端 API，将 Session 状态改为非活跃
+              await sessionAPI.terminateSession(sessionId);
+
+              // 3. 从 Redux 中移除终端
+              dispatch(closeTerminal(sessionId));
+
+              successCount++;
+            } catch (error) {
+              console.error(`[TerminalManager] 关闭终端失败: ${sessionId}`, error);
+              errorCount++;
+            }
+          }
+
+          // 如果处于全屏状态，自动退出全屏
+          if (isTerminalFullscreen) {
+            dispatch(toggleTerminalFullscreen());
+          }
+
+          // 显示结果
+          if (errorCount === 0) {
+            message.success({ content: `已成功关闭所有 ${successCount} 个终端`, key: 'close-all' });
+          } else {
+            message.warning({ content: `已关闭 ${successCount} 个终端，${errorCount} 个失败`, key: 'close-all' });
+          }
+        } catch (error) {
+          console.error('[TerminalManager] 关闭所有终端失败:', error);
+          message.error({ content: '关闭所有终端失败，请重试', key: 'close-all' });
+        }
+      },
+    });
+  };
+
   // ✅ 快捷键支持：Ctrl+1/2/3 切换标签页，Ctrl+W 关闭当前标签页
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -430,47 +497,64 @@ const TerminalManager: React.FC = () => {
             paddingRight: 16,
             background: '#e6f7ff',
             borderBottom: '2px solid #91d5ff',
+            display: 'flex',
+            justifyContent: 'center',
           }}
           className="terminal-tabs"
           tabBarExtraContent={
-            <Space size="small">
-              <Button
-                type="text"
-                size={isTerminalFullscreen ? 'small' : 'middle'}
-                icon={<VerticalAlignBottomOutlined />}
-                onClick={handleScrollToBottom}
-                title="滚动到底部"
-                disabled={!activeTabKey || openTerminalSessions.length === 0}
-              >
-                {!isTerminalFullscreen && '滚动到底部'}
-              </Button>
-              <Button
-                type="text"
-                size={isTerminalFullscreen ? 'small' : 'middle'}
-                icon={<SwapOutlined />}
-                onClick={handleManualSwitchToken}
-                title="手动切换 Token"
-                disabled={!activeTabKey || openTerminalSessions.length === 0}
-              >
-                {!isTerminalFullscreen && '切换 Token'}
-              </Button>
-              <Button
-                type="text"
-                size={isTerminalFullscreen ? 'small' : 'middle'}
-                icon={<ExportOutlined />}
-                onClick={handleOpenExternalTerminal}
-                title="切换到外部终端"
-                disabled={!activeTabKey || openTerminalSessions.length === 0}
-              >
-                {!isTerminalFullscreen && '外部终端'}
-              </Button>
-              <Button
-                type="text"
-                size={isTerminalFullscreen ? 'small' : 'middle'}
-                icon={isTerminalFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
-                onClick={() => dispatch(toggleTerminalFullscreen())}
-                title={isTerminalFullscreen ? '退出全屏 (F11)' : '全屏显示 (F11)'}
-              />
+            <Space size="small" split={<Divider type="vertical" />}>
+              {/* 终端操作区 */}
+              <Space size="small">
+                <Tooltip title="跳转到终端底部">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<VerticalAlignBottomOutlined />}
+                    onClick={handleScrollToBottom}
+                    disabled={!activeTabKey || openTerminalSessions.length === 0}
+                  />
+                </Tooltip>
+                <Tooltip title="手动切换 Token（重启会话）">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<SwapOutlined />}
+                    onClick={handleManualSwitchToken}
+                    disabled={!activeTabKey || openTerminalSessions.length === 0}
+                  />
+                </Tooltip>
+                <Tooltip title="切换到外部终端（CMD/Terminal）">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ExportOutlined />}
+                    onClick={handleOpenExternalTerminal}
+                    disabled={!activeTabKey || openTerminalSessions.length === 0}
+                  />
+                </Tooltip>
+              </Space>
+
+              {/* 窗口操作区 */}
+              <Space size="small">
+                <Tooltip title={isTerminalFullscreen ? '退出全屏 (F11 或 ESC)' : '全屏显示 (F11)'}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={isTerminalFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
+                    onClick={() => dispatch(toggleTerminalFullscreen())}
+                  />
+                </Tooltip>
+                <Tooltip title="关闭所有终端">
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={handleCloseAllTerminals}
+                    disabled={openTerminalSessions.length === 0}
+                  />
+                </Tooltip>
+              </Space>
             </Space>
           }
         />

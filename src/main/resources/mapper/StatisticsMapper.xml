@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.llmctl.mapper.StatisticsMapper">
+
+    <!-- 查询会话时长趋势（最近N天） -->
+    <select id="getSessionDurationTrend" resultType="com.llmctl.dto.SessionDurationTrendDTO">
+        SELECT
+            DATE(start_time) AS date,
+            ROUND(AVG(
+                CASE
+                    WHEN end_time IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_time, end_time)
+                    ELSE TIMESTAMPDIFF(MINUTE, start_time, NOW())
+                END
+            ), 2) AS avgDuration,
+            COUNT(*) AS sessionCount
+        FROM sessions
+        WHERE user_id = #{userId}
+          AND start_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+        GROUP BY DATE(start_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 查询Provider使用统计 -->
+    <select id="getProviderUsageStats" resultType="com.llmctl.dto.ProviderUsageStatDTO">
+        SELECT
+            p.id AS providerId,
+            p.name AS providerName,
+            COUNT(s.id) AS totalSessions,
+            SUM(CASE WHEN s.status = 'active' THEN 1 ELSE 0 END) AS activeSessions,
+            ROUND(
+                SUM(CASE WHEN s.status = 'active' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(s.id), 0),
+                2
+            ) AS successRate
+        FROM providers p
+        LEFT JOIN sessions s ON p.id = s.provider_id AND s.user_id = #{userId}
+        <if test="days != null">
+            AND s.start_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+        </if>
+        WHERE p.user_id = #{userId}
+        GROUP BY p.id, p.name
+        HAVING totalSessions > 0
+        ORDER BY totalSessions DESC
+    </select>
+
+</mapper>

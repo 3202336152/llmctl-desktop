@@ -63,6 +63,15 @@ module.exports = {
   devServer: {
     port: 3000,
     hot: true,
-    historyApiFallback: true
+    historyApiFallback: true,
+    // 配置代理：将 /llmctl 开头的请求转发到后端服务器
+    proxy: {
+      '/llmctl': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+        logLevel: 'debug'
+      }
+    }
   }
 };

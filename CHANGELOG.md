@@ -5,6 +5,98 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [2.3.0] - 2025-11-05
+
+### Added 🎉
+- **Dashboard 数据可视化** - 全新的主页仪表盘，提供系统运行状态的实时概览
+  - **快速操作卡片**：
+    - 创建会话、配置 Provider、MCP 服务器管理、查看通知的快捷入口
+    - 卡片支持悬停效果和点击跳转
+    - 智能禁用状态（创建会话需要先配置 Provider 和 Token）
+  - **系统状态概览**：
+    - 活跃会话数量统计
+    - Token 健康度监控（百分比 + 进度条）
+    - Provider 统计（启用数/总数）
+    - MCP 服务器统计（启用数/总数）
+  - **图表功能**：
+    - 会话时长趋势图（折线图，支持 7/30/90 天切换）
+    - Provider 使用统计图（柱状图，支持 7/30/90 天切换）
+    - 图表支持悬停查看详细数据
+  - **最近会话列表**：
+    - 显示最近 3 个会话
+    - 支持快速打开终端
+    - 显示会话状态和工作目录
+  - **最近活动日志**：
+    - 基于 Redux 状态生成活动记录
+    - 显示会话启动/终止、Provider 启用/禁用、Token 健康状态变化
+    - 相对时间显示（刚刚、N分钟前、N小时前）
+    - 彩色图标和标签，清晰的活动分类
+  - **涉及文件**：
+    - `electron-app/src/renderer/components/Dashboard/Dashboard.tsx` - 主容器组件
+    - `electron-app/src/renderer/components/Dashboard/QuickActionCards.tsx` - 快速操作卡片
+    - `electron-app/src/renderer/components/Dashboard/SystemOverview.tsx` - 系统状态概览
+    - `electron-app/src/renderer/components/Dashboard/SessionTrendChart.tsx` - 会话趋势图
+    - `electron-app/src/renderer/components/Dashboard/TokenUsageChart.tsx` - Provider 统计图
+    - `electron-app/src/renderer/components/Dashboard/RecentSessionsList.tsx` - 最近会话
+    - `electron-app/src/renderer/components/Dashboard/RecentActivities.tsx` - 最近活动
+
+### Improved 🚀
+- **Provider 使用统计图表优化** - 全面提升数据可视化体验
+  - **视觉优化**：
+    - 蓝色调整为浅蓝色 (#4DA3FF)，降低饱和度，视觉更协调
+    - 柱体宽度限制（maxBarSize: 60px），间距优化（barGap: 8, barCategoryGap: 20%）
+    - 圆角从 4px 增加到 6px，更圆润
+  - **数据标签显示**：
+    - 柱体顶部直接显示数值（总会话数、活跃会话数）
+    - 字体样式：12px、加粗、深色
+  - **字体大小提升**：
+    - X/Y 轴标签从 12px 提升到 13px
+    - Y 轴标题提升到 14px、加粗
+    - 图例提升到 13px
+  - **Tooltip 增强**：
+    - 显示 Provider 名称（加粗、14px）
+    - 总会话数使用浅蓝色，与柱状图颜色一致
+    - 显示成功率信息
+    - 增强视觉效果（圆角 6px、阴影）
+  - **图例颜色修复**：
+    - "总会话数" 使用浅蓝色圆点图标
+    - 图标类型改为圆形（iconType: "circle"）
+
+- **终端标签页样式优化**
+  - 标签页内容居中显示（使用 Flexbox 布局）
+  - 减少左右空白，视觉效果更美观
+
+- **UI 布局优化**
+  - 快速操作卡片左侧内边距调整为 50px，整体居中
+  - SystemOverview 卡片统一高度为 140px，解决 Token 健康度卡片过高问题
+  - 最近活动与最近会话卡片高度统一（maxHeight: 400px，支持滚动）
+
+### Fixed 🐛
+- **修复图表标题显示问题** - 移除动态括号（如"会话时长趋势（最近7天）"），改为静态标题
+- **修复 Provider 统计时间范围选项** - 移除"全部"选项，默认为 7 天
+- **修复最近活动无数据问题** - 从 Redux store 实时生成活动记录，替代 notifications API
+- **修复 TypeScript 编译错误** - Token 类型缺少 errorCount 字段，改为显示权重信息
+- **修复 Tooltip 多余分号** - 移除 formatter 返回的空字符串参数
+
+### Technical Details 🔧
+- **Dashboard 数据流**：
+  - 使用 Redux Toolkit 管理全局状态
+  - useEffect 自动加载 Providers、Tokens、Sessions 数据
+  - useMemo 计算系统统计数据，避免重复计算
+  - 刷新按钮使用 key 强制重新挂载组件
+
+- **图表库**：
+  - 使用 Recharts 进行数据可视化
+  - ResponsiveContainer 自适应容器尺寸
+  - 支持 LabelList 显示数据标签
+  - 自定义 Tooltip 和 Legend 样式
+
+- **最近活动生成逻辑**：
+  - 从 sessions 数组提取最近 5 个会话活动
+  - 从 providers 数组提取最近 3 个 Provider 活动
+  - 从 tokens 数组提取最近 3 个 Token 活动
+  - 按时间倒序排列，只保留最近 10 条
+
 ## [2.2.9] - 2025-11-04
 
 ### Improved 🚀

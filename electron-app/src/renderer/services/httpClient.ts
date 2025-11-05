@@ -4,8 +4,15 @@ import { authStorage } from '../utils/authStorage';
 
 // 获取 API 基础 URL（优先使用环境变量，fallback 到 localStorage，最后使用默认值）
 const getApiBaseUrl = (): string => {
+  // 开发模式：使用相对路径，让webpack代理转发到后端
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[API BaseURL] 开发模式，使用相对路径（通过webpack代理转发）: /llmctl');
+    return '/llmctl';
+  }
+
   // 1. 尝试从环境变量获取（打包时注入）
   if (process.env.REACT_APP_API_BASE_URL) {
+    console.log('[API BaseURL] 使用环境变量:', process.env.REACT_APP_API_BASE_URL);
     return process.env.REACT_APP_API_BASE_URL;
   }
 
@@ -13,6 +20,7 @@ const getApiBaseUrl = (): string => {
   try {
     const savedUrl = localStorage.getItem('apiBaseUrl');
     if (savedUrl) {
+      console.log('[API BaseURL] 使用localStorage配置:', savedUrl);
       return savedUrl;
     }
   } catch (e) {
@@ -20,6 +28,7 @@ const getApiBaseUrl = (): string => {
   }
 
   // 3. 使用默认值
+  console.log('[API BaseURL] 使用默认配置: http://localhost:8080/llmctl');
   return 'http://localhost:8080/llmctl';
 };
 

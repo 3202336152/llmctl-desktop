@@ -389,6 +389,9 @@ pre {
   width: 180px !important;
   border-radius: 12px 12px 0 0 !important;
   position: relative !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
 /* 标签页文本省略 */

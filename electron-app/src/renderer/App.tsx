@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Layout, Menu, theme, Button, Tabs, Card, Space, Tag, message, Modal, ConfigProvider, App as AntApp } from 'antd';
 import {
+  HomeOutlined,
   DatabaseOutlined,
   KeyOutlined,
   DesktopOutlined,
@@ -29,6 +30,7 @@ import McpServerManager from './components/Mcp/McpServerManager';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
 import CommandPalette from './components/Common/CommandPalette';
+import Dashboard from './components/Dashboard/Dashboard';
 import TerminalManager from './components/Terminal/TerminalManager';
 import { ResizableSider, StatusBar, TopBar } from './components/Layout';
 import { configAPI, sessionAPI, tokenAPI, authAPI } from './services/api';
@@ -387,24 +389,33 @@ const AppContent: React.FC = () => {
 
   const menuItems = [
     {
+      key: '/',
+      icon: <HomeOutlined />,
+      label: t('nav.home'),
+    },
+    {
       key: '/providers',
       icon: <DatabaseOutlined />,
       label: t('nav.providers'),
+      'data-tour': 'provider-menu' as any,
     },
     {
       key: '/tokens',
       icon: <KeyOutlined />,
       label: t('nav.tokens'),
+      'data-tour': 'token-menu' as any,
     },
     {
       key: '/sessions',
       icon: <DesktopOutlined />,
       label: t('nav.sessions'),
+      'data-tour': 'session-menu' as any,
     },
     {
       key: '/terminals',
       icon: <CodeOutlined />,
       label: t('nav.terminals', 'Terminals'),
+      'data-tour': 'terminal-menu' as any,
     },
     {
       key: '/mcp-servers',
@@ -450,23 +461,12 @@ const AppContent: React.FC = () => {
           minWidth={200}
           maxWidth={400}
         >
-          <div
-            className="app-logo"
-            style={{
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              margin: collapsed ? '16px 8px' : '16px 16px', // 收起时减小左右边距
-              fontSize: collapsed ? '14px' : '18px', // 收起时减小字体
-            }}
-          >
-            {collapsed ? 'CTL' : 'LLMctl'}
-          </div>
           <Menu
             mode="inline"
             selectedKeys={[location.pathname]}
             items={menuItems}
             onClick={({ key }: { key: string }) => handleMenuClick(key)}
-            style={{ height: 'calc(100% - 96px)', borderRight: 0 }} // 调整高度以匹配新的Logo高度
+            style={{ height: '100%', borderRight: 0 }}
           />
         </ResizableSider>
       )}
@@ -513,7 +513,7 @@ const AppContent: React.FC = () => {
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><NotificationCenter /></ProtectedRoute>} />
                 <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
-                <Route path="/" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               </Routes>
             </ErrorBoundary>
           )}

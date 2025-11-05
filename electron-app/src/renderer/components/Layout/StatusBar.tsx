@@ -91,7 +91,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
         </Tooltip>
 
         <span style={{ color: '#999' }}>
-          LLMctl v2.2.4
+          LLMctl v2.3.0
         </span>
       </Space>
     </div>
