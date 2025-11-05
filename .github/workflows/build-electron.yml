@@ -38,12 +38,6 @@ jobs:
         working-directory: electron-app
         run: npm install
 
-      - name: Configure API URL
-        working-directory: electron-app
-        run: |
-          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
-          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
-
       - name: Build and package Windows
         working-directory: electron-app
         run: |
@@ -53,6 +47,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # 仅在 tag 推送时发布，生成 latest.yml
           PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+          # 直接通过环境变量传递 API 地址
+          REACT_APP_API_BASE_URL: http://117.72.200.2:8080/llmctl
+          LLMCTL_API_BASE_URL: http://117.72.200.2:8080/llmctl
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
@@ -106,12 +103,6 @@ jobs:
         working-directory: electron-app
         run: npm install
 
-      - name: Configure API URL
-        working-directory: electron-app
-        run: |
-          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
-          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
-
       - name: Build and package macOS
         working-directory: electron-app
         run: |
@@ -119,6 +110,9 @@ jobs:
           npm run dist:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 直接通过环境变量传递 API 地址
+          REACT_APP_API_BASE_URL: http://117.72.200.2:8080/llmctl
+          LLMCTL_API_BASE_URL: http://117.72.200.2:8080/llmctl
 
       - name: Upload macOS Installer
         uses: actions/upload-artifact@v4
@@ -155,12 +149,6 @@ jobs:
         working-directory: electron-app
         run: npm install
 
-      - name: Configure API URL
-        working-directory: electron-app
-        run: |
-          echo "REACT_APP_API_BASE_URL=http://117.72.200.2:8080/llmctl" > .env
-          echo "LLMCTL_API_BASE_URL=http://117.72.200.2:8080/llmctl" >> .env
-
       - name: Build and package Linux
         working-directory: electron-app
         run: |
@@ -168,6 +156,9 @@ jobs:
           npm run dist:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 直接通过环境变量传递 API 地址
+          REACT_APP_API_BASE_URL: http://117.72.200.2:8080/llmctl
+          LLMCTL_API_BASE_URL: http://117.72.200.2:8080/llmctl
 
       - name: Upload Linux Installer
         uses: actions/upload-artifact@v4

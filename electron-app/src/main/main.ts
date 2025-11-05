@@ -988,12 +988,16 @@ ipcMain.handle('open-external-terminal', async (_event, options: { workingDirect
 
 // 清理所有会话
 app.on('before-quit', async (event) => {
-  // ✅ 修复：更新安装时跳过耗时操作，允许立即退出
+  // ✅ 修复：更新安装时跳过所有耗时操作，立即退出
   // 解决问题：Windows 安装程序等待应用关闭时超时报错 "LLMctl 无法关闭"
   if ((global as any).isUpdating) {
-    console.log('[App] 正在安装更新，跳过耗时的资源清理操作');
-    // 只执行快速的同步清理（不阻止退出）
-    terminalManager.cleanup();
+    console.log('[App] 正在安装更新，立即退出（跳过所有清理操作）');
+    // 同步快速清理，不阻塞退出
+    try {
+      terminalManager.cleanup();
+    } catch (e) {
+      console.warn('[App] 更新时清理终端失败（忽略）:', e);
+    }
     return; // 立即返回，允许应用正常退出
   }
 
@@ -1011,7 +1015,7 @@ app.on('before-quit', async (event) => {
   try {
     const apiBaseUrl = getApiBaseUrl();
     const response = await axios.post(`${apiBaseUrl}/sessions/deactivate-all`, null, {
-      timeout: 3000, // 3秒超时，避免阻塞退出
+      timeout: 2000, // 缩短为2秒超时，避免过长阻塞
     });
 
     if (response.data?.code === 200) {
@@ -1026,7 +1030,11 @@ app.on('before-quit', async (event) => {
   }
 
   // 清理所有终端进程
-  terminalManager.cleanup();
+  try {
+    terminalManager.cleanup();
+  } catch (e) {
+    console.warn('[App] 清理终端失败（继续退出）:', e);
+  }
 
   // 标记为已处理，允许退出
   isQuitting = true;

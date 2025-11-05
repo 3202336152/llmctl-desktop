@@ -98,16 +98,25 @@ export class AutoUpdater {
           // ✅ 修复：在安装更新前主动清理所有资源
           log.info('[AutoUpdater] 准备安装更新，开始清理资源...');
 
-          // 1. 设置退出标记（避免 before-quit 执行耗时操作）
+          // 1. 设置全局更新标记（让 before-quit 事件处理器跳过耗时操作）
           (global as any).isUpdating = true;
+          log.info('[AutoUpdater] 已设置 isUpdating 标记');
 
-          // 2. 立即退出并安装更新
+          // 2. 关闭所有窗口（触发 window-all-closed 事件）
+          const allWindows = BrowserWindow.getAllWindows();
+          log.info(`[AutoUpdater] 准备关闭 ${allWindows.length} 个窗口`);
+          allWindows.forEach(win => {
+            if (!win.isDestroyed()) {
+              win.destroy(); // 使用 destroy() 而不是 close()，立即销毁窗口
+            }
+          });
+
+          // 3. 立即退出并安装更新（不使用 setImmediate，直接同步调用）
           // 参数说明：
           // - isSilent = false：不静默安装，显示安装进度
           // - isForceRunAfter = true：安装后自动启动应用
-          setImmediate(() => {
-            autoUpdater.quitAndInstall(false, true);
-          });
+          log.info('[AutoUpdater] 调用 quitAndInstall');
+          autoUpdater.quitAndInstall(false, true);
         }
       });
     });

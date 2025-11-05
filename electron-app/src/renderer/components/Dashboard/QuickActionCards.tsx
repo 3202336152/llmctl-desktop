@@ -99,7 +99,7 @@ const QuickActionCards: React.FC = () => {
               >
                 <div style={{ textAlign: 'center', padding: '20px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                   <div style={{ marginBottom: 16 }}>
-                    {action.icon}
+                    {action.icon}l
                   </div>
                   <Typography.Title level={4} style={{ marginBottom: 8, fontSize: 18 }}>
                     {action.title}
