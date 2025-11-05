@@ -2,7 +2,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const webpack = require('webpack');
 const path = require('path');
-require('dotenv').config();
+// 只加载 .env 文件中不存在的环境变量（不覆盖已有的）
+// 这样 GitHub Actions 设置的环境变量会优先生效
+require('dotenv').config({ override: false });
 
 module.exports = {
   entry: './src/renderer/index.tsx',
