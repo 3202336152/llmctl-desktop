@@ -1,6 +1,6 @@
 {
   "name": "llmctl-desktop",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "LLM Control System Desktop Application",
   "main": "dist/main/main.js",
   "homepage": "./",

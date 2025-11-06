@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Empty, Skeleton, Alert, Radio } from 'antd';
+import { Card, Empty, Skeleton, Alert } from 'antd';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, LabelList } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import httpClient from '../../services/httpClient';
@@ -12,34 +12,29 @@ interface ProviderUsageData {
   successRate: number;
 }
 
-type TimeRange = 7 | 30 | 90;
-
 // 优化后的颜色方案（降低饱和度，视觉更协调）
 const COLORS = ['#4DA3FF', '#52c41a', '#fa8c16', '#13c2c2', '#722ed1', '#eb2f96', '#faad14'];
 
 /**
  * Provider使用统计图组件
- * 显示每个Provider的会话数量统计，支持时间范围选择
+ * 显示每个Provider的会话数量统计
  */
 const TokenUsageChart: React.FC = () => {
   const { t } = useTranslation();
   const [data, setData] = useState<ProviderUsageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>(7);
 
   useEffect(() => {
     fetchData();
-  }, [timeRange]);
+  }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await httpClient.get('/statistics/provider-usage', {
-        params: { days: timeRange },
-      });
+      const response = await httpClient.get('/statistics/provider-usage');
 
       if (response.data && response.data.code === 200) {
         setData(response.data.data || []);
@@ -54,20 +49,9 @@ const TokenUsageChart: React.FC = () => {
     }
   };
 
-  const handleTimeRangeChange = (e: any) => {
-    setTimeRange(e.target.value);
-  };
-
   return (
     <Card
       title="Provider使用统计"
-      extra={
-        <Radio.Group value={timeRange} onChange={handleTimeRangeChange} size="small">
-          <Radio.Button value={7}>7天</Radio.Button>
-          <Radio.Button value={30}>30天</Radio.Button>
-          <Radio.Button value={90}>90天</Radio.Button>
-        </Radio.Group>
-      }
       styles={{
         body: { paddingBottom: 16 }
       }}
