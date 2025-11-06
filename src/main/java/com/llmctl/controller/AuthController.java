@@ -211,6 +211,26 @@ public class AuthController {
     }
 
     /**
+     * 重置密码（忘记密码功能，不需要登录）
+     *
+     * POST /auth/reset-password
+     * {
+     *   "email": "user@qq.com",
+     *   "verificationCode": "123456",
+     *   "newPassword": "newPass123"
+     * }
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        log.info("重置密码请求: email={}", request.getEmail());
+
+        authService.resetPassword(request);
+
+        return ResponseEntity.ok(ApiResponse.success(null, "密码重置成功，请使用新密码登录"));
+    }
+
+    /**
      * 上传头像
      *
      * POST /auth/upload-avatar

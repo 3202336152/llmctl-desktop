@@ -19,7 +19,7 @@ public class BusinessException extends RuntimeException {
 
     public BusinessException(String message) {
         super(message);
-        this.code = 500;
+        this.code = 400; // 业务异常默认使用 400 Bad Request
     }
 
     public int getCode() {

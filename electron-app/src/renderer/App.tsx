@@ -26,6 +26,7 @@ import NotificationCenter from './components/Notifications/NotificationCenter';
 import UserProfile from './components/User/UserProfile';
 import LoginPage from './components/Auth/LoginPage';
 import RegisterPage from './components/Auth/RegisterPage';
+import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import McpServerManager from './components/Mcp/McpServerManager';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import NotificationManager from './components/Common/NotificationManager';
@@ -384,7 +385,7 @@ const AppContent: React.FC = () => {
   const isTerminalPage = location.pathname === '/terminals';
 
   // 是否在登录页面
-  const isLoginPage = location.pathname === "/login" || location.pathname === "/register";;
+  const isLoginPage = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/forgot-password";
 
 
   const menuItems = [
@@ -502,6 +503,7 @@ const AppContent: React.FC = () => {
                 {/* 公开路由 - 登录页面 */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
                 {/* 受保护的路由 - 需要登录 */}
                 <Route path="/providers" element={<ProtectedRoute><ProviderManager /></ProtectedRoute>} />

@@ -1,7 +1,10 @@
 package com.llmctl.service.impl;
 
 import com.llmctl.entity.EmailVerificationCode;
+import com.llmctl.entity.User;
+import com.llmctl.exception.BusinessException;
 import com.llmctl.mapper.EmailVerificationCodeMapper;
+import com.llmctl.mapper.UserMapper;
 import com.llmctl.service.IEmailService;
 import com.llmctl.service.IVerificationCodeService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class VerificationCodeServiceImpl implements IVerificationCodeService {
 
     private final EmailVerificationCodeMapper codeMapper;
+    private final UserMapper userMapper;
     private final IEmailService emailService;
     private static final Random RANDOM = new Random();
     private static final int CODE_EXPIRE_MINUTES = 5;
@@ -33,6 +37,14 @@ public class VerificationCodeServiceImpl implements IVerificationCodeService {
     @Override
     @Transactional
     public void sendVerificationCode(String email, String purpose) {
+        // 如果是重置密码用途，需要先验证邮箱是否已绑定账户
+        if ("RESET_PASSWORD".equals(purpose)) {
+            User user = userMapper.findByEmail(email);
+            if (user == null) {
+                throw new BusinessException("该邮箱未绑定任何账户，请检查邮箱地址或联系管理员");
+            }
+        }
+
         // 生成6位数字验证码
         String code = String.format("%06d", RANDOM.nextInt(1000000));
 

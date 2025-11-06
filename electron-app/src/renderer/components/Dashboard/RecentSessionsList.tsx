@@ -17,7 +17,7 @@ const { Text } = Typography;
 
 /**
  * 最近会话列表组件
- * 显示最近3个会话，提供快速操作入口
+ * 显示所有会话（按创建时间降序），支持滚动查看
  */
 const RecentSessionsList: React.FC = () => {
   const { t } = useTranslation();
@@ -26,11 +26,10 @@ const RecentSessionsList: React.FC = () => {
   const { sessions } = useAppSelector((state: RootState) => state.session);
   const { providers } = useAppSelector((state: RootState) => state.provider);
 
-  // 获取最近3个会话（按创建时间降序）
+  // 获取所有会话（按创建时间降序）
   const recentSessions = useMemo(() => {
     return [...sessions]
-      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-      .slice(0, 3);
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   }, [sessions]);
 
   // 获取Provider名称
@@ -76,8 +75,12 @@ const RecentSessionsList: React.FC = () => {
           {t('dashboard.viewAll', '查看全部')}
         </Button>
       }
-      style={{ height: '100%' }}
-      bodyStyle={{ height: 'calc(100% - 57px)', overflowY: 'auto', maxHeight: '400px' }}
+      style={{ height: '400px' }}
+      bodyStyle={{
+        height: 'calc(100% - 57px)',
+        overflowY: 'auto',
+        padding: '0 24px'
+      }}
     >
       <List
         dataSource={recentSessions}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, message, Modal } from 'antd';
+import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined, EyeOutlined, EyeInvisibleOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../utils/authStorage';
@@ -10,7 +10,6 @@ const LoginPage: React.FC = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [forgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async (values: any) => {
@@ -39,12 +38,7 @@ const LoginPage: React.FC = () => {
     };
 
     const handleForgotPassword = () => {
-        setForgotPasswordModalVisible(true);
-    };
-
-    const handleForgotPasswordSubmit = () => {
-        message.info('密码重置功能即将推出，请联系管理员重置密码');
-        setForgotPasswordModalVisible(false);
+        navigate('/forgot-password');
     };
 
     return (
@@ -121,19 +115,6 @@ const LoginPage: React.FC = () => {
                     <a onClick={() => navigate('/register')} className="auth-footer-link">注册</a>
                 </div>
             </div>
-
-            {/* 忘记密码模态框 */}
-            <Modal
-                title="忘记密码"
-                open={forgotPasswordModalVisible}
-                onOk={handleForgotPasswordSubmit}
-                onCancel={() => setForgotPasswordModalVisible(false)}
-                okText="确定"
-                cancelText="取消"
-            >
-                <p>密码重置功能即将推出。</p>
-                <p>目前请联系管理员协助重置您的密码。</p>
-            </Modal>
         </div>
     );
 };

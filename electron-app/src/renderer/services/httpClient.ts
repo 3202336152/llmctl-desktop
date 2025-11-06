@@ -138,7 +138,8 @@ apiClient.interceptors.response.use(
 
       switch (status) {
         case 400:
-          errorMessage = '请求参数错误';
+          // 使用后端返回的具体错误信息,如果没有则使用默认提示
+          errorMessage = data?.message || data?.error || '请求参数错误';
           break;
         case 401:
           // 区分登录失败、刷新Token失败和Token过期三种情况

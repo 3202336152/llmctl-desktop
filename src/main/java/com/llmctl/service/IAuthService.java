@@ -60,6 +60,13 @@ public interface IAuthService {
     void changePassword(Long userId, ChangePasswordRequest request);
 
     /**
+     * 重置密码（忘记密码功能，不需要登录）
+     *
+     * @param request 重置密码请求（包含邮箱、验证码、新密码）
+     */
+    void resetPassword(ResetPasswordRequest request);
+
+    /**
      * 上传头像
      *
      * @param userId 用户ID

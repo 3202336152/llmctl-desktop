@@ -240,17 +240,17 @@ const Help: React.FC = () => {
         <div>
           <Title level={4}>Dashboard 数据可视化主页</Title>
           <Paragraph>
-            Dashboard 是 LLMctl 的全新主页,提供系统运行状态的实时概览和数据可视化展示。通过直观的图表和统计信息,帮助您快速了解系统状态、会话趋势和资源使用情况。
+            Dashboard 是 LLMctl 的全新主页，提供系统运行状态的实时概览和数据可视化展示。通过直观的图表和统计信息，帮助您快速了解系统状态、会话趋势和资源使用情况。
           </Paragraph>
 
           <Title level={5}>快速操作卡片</Title>
           <Paragraph>
-            Dashboard 顶部提供 4 个快速操作卡片,让您快速访问常用功能:
+            Dashboard 顶部提供 4 个快速操作卡片，让您快速访问常用功能：
           </Paragraph>
           <List
             size="small"
             dataSource={[
-              '创建会话 - 快速启动新的 AI 会话(需要先配置 Provider 和 Token)',
+              '创建会话 - 快速启动新的 AI 会话（需要先配置 Provider 和 Token）',
               '配置 Provider - 管理 AI 服务提供商配置',
               'MCP 服务器 - 管理 Model Context Protocol 服务器',
               '查看通知 - 查看系统通知和消息中心',
@@ -259,7 +259,7 @@ const Help: React.FC = () => {
           />
           <Alert
             message="智能禁用状态"
-            description="如果您还没有配置 Provider 和 Token,「创建会话」按钮会自动禁用。请先完成基础配置后再创建会话。"
+            description="如果您还没有配置 Provider 和 Token，「创建会话」按钮会自动禁用。请先完成基础配置后再创建会话。"
             type="info"
             showIcon
             style={{ marginTop: 8, marginBottom: 16 }}
@@ -267,71 +267,73 @@ const Help: React.FC = () => {
 
           <Title level={5}>系统状态概览</Title>
           <Paragraph>
-            实时显示系统关键指标,帮助您快速掌握系统运行状况:
+            实时显示系统关键指标，帮助您快速掌握系统运行状况：
           </Paragraph>
           <List
             size="small"
             dataSource={[
               '活跃会话 - 当前正在运行的会话数量',
-              'Token 健康度 - 所有 Token 的健康状态百分比(带进度条可视化)',
-              'Provider 统计 - 显示启用数/总数,快速了解配置情况',
-              'MCP 服务器统计 - 显示启用数/总数,掌握扩展状态',
+              'Token 健康度 - 所有 Token 的健康状态百分比（带进度条可视化）',
+              'Provider 统计 - 显示启用数/总数，快速了解配置情况',
+              'MCP 服务器统计 - 显示启用数/总数，掌握扩展状态',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>数据可视化图表</Title>
-          <Paragraph strong>会话时长趋势图</Paragraph>
+
+          <Title level={5} style={{ fontSize: 14, marginTop: 16 }}>会话时长趋势图</Title>
           <List
             size="small"
             dataSource={[
               '折线图展示最近会话的平均时长和数量趋势',
               '支持 7/30/90 天时间范围切换',
-              '鼠标悬停查看详细数据(日期、平均时长、会话数)',
-              '自适应图表高度,响应式设计',
+              '鼠标悬停查看详细数据（日期、平均时长、会话数）',
+              '自适应图表高度，响应式设计',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
-          <Paragraph strong style={{ marginTop: 16 }}>Provider 使用统计图</Paragraph>
+          <Title level={5} style={{ fontSize: 14, marginTop: 16 }}>Provider 使用统计图</Title>
           <List
             size="small"
             dataSource={[
               '柱状图展示每个 Provider 的会话数量统计',
               '支持 7/30/90 天时间范围切换',
-              '柱体顶部显示具体数值(总会话数、活跃会话数)',
-              'Tooltip 显示详细信息(Provider 名称、总会话数、活跃会话数、成功率)',
-              '浅蓝色配色方案 (#4DA3FF),视觉协调',
+              '柱体顶部显示具体数值（总会话数、活跃会话数）',
+              'Tooltip 显示详细信息（Provider 名称、总会话数、活跃会话数、成功率）',
+              '浅蓝色配色方案 (#4DA3FF)，视觉协调',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>最近会话列表</Title>
           <Paragraph>
-            显示最近 3 个会话,帮助您快速回顾和恢复工作:
+            显示所有会话（按创建时间降序），支持滚动查看，帮助您快速回顾和恢复工作：
           </Paragraph>
           <List
             size="small"
             dataSource={[
-              '显示会话状态(活跃/未激活)和工作目录',
-              '支持快速打开终端,一键进入工作状态',
-              '操作按钮:「打开终端」 / 「查看全部」',
+              '显示会话状态（活跃/未激活）、Provider 名称和工作目录',
+              '支持快速打开终端，一键进入工作状态',
+              '固定高度 400px，会话数量超出时自动显示滚动条',
+              '操作按钮：「打开终端」 / 「查看全部」',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Title level={5}>最近活动日志</Title>
           <Paragraph>
-            基于 Redux 状态生成活动记录,实时显示系统操作历史:
+            基于 Redux 状态生成活动记录，实时显示系统操作历史：
           </Paragraph>
           <List
             size="small"
             dataSource={[
               '显示会话启动/终止、Provider 启用/禁用、Token 健康状态变化',
-              '相对时间显示(刚刚、N分钟前、N小时前、N天前)',
-              '彩色图标和标签,清晰的活动分类',
-              'Timeline 时间线展示,操作历史清晰可追溯',
-              '无需额外 API 请求,基于本地状态生成',
+              '相对时间显示（刚刚、N分钟前、N小时前、N天前）',
+              '彩色图标和标签，清晰的活动分类',
+              'Timeline 时间线展示，操作历史清晰可追溯',
+              '无需额外 API 请求，基于本地状态生成',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
@@ -340,18 +342,18 @@ const Help: React.FC = () => {
           <List
             size="small"
             dataSource={[
-              '定期查看 Token 健康度,及时处理失效的 Token',
-              '使用图表的时间范围切换功能,分析不同时间段的使用趋势',
-              '通过最近活动日志追溯系统操作历史,排查问题',
+              '定期查看 Token 健康度，及时处理失效的 Token',
+              '使用图表的时间范围切换功能，分析不同时间段的使用趋势',
+              '通过最近活动日志追溯系统操作历史，排查问题',
               '点击「刷新数据」按钮可以强制重新加载所有数据',
-              '最近会话列表可以快速访问常用项目,提升工作效率',
+              '最近会话列表可以快速访问常用项目，提升工作效率',
             ]}
             renderItem={(item: string) => <List.Item>{item}</List.Item>}
           />
 
           <Alert
             message="数据实时更新"
-            description="Dashboard 数据基于 Redux 全局状态实时生成,会话、Token、Provider 的任何变化都会自动反映在 Dashboard 中,无需手动刷新。"
+            description="Dashboard 数据基于 Redux 全局状态实时生成，会话、Token、Provider 的任何变化都会自动反映在 Dashboard 中，无需手动刷新。"
             type="success"
             showIcon
             style={{ marginTop: 16 }}

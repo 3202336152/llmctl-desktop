@@ -389,6 +389,37 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        log.info("重置密码: email={}", request.getEmail());
+
+        // 1. 通过邮箱查找用户
+        User user = userMapper.findByEmail(request.getEmail());
+        if (user == null) {
+            throw new BusinessException("该邮箱未绑定任何账户");
+        }
+
+        // 2. 验证邮箱验证码
+        boolean codeValid = verificationCodeService.verifyCode(
+                request.getEmail(),
+                request.getVerificationCode(),
+                "RESET_PASSWORD"
+        );
+        if (!codeValid) {
+            throw new BusinessException("验证码无效或已过期");
+        }
+
+        // 3. 更新密码
+        String newPasswordHash = passwordEncoder.encode(request.getNewPassword());
+        userMapper.updatePassword(user.getId(), newPasswordHash);
+
+        // 4. 清除所有Refresh Token（强制重新登录）
+        userMapper.clearRefreshToken(user.getId());
+
+        log.info("密码重置成功: userId={}, email={}", user.getId(), request.getEmail());
+    }
+
+    @Override
+    @Transactional
     public String uploadAvatar(Long userId, MultipartFile file) throws IOException {
         log.info("上传头像: userId={}, filename={}, size={}", userId, file.getOriginalFilename(), file.getSize());
 
