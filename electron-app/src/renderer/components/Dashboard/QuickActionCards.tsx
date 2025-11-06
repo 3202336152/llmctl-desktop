@@ -60,7 +60,6 @@ const QuickActionCards: React.FC = () => {
       color: '#52c41a',
       description: t('dashboard.configureProviderDesc', '管理您的LLM服务提供商'),
       onClick: () => navigate('/providers'),
-      badge: providers.length,
       tooltip: `已配置 ${providers.length} 个Provider`,
     },
     {
@@ -99,7 +98,7 @@ const QuickActionCards: React.FC = () => {
               >
                 <div style={{ textAlign: 'center', padding: '20px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                   <div style={{ marginBottom: 16 }}>
-                    {action.icon}l
+                    {action.icon}
                   </div>
                   <Typography.Title level={4} style={{ marginBottom: 8, fontSize: 18 }}>
                     {action.title}
