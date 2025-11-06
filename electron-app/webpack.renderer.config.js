@@ -58,7 +58,8 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'global': 'globalThis',
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      // ✅ 移除 NODE_ENV 定义，webpack 会根据 --mode 参数自动设置
+      // 这样可以避免 "Conflicting values for 'process.env.NODE_ENV'" 警告
       'process.env.REACT_APP_API_BASE_URL': JSON.stringify(process.env.REACT_APP_API_BASE_URL)
     })
   ],

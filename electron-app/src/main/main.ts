@@ -161,6 +161,16 @@ function createMainWindow(): BrowserWindow {
     // mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+    // ✅ 生产环境：允许通过Ctrl+Shift+I 打开开发者工具（用于调试）
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown') {
+        //Ctrl+Shift+I 打开开发者工具
+        if (input.control && input.shift && input.key === 'I') {
+          mainWindow?.webContents.toggleDevTools();
+        }
+      }
+    });
   }
 
   mainWindow.once('ready-to-show', () => {

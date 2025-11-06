@@ -38,13 +38,30 @@ jobs:
         working-directory: electron-app
         run: npm install
 
+      - name: Verify environment variables
+        working-directory: electron-app
+        run: |
+          echo "========== Environment Variables =========="
+          echo "NODE_ENV: $NODE_ENV"
+          echo "REACT_APP_API_BASE_URL: $REACT_APP_API_BASE_URL"
+          echo "LLMCTL_API_BASE_URL: $LLMCTL_API_BASE_URL"
+          echo "=========================================="
+        env:
+          NODE_ENV: production
+          REACT_APP_API_BASE_URL: http://117.72.200.2:8080/llmctl
+          LLMCTL_API_BASE_URL: http://117.72.200.2:8080/llmctl
+
       - name: Build and package Windows
         working-directory: electron-app
         run: |
           npm run build
+          echo "========== Verify API Address in Build =========="
+          grep -o "117\.72\.200\.2" dist/renderer/renderer.js | wc -l || echo "API address NOT found!"
+          echo "=================================================="
           npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
           # 仅在 tag 推送时发布，生成 latest.yml
           PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
           # 直接通过环境变量传递 API 地址

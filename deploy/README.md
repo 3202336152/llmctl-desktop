@@ -25,17 +25,17 @@ git push origin main
 #### 2. 正式发布
 ```bash
 # 创建版本标签并推送
-git tag -a v2.1.3 -m "Release version 2.1.3"
-git push origin v2.1.3
+git tag -a v2.3.0 -m "Release version 2.3.0"
+git push origin v2.3.0
 ```
 #### 3. 重新推送版本标签：
 ```bash
 # 删除现有标签
-git tag -d v2.1.3
-git push origin :refs/tags/v2.1.3
+git tag -d v2.3.0
+git push origin :refs/tags/v2.3.0
 # 重新创建并推送标签
-git tag -a v2.1.3 -m "Release version 2.1.3"
-git push origin v2.1.3
+git tag -a v2.3.0 -m "Release version 2.3.0"
+git push origin v2.3.0
 ```
 
 ### 🔧 构建系统特性
@@ -43,7 +43,7 @@ git push origin v2.1.3
 - **多平台并行构建**：Windows、macOS、Linux 同时构建
 - **自动创建 Release**：版本标签触发时自动创建 GitHub Release
 - **自动上传文件**：构建完成后自动上传安装包
-- **智能版本管理**：使用语义化版本号（如 v2.1.3）
+- **智能版本管理**：使用语义化版本号（如 v2.3.0）
 
 ### 📋 监控构建状态
 
@@ -311,7 +311,7 @@ docker-compose logs -f app
 
 ---
 
-**版本**: v2.1.3
+**版本**: v2.3.0
 **前端构建**: GitHub Actions 自动构建发布
 **后端部署**: Docker + 外部 MySQL
 **更新日期**: 2025-10-15
