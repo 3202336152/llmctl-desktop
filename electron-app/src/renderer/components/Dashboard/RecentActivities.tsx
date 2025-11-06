@@ -247,8 +247,8 @@ const RecentActivities: React.FC = () => {
           刷新
         </Button>
       }
-      style={{ height: '100%' }}
-      bodyStyle={{ height: 'calc(100% - 57px)', overflowY: 'auto', maxHeight: '400px' }}
+      style={{ height: '400px' }}
+      bodyStyle={{ height: 'calc(100% - 57px)', overflowY: 'auto' }}
     >
       <Timeline
         mode="left"
