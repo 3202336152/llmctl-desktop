@@ -428,10 +428,11 @@ class TerminalManager {
           .replace(/\x1b\[\?2004[hl]/g, '')
           .replace(/\x1b\[20[01]~/g, '');
 
+        // ✅ 注释掉自动错误检测，避免误判（保留手动切换Token功能）
         // 检测 Token 错误（不阻塞输出）
-        this.detectTokenError(sessionId, filteredData, currentInstanceId).catch(err => {
-          console.error('[TerminalManager] ❌ 错误检测失败:', err);
-        });
+        // this.detectTokenError(sessionId, filteredData, currentInstanceId).catch(err => {
+        //   console.error('[TerminalManager] ❌ 错误检测失败:', err);
+        // });
 
         this.sendOutput(sessionId, filteredData, currentInstanceId);
       });
