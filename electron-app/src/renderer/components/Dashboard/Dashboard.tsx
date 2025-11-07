@@ -1,6 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Row, Col, Typography, Button, Space } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import React, { useMemo, useEffect } from 'react';
+import { Row, Col } from 'antd';
 import { useAppSelector, useAppDispatch } from '../../store';
 import type { RootState } from '../../store';
 import QuickActionCards from './QuickActionCards';
@@ -16,8 +15,6 @@ import { setSessions } from '../../store/slices/sessionSlice';
 import { tokenAPI, sessionAPI } from '../../services/api';
 import './Dashboard.css';
 
-const { Title } = Typography;
-
 /**
  * Dashboard 首页组件
  * 提供系统概览、快速操作、数据可视化和最近会话
@@ -28,7 +25,6 @@ const Dashboard: React.FC = () => {
   const { sessions } = useAppSelector((state: RootState) => state.session);
   const { providers } = useAppSelector((state: RootState) => state.provider);
   const { tokens } = useAppSelector((state: RootState) => state.token);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // 加载Providers、Tokens和Sessions数据
   useEffect(() => {
@@ -90,22 +86,8 @@ const Dashboard: React.FC = () => {
     };
   }, [sessions, providers, tokens]);
 
-  // 刷新统计数据（通过重新挂载组件）
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
-
   return (
     <div className="dashboard-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          {t('dashboard.title', '控制台')}
-        </Title>
-        <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-          {t('dashboard.refresh', '刷新数据')}
-        </Button>
-      </div>
-
       <Row gutter={[16, 16]}>
         {/* 第一行：快速操作卡片 */}
         <Col span={24}>
@@ -124,10 +106,10 @@ const Dashboard: React.FC = () => {
 
         {/* 第三行：图表区域 */}
         <Col xs={24} lg={12}>
-          <SessionTrendChart key={`trend-${refreshKey}`} />
+          <SessionTrendChart />
         </Col>
         <Col xs={24} lg={12}>
-          <TokenUsageChart key={`usage-${refreshKey}`} />
+          <TokenUsageChart />
         </Col>
 
         {/* 第四行：最近会话和活动日志 */}
@@ -135,7 +117,7 @@ const Dashboard: React.FC = () => {
           <RecentSessionsList />
         </Col>
         <Col xs={24} lg={12}>
-          <RecentActivities key={`activities-${refreshKey}`} />
+          <RecentActivities />
         </Col>
       </Row>
     </div>

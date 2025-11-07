@@ -86,7 +86,7 @@ const QuickActionCards: React.FC = () => {
   return (
     <Row gutter={16}>
       {quickActions.map(action => (
-        <Col xs={24} sm={12} md={6} key={action.key} style={{ paddingLeft: '50px'}}>
+        <Col xs={24} sm={12} md={6} key={action.key}>
           <Tooltip title={action.tooltip}>
             <Badge count={action.badge} offset={[-10, 10]}>
               <Card
