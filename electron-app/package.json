@@ -118,13 +118,23 @@
     },
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
       ],
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon-1024.png"
     },
     "dmg": {
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "zip": {
+      "artifactName": "${productName}-${version}-${arch}-mac.${ext}"
     },
     "linux": {
       "target": [
