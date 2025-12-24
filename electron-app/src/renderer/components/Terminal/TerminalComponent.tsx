@@ -204,10 +204,10 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
         terminal.writeln('');
 
     // 创建Electron终端会话
+    // 注意：不传递 command 参数，让 terminalManager 根据操作系统自动选择 shell
     window.electronAPI
       .terminalCreate({
         sessionId,
-        command: 'cmd.exe',
         cwd,
         env: envVars,
       })
@@ -222,7 +222,7 @@ const TerminalComponent: React.FC<TerminalComponentProps> = React.memo(({
           console.log(`[TerminalComponent] ✅ 终端初始化完成，总耗时: ${(performance.now() - perfStart).toFixed(2)}ms`);
 
           // 如果会话配置了命令，自动执行该命令
-          if (command && command !== 'cmd.exe') {
+          if (command) {
             setTimeout(() => {
               window.electronAPI.terminalInput(sessionId, `${command}\r`).catch((error) => {
                 console.error('自动执行命令失败:', error);

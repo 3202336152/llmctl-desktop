@@ -476,10 +476,17 @@ public class SessionServiceImpl implements ISessionService {
         log.debug("为Provider {} 构建环境变量，Token ID: {}, 支持的类型: {}",
                   provider.getId(), selectedToken.getId(), provider.getTypes());
 
-        // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
-        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+        // 根据操作系统设置 UTF-8 编码环境变量
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("windows")) {
+            // Windows: 使用 CHCP
             envVars.put("CHCP", "65001"); // UTF-8 code page
             log.debug("检测到 Windows 系统，已添加 UTF-8 编码设置 (CHCP=65001)");
+        } else {
+            // macOS/Linux: 使用 LANG 和 LC_ALL
+            envVars.put("LANG", "en_US.UTF-8");
+            envVars.put("LC_ALL", "en_US.UTF-8");
+            log.debug("检测到 Unix 系统，已添加 UTF-8 编码设置 (LANG=en_US.UTF-8)");
         }
 
         // 为所有支持的CLI类型设置环境变量

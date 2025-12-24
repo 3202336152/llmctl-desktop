@@ -213,10 +213,20 @@ class TerminalManager {
 
     console.log('[TerminalManager] 🚀 创建新的 pty 会话:', sessionId);
 
-    const { command = 'cmd.exe', cwd = process.cwd(), env = {} } = options;
+    const { cwd = process.cwd(), env = {} } = options;
 
     const isWindows = os.platform() === 'win32';
-    const shell = isWindows ? 'cmd.exe' : (command || 'bash');
+    const isMac = os.platform() === 'darwin';
+
+    // 根据操作系统选择默认 shell
+    let shell: string;
+    if (isWindows) {
+      shell = 'cmd.exe';
+    } else if (isMac) {
+      shell = '/bin/zsh'; // macOS Catalina+ 默认 shell
+    } else {
+      shell = '/bin/bash'; // Linux 默认 shell
+    }
 
     // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
     const fullEnv = {
@@ -224,14 +234,22 @@ class TerminalManager {
       ...env,
     };
 
-    // Windows 系统：添加完整的 UTF-8 编码支持
+    // 根据操作系统设置 UTF-8 编码环境变量
     if (isWindows) {
+      // Windows: 使用 CHCP 和 Python 相关变量
       fullEnv.PYTHONIOENCODING = 'utf-8';
       fullEnv.PYTHONUTF8 = '1';
-      fullEnv.LANG = 'zh_CN.UTF-8';
-      fullEnv.LC_ALL = 'zh_CN.UTF-8';
+      // 注意：不设置 LANG 和 LC_ALL，这些是 Unix 风格的环境变量
+      // 在 Windows 上可能导致某些跨平台工具（如 Claude Code）错误地将 nul 设备解释为文件名
       fullEnv.CHCP = '65001'; // UTF-8 code page
-      console.log('[TerminalManager] 检测到 Windows 系统，已添加完整的 UTF-8 编码环境变量');
+      console.log('[TerminalManager] 检测到 Windows 系统，已添加 UTF-8 编码环境变量');
+    } else {
+      // macOS/Linux: 使用 LANG 和 LC_ALL
+      fullEnv.LANG = 'en_US.UTF-8';
+      fullEnv.LC_ALL = 'en_US.UTF-8';
+      fullEnv.PYTHONIOENCODING = 'utf-8';
+      fullEnv.PYTHONUTF8 = '1';
+      console.log('[TerminalManager] 检测到 Unix 系统，已添加 UTF-8 编码环境变量');
     }
 
     // ✅ Codex 配置文件处理（会话独立方案）- 使用队列和超时保护
