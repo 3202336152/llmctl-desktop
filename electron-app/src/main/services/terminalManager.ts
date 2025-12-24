@@ -228,10 +228,24 @@ class TerminalManager {
       shell = '/bin/bash'; // Linux 默认 shell
     }
 
+    // ✅ macOS/Linux: 获取用户 shell 的完整 PATH（解决 GUI 应用不继承 shell 配置的问题）
+    let shellPath = process.env.PATH || '';
+    if (!isWindows) {
+      try {
+        const { execSync } = require('child_process');
+        // 启动一个登录 shell 来获取完整的 PATH（包含 .zshrc/.bash_profile 中的配置）
+        shellPath = execSync(`${shell} -l -c 'echo $PATH'`, { encoding: 'utf8' }).trim();
+        console.log('[TerminalManager] 获取到用户 shell PATH:', shellPath);
+      } catch (error) {
+        console.error('[TerminalManager] 获取 shell PATH 失败，使用默认值:', error);
+      }
+    }
+
     // ✅ Windows 编码设置：强制使用 UTF-8 避免终端乱码
-    const fullEnv = {
+    const fullEnv: Record<string, string | undefined> = {
       ...process.env,
       ...env,
+      PATH: shellPath, // 使用完整的 shell PATH
     };
 
     // 根据操作系统设置 UTF-8 编码环境变量

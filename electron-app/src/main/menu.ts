@@ -8,6 +8,13 @@ const menuTranslations = {
     exportConfig: '导出配置',
     restart: '重启应用',
     exit: '退出',
+    edit: '编辑',
+    undo: '撤销',
+    redo: '重做',
+    cut: '剪切',
+    copy: '复制',
+    paste: '粘贴',
+    selectAll: '全选',
     session: '会话',
     startNewSession: '启动新会话',
     viewAllSessions: '查看所有会话',
@@ -58,6 +65,13 @@ const menuTranslations = {
     exportConfig: 'Export Config',
     restart: 'Restart Application',
     exit: 'Exit',
+    edit: 'Edit',
+    undo: 'Undo',
+    redo: 'Redo',
+    cut: 'Cut',
+    copy: 'Copy',
+    paste: 'Paste',
+    selectAll: 'Select All',
     session: 'Session',
     startNewSession: 'Start New Session',
     viewAllSessions: 'View All Sessions',
@@ -186,6 +200,19 @@ export function createMenu(): Menu {
             }
           }
         }
+      ]
+    },
+    {
+      label: t('edit'),
+      submenu: [
+        { role: 'undo', label: t('undo') },
+        { role: 'redo', label: t('redo') },
+        { type: 'separator' },
+        { role: 'cut', label: t('cut') },
+        { role: 'copy', label: t('copy') },
+        { role: 'paste', label: t('paste') },
+        { type: 'separator' },
+        { role: 'selectAll', label: t('selectAll') }
       ]
     },
     {

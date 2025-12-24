@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Empty, Skeleton, Alert } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Empty, Skeleton, Alert, Radio, Button, Space } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, LabelList } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import httpClient from '../../services/httpClient';
@@ -9,32 +10,36 @@ interface ProviderUsageData {
   providerName: string;
   totalSessions: number;
   activeSessions: number;
-  successRate: number;
+  activeRate: number;
 }
+
+type TimeRange = 7 | 30 | 90 | null;
 
 // 优化后的颜色方案（降低饱和度，视觉更协调）
 const COLORS = ['#4DA3FF', '#52c41a', '#fa8c16', '#13c2c2', '#722ed1', '#eb2f96', '#faad14'];
 
 /**
  * Provider使用统计图组件
- * 显示每个Provider的会话数量统计
+ * 显示每个Provider的会话数量统计，支持时间范围筛选
  */
 const TokenUsageChart: React.FC = () => {
   const { t } = useTranslation();
   const [data, setData] = useState<ProviderUsageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await httpClient.get('/statistics/provider-usage');
+      const params: { days?: number } = {};
+      if (timeRange !== null) {
+        params.days = timeRange;
+      }
+
+      const response = await httpClient.get('/statistics/provider-usage', { params });
 
       if (response.data && response.data.code === 200) {
         setData(response.data.data || []);
@@ -47,11 +52,36 @@ const TokenUsageChart: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [timeRange, t]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleTimeRangeChange = (e: any) => {
+    setTimeRange(e.target.value);
   };
 
   return (
     <Card
       title="Provider使用统计"
+      extra={
+        <Space>
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+            size="small"
+          />
+          <Radio.Group value={timeRange} onChange={handleTimeRangeChange} size="small">
+            <Radio.Button value={7}>7天</Radio.Button>
+            <Radio.Button value={30}>30天</Radio.Button>
+            <Radio.Button value={90}>90天</Radio.Button>
+            <Radio.Button value={null}>全部</Radio.Button>
+          </Radio.Group>
+        </Space>
+      }
       styles={{
         body: { paddingBottom: 16 }
       }}
@@ -85,6 +115,7 @@ const TokenUsageChart: React.FC = () => {
                 style: { fontSize: 14, fontWeight: 500 }
               }}
               tickMargin={8}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
@@ -99,7 +130,7 @@ const TokenUsageChart: React.FC = () => {
                   return [
                     <div key="total">
                       <div style={{ fontWeight: 600, marginBottom: 4, color: '#4DA3FF' }}>{t('dashboard.totalSessions', '总会话数')}: {value}</div>
-                      <div style={{ fontSize: 12, color: '#8c8c8c' }}>成功率: {payload.successRate}%</div>
+                      <div style={{ fontSize: 12, color: '#8c8c8c' }}>活跃率: {payload.activeRate ?? 0}%</div>
                     </div>
                   ];
                 }

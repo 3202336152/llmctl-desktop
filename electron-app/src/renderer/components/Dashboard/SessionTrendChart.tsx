@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Empty, Skeleton, Alert, Radio } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Empty, Skeleton, Alert, Radio, Button, Space } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import httpClient from '../../services/httpClient';
@@ -15,6 +16,7 @@ type TimeRange = 7 | 30 | 90;
 /**
  * 会话时长趋势图组件
  * 显示最近N天的会话平均时长和数量趋势，支持7天/30天/90天切换
+ * 使用双Y轴同时展示平均时长和会话数量
  */
 const SessionTrendChart: React.FC = () => {
   const { t } = useTranslation();
@@ -23,11 +25,7 @@ const SessionTrendChart: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
 
-  useEffect(() => {
-    fetchData();
-  }, [timeRange]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -47,7 +45,11 @@ const SessionTrendChart: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, t]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const formatDate = (dateStr: string) => {
     // 将 YYYY-MM-DD 格式转换为 MM-DD
@@ -59,22 +61,34 @@ const SessionTrendChart: React.FC = () => {
     setTimeRange(e.target.value);
   };
 
+  // 检查是否有实际数据（非全零）
+  const hasActualData = data.some(item => item.avgDuration > 0 || item.sessionCount > 0);
+
   return (
     <Card
       title="会话时长趋势"
       extra={
-        <Radio.Group value={timeRange} onChange={handleTimeRangeChange} size="small">
-          <Radio.Button value={7}>7天</Radio.Button>
-          <Radio.Button value={30}>30天</Radio.Button>
-          <Radio.Button value={90}>90天</Radio.Button>
-        </Radio.Group>
+        <Space>
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+            size="small"
+          />
+          <Radio.Group value={timeRange} onChange={handleTimeRangeChange} size="small">
+            <Radio.Button value={7}>7天</Radio.Button>
+            <Radio.Button value={30}>30天</Radio.Button>
+            <Radio.Button value={90}>90天</Radio.Button>
+          </Radio.Group>
+        </Space>
       }
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : error ? (
         <Alert message={error} type="error" showIcon />
-      ) : data.length === 0 ? (
+      ) : !hasActualData ? (
         <Empty
           description={t('dashboard.noSessionData', '暂无会话数据，请先创建会话')}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -89,10 +103,21 @@ const SessionTrendChart: React.FC = () => {
               stroke="#8c8c8c"
               style={{ fontSize: 12 }}
             />
+            {/* 左侧Y轴：平均时长 */}
             <YAxis
-              stroke="#8c8c8c"
+              yAxisId="left"
+              stroke="#1890ff"
               style={{ fontSize: 12 }}
-              label={{ value: t('dashboard.durationMinutes', '时长（分钟）'), angle: -90, position: 'insideLeft' }}
+              label={{ value: t('dashboard.durationMinutes', '时长（分钟）'), angle: -90, position: 'insideLeft', fill: '#1890ff' }}
+            />
+            {/* 右侧Y轴：会话数量 */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="#52c41a"
+              style={{ fontSize: 12 }}
+              label={{ value: t('dashboard.sessionCount', '会话数'), angle: 90, position: 'insideRight', fill: '#52c41a' }}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{ backgroundColor: '#fff', border: '1px solid #d9d9d9', borderRadius: 4 }}
@@ -121,6 +146,7 @@ const SessionTrendChart: React.FC = () => {
               strokeWidth={2}
               dot={{ fill: '#1890ff', r: 4 }}
               activeDot={{ r: 6 }}
+              yAxisId="left"
             />
             <Line
               type="monotone"
@@ -130,7 +156,6 @@ const SessionTrendChart: React.FC = () => {
               dot={{ fill: '#52c41a', r: 4 }}
               activeDot={{ r: 6 }}
               yAxisId="right"
-              hide
             />
           </LineChart>
         </ResponsiveContainer>

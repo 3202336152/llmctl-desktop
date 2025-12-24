@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Provider使用统计DTO
- * 用于统计每个Provider的会话数量和成功率
+ * 用于统计每个Provider的会话数量和活跃率
  */
 @Data
 @NoArgsConstructor
@@ -33,7 +33,7 @@ public class ProviderUsageStatDTO {
     private Integer activeSessions;
 
     /**
-     * 成功率（活跃会话占比，百分比）
+     * 活跃率（活跃会话占比，百分比）
      */
-    private Double successRate;
+    private Double activeRate;
 }

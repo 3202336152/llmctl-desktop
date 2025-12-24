@@ -165,7 +165,8 @@ public class SessionServiceImpl implements ISessionService {
                 provider,
                 selectedToken,
                 request.getWorkingDirectory(),
-                session.getId()
+                session.getId(),
+                request.getType()
             );
             sessionDTO.setEnvironmentVariables(envVars);
             log.debug("已在 startSession 响应中包含环境变量，避免重复查询");
@@ -454,27 +455,28 @@ public class SessionServiceImpl implements ISessionService {
             throw new BusinessException("Token不存在: " + session.getTokenId());
         }
 
-        return buildEnvironmentVariables(provider, selectedToken, session.getWorkingDirectory(), sessionId);
+        return buildEnvironmentVariables(provider, selectedToken, session.getWorkingDirectory(), sessionId, session.getType());
     }
 
     /**
      * 构建环境变量（用于启动进程）
-     * 说明：由于一个Provider可以支持多个CLI类型，需要为所有支持的类型设置对应的环境变量
+     * 只为当前会话选择的CLI类型设置环境变量
      *
      * @param provider Provider对象
      * @param selectedToken 选中的Token
      * @param workingDirectory 工作目录路径
      * @param sessionId 会话ID（用于创建独立的配置目录）
+     * @param sessionType 当前会话选择的CLI类型
      * @return 环境变量Map
      */
-    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken, String workingDirectory, String sessionId) {
+    private Map<String, String> buildEnvironmentVariables(Provider provider, Token selectedToken, String workingDirectory, String sessionId, String sessionType) {
         Map<String, String> envVars = new HashMap<>();
 
         // 解密Token值
         String tokenValue = encryptionService.decrypt(selectedToken.getValue());
 
-        log.debug("为Provider {} 构建环境变量，Token ID: {}, 支持的类型: {}",
-                  provider.getId(), selectedToken.getId(), provider.getTypes());
+        log.debug("为Provider {} 构建环境变量，Token ID: {}, 会话类型: {}",
+                  provider.getId(), selectedToken.getId(), sessionType);
 
         // 根据操作系统设置 UTF-8 编码环境变量
         String osName = System.getProperty("os.name").toLowerCase();
@@ -489,85 +491,82 @@ public class SessionServiceImpl implements ISessionService {
             log.debug("检测到 Unix 系统，已添加 UTF-8 编码设置 (LANG=en_US.UTF-8)");
         }
 
-        // 为所有支持的CLI类型设置环境变量
-        for (String type : provider.getTypes()) {
-            // 查找对应的配置
-            ProviderConfig config = findConfigByType(provider, type);
-            if (config == null) {
-                log.warn("Provider {} 的类型 {} 没有配置数据，跳过环境变量设置", provider.getId(), type);
-                continue;
-            }
+        // 只为当前会话选择的CLI类型设置环境变量
+        ProviderConfig config = findConfigByType(provider, sessionType);
+        if (config == null) {
+            log.warn("Provider {} 的类型 {} 没有配置数据，跳过环境变量设置", provider.getId(), sessionType);
+            return envVars;
+        }
 
-            Map<String, Object> configData = parseConfigData(config.getConfigData());
+        Map<String, Object> configData = parseConfigData(config.getConfigData());
 
-            switch (type.toLowerCase()) {
-                case "claude code":
-                    envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
-                    if (configData.get("baseUrl") != null) {
-                        envVars.put("ANTHROPIC_BASE_URL", configData.get("baseUrl").toString());
-                    }
-                    if (configData.get("modelName") != null) {
-                        envVars.put("ANTHROPIC_MODEL", configData.get("modelName").toString());
-                    }
-                    if (configData.get("maxTokens") != null) {
-                        envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", configData.get("maxTokens").toString());
-                    }
-                    break;
+        switch (sessionType.toLowerCase()) {
+            case "claude code":
+                envVars.put("ANTHROPIC_AUTH_TOKEN", tokenValue);
+                if (configData.get("baseUrl") != null) {
+                    envVars.put("ANTHROPIC_BASE_URL", configData.get("baseUrl").toString());
+                }
+                if (configData.get("modelName") != null) {
+                    envVars.put("ANTHROPIC_MODEL", configData.get("modelName").toString());
+                }
+                if (configData.get("maxTokens") != null) {
+                    envVars.put("CLAUDE_CODE_MAX_OUTPUT_TOKENS", configData.get("maxTokens").toString());
+                }
+                break;
 
-                case "codex":
-                    // ✅ 使用会话独立的配置目录，避免多个会话相互覆盖
-                    // 目录结构: 工作目录/.codex-sessions/{sessionId}/
-                    String codexHome = workingDirectory + "/.codex-sessions/" + sessionId;
-                    envVars.put("CODEX_HOME", codexHome);
-                    log.debug("设置 CODEX_HOME 环境变量: {} (会话: {})", codexHome, sessionId);
+            case "codex":
+                // 使用会话独立的配置目录，避免多个会话相互覆盖
+                // 目录结构: 工作目录/.codex-sessions/{sessionId}/
+                String codexHome = workingDirectory + "/.codex-sessions/" + sessionId;
+                envVars.put("CODEX_HOME", codexHome);
+                log.debug("设置 CODEX_HOME 环境变量: {} (会话: {})", codexHome, sessionId);
 
-                    // 前端 Electron 会直接从数据库读取配置并创建文件
-                    // 只传递必要的配置数据供前端使用
-                    if (configData.get("configToml") != null) {
-                        envVars.put("CODEX_CONFIG_TOML", configData.get("configToml").toString());
-                    }
-                    if (configData.get("authJson") != null) {
-                        envVars.put("CODEX_AUTH_JSON", configData.get("authJson").toString());
-                    }
-                    // Token 传递给前端用于替换 auth.json 中的占位符
-                    envVars.put("CODEX_API_KEY", tokenValue);
-                    break;
+                // 前端 Electron 会直接从数据库读取配置并创建文件
+                // 只传递必要的配置数据供前端使用
+                if (configData.get("configToml") != null) {
+                    envVars.put("CODEX_CONFIG_TOML", configData.get("configToml").toString());
+                }
+                if (configData.get("authJson") != null) {
+                    envVars.put("CODEX_AUTH_JSON", configData.get("authJson").toString());
+                }
+                // Token 传递给前端用于替换 auth.json 中的占位符
+                envVars.put("CODEX_API_KEY", tokenValue);
+                break;
 
-                case "gemini":
-                    envVars.put("GOOGLE_API_KEY", tokenValue);
-                    if (configData.get("baseUrl") != null) {
-                        envVars.put("GOOGLE_BASE_URL", configData.get("baseUrl").toString());
-                    }
-                    if (configData.get("modelName") != null) {
-                        envVars.put("GEMINI_MODEL", configData.get("modelName").toString());
-                    }
-                    if (configData.get("maxTokens") != null) {
-                        envVars.put("GEMINI_MAX_TOKENS", configData.get("maxTokens").toString());
-                    }
-                    if (configData.get("temperature") != null) {
-                        envVars.put("GEMINI_TEMPERATURE", configData.get("temperature").toString());
-                    }
-                    break;
+            case "gemini":
+                envVars.put("GOOGLE_API_KEY", tokenValue);
+                if (configData.get("baseUrl") != null) {
+                    envVars.put("GOOGLE_BASE_URL", configData.get("baseUrl").toString());
+                }
+                if (configData.get("modelName") != null) {
+                    envVars.put("GEMINI_MODEL", configData.get("modelName").toString());
+                }
+                if (configData.get("maxTokens") != null) {
+                    envVars.put("GEMINI_MAX_TOKENS", configData.get("maxTokens").toString());
+                }
+                if (configData.get("temperature") != null) {
+                    envVars.put("GEMINI_TEMPERATURE", configData.get("temperature").toString());
+                }
+                break;
 
-                case "qoder":
-                    envVars.put("QODER_API_KEY", tokenValue);
-                    if (configData.get("baseUrl") != null) {
-                        envVars.put("QODER_BASE_URL", configData.get("baseUrl").toString());
-                    }
-                    if (configData.get("modelName") != null) {
-                        envVars.put("QODER_MODEL", configData.get("modelName").toString());
-                    }
-                    if (configData.get("maxTokens") != null) {
-                        envVars.put("QODER_MAX_TOKENS", configData.get("maxTokens").toString());
-                    }
-                    if (configData.get("temperature") != null) {
-                        envVars.put("QODER_TEMPERATURE", configData.get("temperature").toString());
-                    }
-                    break;
+            case "qoder":
+                envVars.put("QODER_API_KEY", tokenValue);
+                if (configData.get("baseUrl") != null) {
+                    envVars.put("QODER_BASE_URL", configData.get("baseUrl").toString());
+                }
+                if (configData.get("modelName") != null) {
+                    envVars.put("QODER_MODEL", configData.get("modelName").toString());
+                }
+                if (configData.get("maxTokens") != null) {
+                    envVars.put("QODER_MAX_TOKENS", configData.get("maxTokens").toString());
+                }
+                if (configData.get("temperature") != null) {
+                    envVars.put("QODER_TEMPERATURE", configData.get("temperature").toString());
+                }
+                break;
 
-                default:
-                    log.warn("未知的Provider类型: {}", type);
-            }
+            default:
+                log.warn("未知的Provider类型: {}", sessionType);
         }
 
         return envVars;

@@ -122,3 +122,16 @@ npm run electron:dev
 1. 构建应用: `npm run build`
 2. 打包应用: `npm run dist`
 3. 生成的安装包位于 `release/` 目录
+
+## macOS 安装说明
+
+由于应用未进行 Apple 签名，macOS 用户首次打开可能会提示 **"已损坏，无法打开"**。
+
+### 解决方法
+
+1. 将 `LLMctl.app` 拖入 `/Applications` 目录
+2. 打开终端，执行以下命令：
+```bash
+xattr -cr /Applications/LLMctl.app
+```
+3. 再次双击打开应用即可正常使用

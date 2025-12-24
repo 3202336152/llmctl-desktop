@@ -69,7 +69,7 @@
         <include refid="Base_Column_List"/>
         FROM providers
         WHERE user_id = #{userId}
-        ORDER BY created_at DESC
+        ORDER BY is_active DESC, created_at DESC
     </select>
 
     <!-- 根据类型和用户ID查询Provider列表 (搜索JSON数组中是否包含指定类型) -->
@@ -186,7 +186,7 @@
         FROM providers p
         LEFT JOIN provider_configs pc ON p.id = pc.provider_id
         WHERE p.user_id = #{userId}
-        ORDER BY p.created_at DESC, pc.cli_type
+        ORDER BY p.is_active DESC, p.created_at DESC, pc.cli_type
     </select>
 
 </mapper>

@@ -5,24 +5,42 @@
 <mapper namespace="com.llmctl.mapper.StatisticsMapper">
 
     <!-- 查询会话时长趋势（最近N天） -->
+    <!-- 使用日期序列确保返回连续日期，避免图表断点 -->
+    <!-- 对于活跃会话使用 last_activity 作为截止时间，避免时长不稳定 -->
     <select id="getSessionDurationTrend" resultType="com.llmctl.dto.SessionDurationTrendDTO">
+        WITH RECURSIVE date_series AS (
+            SELECT DATE_SUB(CURDATE(), INTERVAL (#{days} - 1) DAY) AS date
+            UNION ALL
+            SELECT DATE_ADD(date, INTERVAL 1 DAY)
+            FROM date_series
+            WHERE date &lt; CURDATE()
+        ),
+        session_stats AS (
+            SELECT
+                DATE(start_time) AS session_date,
+                ROUND(AVG(
+                    CASE
+                        WHEN end_time IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_time, end_time)
+                        ELSE TIMESTAMPDIFF(MINUTE, start_time, COALESCE(last_activity, NOW()))
+                    END
+                ), 2) AS avgDuration,
+                COUNT(*) AS sessionCount
+            FROM sessions
+            WHERE user_id = #{userId}
+              AND start_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+            GROUP BY DATE(start_time)
+        )
         SELECT
-            DATE(start_time) AS date,
-            ROUND(AVG(
-                CASE
-                    WHEN end_time IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_time, end_time)
-                    ELSE TIMESTAMPDIFF(MINUTE, start_time, NOW())
-                END
-            ), 2) AS avgDuration,
-            COUNT(*) AS sessionCount
-        FROM sessions
-        WHERE user_id = #{userId}
-          AND start_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
-        GROUP BY DATE(start_time)
-        ORDER BY date ASC
+            ds.date AS date,
+            COALESCE(ss.avgDuration, 0) AS avgDuration,
+            COALESCE(ss.sessionCount, 0) AS sessionCount
+        FROM date_series ds
+        LEFT JOIN session_stats ss ON ds.date = ss.session_date
+        ORDER BY ds.date ASC
     </select>
 
     <!-- 查询Provider使用统计 -->
+    <!-- activeRate 表示活跃会话占比，而非成功率 -->
     <select id="getProviderUsageStats" resultType="com.llmctl.dto.ProviderUsageStatDTO">
         SELECT
             p.id AS providerId,
@@ -32,7 +50,7 @@
             ROUND(
                 SUM(CASE WHEN s.status = 'active' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(s.id), 0),
                 2
-            ) AS successRate
+            ) AS activeRate
         FROM providers p
         LEFT JOIN sessions s ON p.id = s.provider_id AND s.user_id = #{userId}
         <if test="days != null">
